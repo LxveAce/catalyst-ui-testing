@@ -177,13 +177,49 @@ export class SessionService {
       return this.defaults();
     }
     if (!parsed || typeof parsed !== 'object') return this.defaults();
-    const p = parsed as PersistedSession;
-    if (p.version !== STORE_VERSION) {
-      // Future migrations land here; for now we treat unknown versions as a
-      // signal to start fresh rather than silently misinterpret structure.
+    const p = parsed as Partial<PersistedSession> & { version?: unknown };
+    const rawVersion = typeof p.version === 'number' && Number.isInteger(p.version)
+      ? p.version
+      : null;
+    if (rawVersion === null) return this.defaults();
+    if (rawVersion > STORE_VERSION) {
+      // From-the-future file: a newer build wrote it. We don't know the shape,
+      // so don't try — just start fresh rather than mis-sanitize.
       return this.defaults();
     }
+    if (rawVersion < STORE_VERSION) {
+      // Migrate forward step-by-step. Each migrator reads the prior-version
+      // shape and returns the next-version shape. Today there's only v1, so
+      // the migration table is empty; the structure is here so future schema
+      // bumps don't have to re-architect this method.
+      const migrated = this.migrate(p, rawVersion);
+      if (!migrated) return this.defaults();
+      return this.sanitize(migrated.state);
+    }
     return this.sanitize(p.state);
+  }
+
+  /**
+   * Step-by-step forward migration from `from` to STORE_VERSION.
+   * Add a case for each version bump. Return null to refuse the migration
+   * (caller falls back to defaults).
+   *
+   * Example skeleton for the next bump:
+   *   if (from === 1) {
+   *     // shape from v1 → v2 (e.g. add a `palette` field)
+   *     current = { ...current, state: { ...current.state, palette: {...} } };
+   *     from = 2;
+   *   }
+   */
+  private migrate(p: Partial<PersistedSession>, from: number): PersistedSession | null {
+    let current: Partial<PersistedSession> = p;
+    let v = from;
+    // No bumps shipped yet — v1 is the only version.
+    if (v !== STORE_VERSION) return null;
+    return {
+      version: STORE_VERSION,
+      state: (current.state ?? this.defaults()) as SessionState,
+    };
   }
 
   private write(): void {

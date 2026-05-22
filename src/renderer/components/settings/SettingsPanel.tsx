@@ -8,7 +8,6 @@ import type {
   TraySettings,
   UpdaterSettings,
   UpdaterState,
-  UpdateChannel,
 } from '../../../shared/types';
 import { ACTION_LABELS, chordFromEvent } from '../../hotkeys';
 
@@ -416,54 +415,10 @@ export function SettingsPanel() {
               />
             )}
             {updaterSettings && (
-              <>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '5px 0',
-                  fontSize: 12,
-                }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Channel</span>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    {(['stable', 'beta'] as UpdateChannel[]).map((ch) => {
-                      const active = updaterSettings.channel === ch;
-                      return (
-                        <button
-                          key={ch}
-                          onClick={() => void updateUpdater({ channel: ch })}
-                          style={{
-                            padding: '3px 10px',
-                            fontSize: 11,
-                            border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
-                            borderRadius: 'var(--radius-sm)',
-                            background: active ? 'var(--accent-dim)' : 'var(--bg-elevated)',
-                            color: active ? 'var(--accent-light)' : 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            textTransform: 'capitalize',
-                          }}
-                        >
-                          {ch}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                {updaterSettings.channel === 'beta' && (
-                  <div style={{
-                    marginTop: 2,
-                    fontSize: 10,
-                    color: 'var(--text-muted)',
-                    lineHeight: 1.4,
-                    fontStyle: 'italic',
-                  }}>
-                    Note: beta channel is a stored preference. The auto-updater
-                    currently always pulls from the stable Releases feed; beta
-                    routing requires manual installation until the publisher
-                    pipeline is split.
-                  </div>
-                )}
-              </>
+              <SettingRow
+                label="Channel"
+                value="stable"
+              />
             )}
             {updaterSettings && (
               <ToggleRow
@@ -540,6 +495,9 @@ export function SettingsPanel() {
           <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
             When enabled, closing the window hides it to the system tray
             instead of quitting. Right-click the tray icon for options.
+            Background services (cost sampler, vault sync, auto-updater)
+            keep running while hidden — notifications will accumulate until
+            you bring the window back, or until you sign out / disable them.
           </div>
         </div>
       )}
