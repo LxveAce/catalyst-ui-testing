@@ -20,6 +20,7 @@ const VALID_PANEL_IDS = new Set([
   'commands',
   'resources',
   'github',
+  'cost',
   'compact',
   'lmm',
   'sync',
