@@ -24,7 +24,7 @@ Download from the [**latest release**](https://github.com/LxveAce/claude-code-st
 and double-click. The installer downloads Node + the Claude CLI for you and
 launches the app — sign in to Claude in the first-launch modal, done.
 
-- **Windows:** `Claude.Code.Studio-2.0.0-Setup.exe` (NSIS one-click silent install)
+- **Windows:** `Claude-Code-Studio-Windows.exe` (NSIS one-click silent install)
 - **macOS Apple Silicon:** `Claude.Code.Studio-2.0.0-arm64.dmg` (drag to Applications)
 - **Linux:** `.AppImage` (portable), `.deb` (Debian/Ubuntu), or `.rpm` (Fedora/RHEL)
 
@@ -77,7 +77,7 @@ and follow the per-platform steps below.
 
 ### Windows
 
-1. Download `Claude.Code.Studio-2.0.0-Setup.exe`.
+1. Download `Claude-Code-Studio-Windows.exe`.
 2. Double-click. The NSIS installer downloads Node + the Claude CLI,
    then launches Studio. No further setup needed.
 
@@ -87,8 +87,8 @@ and follow the per-platform steps below.
 
 ### macOS (Intel + Apple Silicon)
 
-1. Download `Claude.Code.Studio-2.0.0-x64.dmg` (Intel) or
-   `Claude.Code.Studio-2.0.0-arm64.dmg` (Apple Silicon — M1/M2/M3+).
+1. Download `Claude-Code-Studio-Mac.dmg` (Apple Silicon native; runs on
+   Intel Macs via Rosetta).
 2. Open the DMG, drag **Claude Code Studio** into **Applications**.
 3. Eject the DMG, open Studio from Launchpad / Spotlight.
 4. First launch: an onboarding modal downloads Node + the Claude CLI
@@ -112,11 +112,11 @@ your distro.
 
 #### AppImage (works on any distro, no install needed)
 
-1. Download `Claude.Code.Studio-2.0.0-x64.AppImage`.
+1. Download `Claude-Code-Studio-Linux.AppImage`.
 2. Make it executable and run:
    ```bash
-   chmod +x Claude.Code.Studio-2.0.0-x64.AppImage
-   ./Claude.Code.Studio-2.0.0-x64.AppImage
+   chmod +x Claude-Code-Studio-Linux.AppImage
+   ./Claude-Code-Studio-Linux.AppImage
    ```
 3. First launch: onboarding modal downloads Node + Claude CLI into
    `~/.config/Claude Code Studio/runtime/`. Sign in via the modal.
@@ -127,8 +127,8 @@ If you want a desktop entry + menu integration, drop the AppImage into
 #### Debian / Ubuntu
 
 ```bash
-wget https://github.com/LxveAce/claude-code-studio/releases/latest/download/claude-code-studio_2.0.0_amd64.deb
-sudo dpkg -i claude-code-studio_2.0.0_amd64.deb
+wget https://github.com/LxveAce/claude-code-studio/releases/latest/download/Claude-Code-Studio-Linux.deb
+sudo dpkg -i Claude-Code-Studio-Linux.deb
 sudo apt-get install -f   # resolve missing deps if any
 ```
 
@@ -138,14 +138,14 @@ modal as the AppImage.
 #### Fedora / RHEL / CentOS
 
 ```bash
-wget https://github.com/LxveAce/claude-code-studio/releases/latest/download/claude-code-studio-2.0.0.x86_64.rpm
-sudo rpm -i claude-code-studio-2.0.0.x86_64.rpm
+wget https://github.com/LxveAce/claude-code-studio/releases/latest/download/Claude-Code-Studio-Linux.rpm
+sudo rpm -i Claude-Code-Studio-Linux.rpm
 ```
 
 Or via dnf:
 
 ```bash
-sudo dnf install ./claude-code-studio-2.0.0.x86_64.rpm
+sudo dnf install ./Claude-Code-Studio-Linux.rpm
 ```
 
 **Linux node-pty native build:** the prebuild that ships with node-pty
