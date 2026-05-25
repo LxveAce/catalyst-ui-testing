@@ -25,6 +25,7 @@
 import { build } from 'vite';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { builtinModules } from 'node:module';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -38,10 +39,41 @@ const defines = {
   MAIN_WINDOW_VITE_NAME: JSON.stringify('main_window'),
 };
 
+// Mark EVERY Node.js built-in as external so Vite emits plain
+// `require('node:path')` calls in the bundled output instead of bundling
+// them as browser-shimmed modules. Without this, Vite's default target
+// is `modules` (browser), and `node:path` etc. get replaced with empty
+// stubs — which crashes the main process at startup with
+// `TypeError: path.join is not a function`.
+const nodeExternals = [
+  ...builtinModules,
+  ...builtinModules.map((m) => `node:${m}`),
+];
+
+// Production runtime deps that the main process requires at runtime —
+// must NOT be bundled into the asar (they need to load from
+// node_modules). node-pty has native bindings; systeminformation has
+// optional native helpers; electron + electron-updater are runtime-
+// provided.
+const runtimeExternals = [
+  'electron',
+  'electron-updater',
+  'electron-squirrel-startup',
+  'node-pty',
+  'systeminformation',
+  '@octokit/rest',
+];
+
+const mainExternals = [...nodeExternals, ...runtimeExternals];
+
 async function buildMain() {
   await build({
     configFile: path.resolve(root, 'vite.main.config.ts'),
     build: {
+      // Target Node 20+ (Electron 42 uses Node 20.x) so Vite doesn't
+      // try to provide browser polyfills for Node-only globals.
+      target: 'node20',
+      ssr: true,
       lib: {
         entry: path.resolve(root, 'src/main/index.ts'),
         formats: ['cjs'],
@@ -52,6 +84,12 @@ async function buildMain() {
       // Electron main is small enough that the readability of unminified
       // stack traces in production logs is worth more than the few KB saved.
       minify: false,
+      rollupOptions: {
+        // CRITICAL: externalize all Node built-ins + our runtime deps.
+        // Without this, `require('node:path')` returns a browser stub
+        // and path.join etc. crash at startup.
+        external: mainExternals,
+      },
     },
     define: defines,
   });
@@ -61,6 +99,8 @@ async function buildPreload() {
   await build({
     configFile: path.resolve(root, 'vite.preload.config.ts'),
     build: {
+      target: 'node20',
+      ssr: true,
       lib: {
         entry: path.resolve(root, 'src/preload/preload.ts'),
         formats: ['cjs'],
@@ -69,7 +109,13 @@ async function buildPreload() {
       outDir: path.resolve(root, '.vite/build'),
       emptyOutDir: false,
       minify: false,
-      rollupOptions: { external: ['electron'] },
+      // Preload runs in a sandboxed renderer but with Node integration
+      // disabled; it can still use Node built-ins through contextBridge
+      // but is bundled together with browser code. Externalize Node
+      // built-ins + electron to keep them as runtime requires.
+      rollupOptions: {
+        external: [...nodeExternals, 'electron'],
+      },
     },
   });
 }
