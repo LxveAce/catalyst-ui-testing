@@ -141,7 +141,12 @@
 
   ; --- Step 4: Install Claude Code CLI via bundled npm ---
   !insertmacro CCSLog "Installing Claude Code CLI (${CLAUDE_PKG})..."
-  nsExec::ExecToStack '"$INSTDIR\resources\runtime\node.exe" "$INSTDIR\resources\runtime\node_modules\npm\bin\npm-cli.js" install --prefix "$INSTDIR\resources\runtime" --registry=https://registry.npmjs.org/ --no-save --no-package-lock --no-audit --no-fund --silent ${CLAUDE_PKG}'
+  ; NOTE: dropped --silent so npm actually emits error output when
+  ; something fails. With --silent, the npm exit-code-1 path leaves
+  ; stderr empty and the modal can't tell the user what went wrong.
+  ; --loglevel=error still suppresses non-error chatter while keeping
+  ; failure detail.
+  nsExec::ExecToStack '"$INSTDIR\resources\runtime\node.exe" "$INSTDIR\resources\runtime\node_modules\npm\bin\npm-cli.js" install --prefix "$INSTDIR\resources\runtime" --registry=https://registry.npmjs.org/ --no-save --no-package-lock --no-audit --no-fund --loglevel=error ${CLAUDE_PKG}'
   Pop $0
   Pop $1
   IntCmp $0 0 npm_ok
