@@ -7,6 +7,98 @@ to start.
 
 ---
 
+## ★ Multi-model support — "API Models" + "Local Models" tabs (v3.0 direction)
+
+**Status:** Brainstorm only — captured 2026-05-26 from user. Significant
+re-architecture; not v2.x work. Sketch the design here so it can be
+refined when we're ready to start.
+
+### The pitch
+
+Today Studio has one terminal driving one CLI (Anthropic's `claude`).
+Expand it to a multi-model surface where the user can run any combination
+of remote-API-backed and locally-hosted models in parallel, with the
+same GUI shell (terminal panes, resource monitor, etc.) around each.
+
+### Two model categories
+
+1. **API Models** (current behaviour generalised)
+   - Talk to a remote API for inference. Lightweight on the user's
+     machine — just network + render.
+   - Each model is a separate CLI/process spawned in its own pane.
+   - Tabs/sub-panels per model: Claude (Anthropic), GPT-x (OpenAI),
+     Gemini, etc. — whichever the user adds.
+   - Auth per provider stored encrypted via the existing `safeStorage`
+     pattern.
+
+2. **Local Models**
+   - Run inference on the user's hardware (GPU/CPU). No network call
+     for the actual model — though the *binary itself* is downloaded
+     once.
+   - Source for binaries: a curated registry/database (could be our
+     own JSON manifest hosted on GitHub or a backend) that lists
+     model + size + URL + hash + runtime requirements.
+   - User picks a model from a catalog → Studio downloads to local
+     storage (similar to the Phase 4 Node bootstrap pattern — fetch,
+     verify SHA, extract) → spawns the model via a runtime
+     (`llama.cpp`, `ollama`, `vllm`, custom — depends on format).
+   - First-use bootstrap dialog matching the existing Claude CLI
+     onboarding UX: "This model is X GB. Download now?"
+
+### Concurrent model runs
+
+- Each model lives in its own pane (existing split-panes infra works).
+- Resource monitor needs per-pane breakdown (already noted as C4 in
+  earlier polish list) — multi-model makes that essential.
+- Cap concurrent local models by available RAM/VRAM. Reuse the
+  PtyRegistry pattern with a resource-aware admission control.
+
+### Pop-out windows (separate from tabs)
+
+- Right now everything's a pane inside one window. For multi-model the
+  user will want to pop a model out to a separate window (separate
+  monitor / side-by-side workflow).
+- Electron supports multiple BrowserWindows; need a window manager
+  service that tracks which panes are in which window, persists across
+  restart, and forwards IPC between windows.
+
+### Where this affects the existing codebase
+
+- `PtyRegistry` → generalize beyond "claude" to any model CLI; add
+  `model` metadata to each pane.
+- New `ModelRegistry` service: catalog of API + Local models, per-model
+  config (auth, runtime, install path).
+- New `ModelDownloadService` (mirror Phase 4 bootstrap): handles local
+  model fetch + verify + extract.
+- Renderer: new "Models" panel with two top-level tabs (API / Local),
+  catalog browser, per-model launch button.
+- Settings panel: per-provider auth (extend the existing AuthPanel
+  pattern that's currently Claude-specific).
+- Window manager service in main process for pop-out support.
+
+### Open questions (decide before coding)
+
+- Catalog hosting: GitHub-Pages-hosted JSON? Cloudflare Worker? Own
+  schema vs. piggyback on Hugging Face / Ollama registry?
+- Local-model runtime: bundle our own (llama.cpp prebuild for each
+  OS) or shell out to an existing tool (ollama, lm-studio)?
+- License / TOS exposure: local models often have non-commercial
+  licenses; surface that prominently in the catalog UI.
+- GPU detection: nvidia-smi / Metal / Vulkan probe → only show models
+  the user's hardware can run.
+
+### Scope estimate (rough)
+
+- Multi-API tabs (just adding GPT/Gemini providers): ~1 week
+- Local-model catalog + download + run: ~3-4 weeks (includes building
+  the runtime wrapper)
+- Pop-out windows: ~1 week (Electron multi-window is fiddly but well-
+  documented)
+- Total v3.0 work: ~6-8 weeks if all built sequentially; faster with
+  parallel agents on independent pieces.
+
+---
+
 ## 0. v1.1 bootstrap installer — IN DEVELOPMENT
 
 **Status:** 4 of 9 phases shipped on `feature/bootstrap-installer`. See
