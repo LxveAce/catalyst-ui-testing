@@ -813,11 +813,26 @@ export type WindowStateMap = Record<string, WindowState>;
 // leave the main process. Renderer only sees presence/timestamps.
 export type ProviderId = 'anthropic' | 'openai' | 'gemini' | 'openrouter';
 
+/** Where auth for a given provider came from. */
+export type AuthSource =
+  /** Stored encrypted via our safeStorage. */
+  | 'stored'
+  /** Env var already set in process.env (inherited from shell). */
+  | 'env'
+  /** Anthropic only — Claude CLI's OAuth flow has produced a token in
+   *  ~/.claude.json (set by `claude /login`). No key is exportable. */
+  | 'cli-oauth'
+  /** Nothing detected; user needs to provide a key. */
+  | 'none';
+
 export interface ProviderAuthEntry {
   provider: ProviderId;
   hasKey: boolean;
   /** ISO 8601 timestamp when the key was last set. Null if never set. */
   lastUpdated: string | null;
+  /** Auto-detected auth source; lets the UI skip prompting when the
+   *  CLI is already authed via OAuth or an env var. */
+  source: AuthSource;
 }
 
 /** Renderer-visible info about a "we need an API key now" prompt from a

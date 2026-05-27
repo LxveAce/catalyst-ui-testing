@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { ProviderAuthEntry, ProviderId } from '../../../shared/types';
+import type { AuthSource, ProviderAuthEntry, ProviderId } from '../../../shared/types';
 import { ApiKeyModal } from './ApiKeyModal';
 
 const PROVIDER_LABEL: Record<ProviderId, string> = {
@@ -106,9 +106,26 @@ export function ProviderKeysList() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {entries.map((entry) => {
-          const lastWord = entry.lastUpdated
+          // Build a status line that reflects the auto-detect source so the
+          // user sees "already authenticated via Claude CLI" / "env var
+          // detected" instead of a false "not set" when the CLI is wired up
+          // independently. Source ranking: stored > cli-oauth > env > none.
+          const sourceTag = sourceLabel(entry.source);
+          const lastWord = entry.hasKey
             ? `set ${formatRelative(entry.lastUpdated)}`
-            : 'not set';
+            : entry.source === 'cli-oauth'
+              ? 'authenticated via Claude CLI'
+              : entry.source === 'env'
+                ? 'env var detected'
+                : 'not set';
+          // No need to prompt for a key when an env var or CLI OAuth is
+          // already in place — the spawned PTY inherits it. We still
+          // expose "Set" so power users can override.
+          const buttonLabel = entry.hasKey
+            ? 'Replace'
+            : entry.source === 'none'
+              ? 'Set'
+              : 'Override';
           return (
             <div
               key={entry.provider}
@@ -128,9 +145,28 @@ export function ProviderKeysList() {
                     fontSize: 12,
                     fontWeight: 600,
                     color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
                   }}
                 >
                   {PROVIDER_LABEL[entry.provider]}
+                  {sourceTag && (
+                    <span
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: sourceTag.bg,
+                        color: sourceTag.fg,
+                      }}
+                    >
+                      {sourceTag.text}
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                   {PROVIDER_BLURB[entry.provider]} · {lastWord}
@@ -149,7 +185,7 @@ export function ProviderKeysList() {
                   fontSize: 11,
                 }}
               >
-                {entry.hasKey ? 'Replace' : 'Set'}
+                {buttonLabel}
               </button>
               {entry.hasKey && (
                 <button
@@ -187,7 +223,8 @@ export function ProviderKeysList() {
   );
 }
 
-function formatRelative(iso: string): string {
+function formatRelative(iso: string | null): string {
+  if (!iso) return 'never';
   const then = Date.parse(iso);
   if (!Number.isFinite(then)) return iso;
   const diff = Date.now() - then;
@@ -196,4 +233,26 @@ function formatRelative(iso: string): string {
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
   if (diff < 30 * 86_400_000) return `${Math.floor(diff / 86_400_000)}d ago`;
   return new Date(then).toLocaleDateString();
+}
+
+/** Small colored tag rendered next to the provider name when auth was
+ *  auto-detected from somewhere other than our own safeStorage. */
+function sourceLabel(
+  s: AuthSource
+): { text: string; bg: string; fg: string } | null {
+  switch (s) {
+    case 'cli-oauth':
+      return {
+        text: 'CLI OAuth',
+        bg: 'rgba(134,239,172,0.18)',
+        fg: '#86efac',
+      };
+    case 'env':
+      return { text: 'env var', bg: 'rgba(147,197,253,0.18)', fg: '#93c5fd' };
+    case 'stored':
+      return { text: 'saved', bg: 'rgba(124,58,237,0.22)', fg: '#a78bfa' };
+    case 'none':
+    default:
+      return null;
+  }
 }
