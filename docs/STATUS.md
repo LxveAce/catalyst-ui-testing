@@ -314,12 +314,17 @@ to ship a public update.
 
 ## Pointers
 
-- **Plan file (Claude-local, not in repo):**
-  `~/.claude/plans/im-going-to-enable-lovely-cook.md`.
+- **Original R&D plan (now committed to repo):**
+  `docs/PLAN_2026-05-27_rnd-push.md`. The full plan I worked from at the
+  start of the day — Cat 1–9 categorization + execution model.
+- **R&D kickoff session log (morning):**
+  `docs/SESSION_LOG_2026-05-27_rnd-kickoff.md`.
+- **Evening session log (everything after the morning push):**
+  `docs/SESSION_LOG_2026-05-27_evening.md` — chat-skin v2, GPU routing,
+  auto-detect, BitNet, TerminalTabs scaffolding, v3.1.0 release.
 - **Per-file LMM journals:** `journal/` mirrors `src/` paths.
 - **Multi-provider design notes:** `docs/MULTI_PROVIDER_BRAINSTORM.md`.
 - **Backlog:** `docs/BACKLOG.md`.
-- **R&D kickoff session log:** `docs/SESSION_LOG_2026-05-27_rnd-kickoff.md`.
 - **Verification report:** `docs/VERIFICATION_2026-05-27.md`.
 - **Runtime verifier:** `scripts/runtime-verify.mjs` (writes
   `runtime-verify-summary.md` to repo root).
