@@ -16,14 +16,37 @@ tell the next Claude session (on any machine) exactly where the work stands.
 Pick this up by:
 
 1. **Read this whole file** — every recent change is summarized below.
-2. **Read the "Deferred — pick up here" section** — three items the user asked for
+2. **Check the v3.1.0 GitHub Release** at
+   https://github.com/LxveAce/claude-code-studio-testing/releases/tag/v3.1.0 —
+   the `release.yml` CI workflow builds installers for all 3 OSes
+   (`Claude-Code-Studio-3.1.0-Windows.exe`, `-Mac.dmg`, `-Linux-*.{AppImage,deb,rpm}`)
+   and uploads them as release assets when a `v*.*.*` tag is pushed. If the
+   release doesn't have assets yet, the workflow may still be running — see
+   https://github.com/LxveAce/claude-code-studio-testing/actions
+   (look for the "Release" workflow on tag `v3.1.0`).
+3. **Read the "Deferred — pick up here" section** — three items the user asked for
    that I scoped + scaffolded but did not ship in this session: TerminalTabs wiring
    into App.tsx, Claude chat-mode (`--output-format=stream-json`) for the chat skin,
    and Commands tab mirroring the active model.
-3. **Built Windows installer**: see the latest GitHub Release on
-   `LxveAce/claude-code-studio-testing` (if I made it to the build-and-upload step
-   before this session ended — search "Releases" tab).
 4. **Open issues**: see issue tracker on the testing repo.
+
+### Installer build notes
+
+- **The agent tried building the installer locally on 2026-05-27 and failed**
+  at `winCodeSign` extraction: `Cannot create symbolic link : A required
+  privilege is not held by the client.` Cause: Windows Dev Mode is not on for
+  the user's account, and the agent shell isn't elevated.
+- **Workaround used**: tagged `v3.1.0` and pushed — `release.yml` workflow
+  triggers on tag and builds installers on GitHub Actions hosted runners
+  (which have the needed permissions).
+- **First v3.1.0 CI release failed** with `NSIS warning 6001 — Variable
+  "OllamaWantsInstall" not referenced` (false positive caused by macro-scoped
+  usage). Fixed with a targeted `!pragma warning disable 6001` in
+  `build/installer.nsh`. Tag force-moved + workflow re-triggered. Should
+  succeed on the second pass.
+- **To build locally** (if you want a fresh installer at home): enable Windows
+  Dev Mode (Settings → Privacy & Security → For developers → Developer Mode
+  ON), then `npm run dist`. Output: `dist/Claude-Code-Studio-3.1.0-Windows.exe`.
 
 ---
 
