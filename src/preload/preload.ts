@@ -247,6 +247,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     delete: (name: string) => ipcRenderer.invoke(IPC.OLLAMA_DELETE, name),
     onPullProgress: (callback: (evt: unknown) => void) =>
       subscribe<[unknown]>(IPC.OLLAMA_PULL_PROGRESS, callback),
+    /** Cat 7: daemon lifecycle for autostart. */
+    daemonState: () => ipcRenderer.invoke(IPC.OLLAMA_DAEMON_STATE),
+    daemonStart: () => ipcRenderer.invoke(IPC.OLLAMA_DAEMON_START),
+    daemonStop: () => ipcRenderer.invoke(IPC.OLLAMA_DAEMON_STOP),
+    onDaemonStateChanged: (callback: (state: unknown) => void) =>
+      subscribe<[unknown]>(IPC.OLLAMA_DAEMON_STATE_CHANGED, callback),
   },
   hardware: {
     detect: (force = false) => ipcRenderer.invoke(IPC.HARDWARE_DETECT, force),
