@@ -1,6 +1,7 @@
 # Claude Code Studio — Testing Repo STATUS
 
-> **Last updated:** 2026-05-27 (post-fix-pass + chat-skin shipped)
+> **Version:** v3.1.0
+> **Last updated:** 2026-05-27 (multi-session evening push — GPU + chat-skin v2 + auto-detect + BitNet + v3.1.0 bump)
 > **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`)
 > **Latest session log:** [`SESSION_LOG_2026-05-27_rnd-kickoff.md`](./SESSION_LOG_2026-05-27_rnd-kickoff.md)
 > **Latest verification report:** [`VERIFICATION_2026-05-27.md`](./VERIFICATION_2026-05-27.md)
@@ -10,178 +11,230 @@ tell the next Claude session (on any machine) exactly where the work stands.
 
 ---
 
+## TL;DR for the next session
+
+Pick this up by:
+
+1. **Read this whole file** — every recent change is summarized below.
+2. **Read the "Deferred — pick up here" section** — three items the user asked for
+   that I scoped + scaffolded but did not ship in this session: TerminalTabs wiring
+   into App.tsx, Claude chat-mode (`--output-format=stream-json`) for the chat skin,
+   and Commands tab mirroring the active model.
+3. **Built Windows installer**: see the latest GitHub Release on
+   `LxveAce/claude-code-studio-testing` (if I made it to the build-and-upload step
+   before this session ended — search "Releases" tab).
+4. **Open issues**: see issue tracker on the testing repo.
+
+---
+
 ## Where we are
 
 The official release (`LxveAce/claude-code-studio` master) shipped **v3.0.0** on
-2026-05-26 with the multi-model catalog, file tree, cross-platform uninstall flow,
-and the v3.0.0 release docs.
+2026-05-26. The testing repo is the active dev branch — every R&D feature lands
+here first.
 
-**As of 2026-05-27 (after the fix-pass + chat skin):** the R&D push (Cat 1-9), a
-**post-audit fix pass** (PR #13 — addresses the user-reported "local AI models don't
-work at all" bug + multiple HIGH-severity issues from a thorough code-review audit),
-and a **chat-skin overlay** (PR #14 — toggleable ChatGPT/Claude.ai-style chat UI on
-terminal panes) are all shipped to testing/master. The official repo is slimmed of
-dev-only artifacts (journal/, security-reviews/, session logs, INSTALLER_REDESIGN.md,
-etc.); testing keeps the full
-archive. R&D features land on testing first via feature branches → PR → merge, then
-get promoted to the public repo when ready.
+**testing/master is currently at PR #17 merged.** Sequence of work this evening:
 
-**Testing is now ahead of main by 8 merged feature PRs** (Cat 3 + Cat 4-8 + Cat 9
-doc). Promotion to the public repo is the next step.
-
----
-
-## What shipped this session
-
-| Cat | PR / commit | Topic |
+| PR | Topic | Status |
 |---|---|---|
-| 1 | force-push | Sync testing/master to `d0af93a` (release) |
-| 2 | `49b8fd9` on **main** | Slim public repo of dev artifacts |
-| 3 | `cd68563` | STATUS.md + SESSION_LOG + 6 GitHub issues |
-| 4 | [#8](https://github.com/LxveAce/claude-code-studio-testing/pull/8) | Themes + theme editor + resizable windows + state persistence |
-| 5 | [#9](https://github.com/LxveAce/claude-code-studio-testing/pull/9) | Universal API key UI + safeStorage + PTY interceptor |
-| 6 | [#10](https://github.com/LxveAce/claude-code-studio-testing/pull/10) | Gemini / Aider / OpenRouter catalog + CLI detection + setup modal |
-| 7 | [#11](https://github.com/LxveAce/claude-code-studio-testing/pull/11) | Ollama daemon autostart on app launch |
-| 8 | [#12](https://github.com/LxveAce/claude-code-studio-testing/pull/12) | Installer wizard mode + BMP chrome + Ollama opt-in |
-| 9 | folded into #10 | Multi-provider brainstorm doc |
-| Fix-pass | [#13](https://github.com/LxveAce/claude-code-studio-testing/pull/13) | **Local AI PATH resolver** + provider-detect Windows .cmd + theme race + launch order + 5 more |
-| Skin | [#14](https://github.com/LxveAce/claude-code-studio-testing/pull/14) | **Chat-skin overlay** — toggleable ChatGPT/Claude.ai-style UI on terminal panes |
-
-Detail per category:
-
-### Cat 4 — UI foundations
-- 7 new built-in themes (Slate, Indigo, Crimson, Forest, Magenta, Midnight, Solarized
-  → 13 total).
-- Theme editor modal in Settings → Edit themes…, with color pickers + live preview +
-  restore-on-dismiss. Custom themes persist to `<userData>/themes.json`.
-- All BrowserWindows resizable; per-window geometry persisted to
-  `<userData>/window-state.json`. Off-screen monitor recovery via
-  `screen.getAllDisplays()`.
-
-### Cat 5 — Multi-provider plumbing
-- `provider-auth-service` — per-provider API key store, encrypted via Electron
-  safeStorage. Raw keys never cross IPC.
-- `ApiKeyModal` — single component for both pre-launch and PTY-interceptor flows.
-  Dismiss = no nagging.
-- `pty-key-interceptor` — per-pane regex watch for "Enter your X API key" prompts on
-  attached panes only (Claude / Ollama exempt to avoid false positives).
-- ModelsPanel pre-launch check + env-var injection at PtyRegistry spawn.
-- ProviderKeysList in Settings shows all 4 known providers with set/replace/delete.
-
-### Cat 6 + Cat 9 — Providers
-- Catalog entries: `api.google.gemini-cli`, `api.aider.multi`, `api.openrouter.aider`.
-- `provider-detect` — session-cached `<cli> --version` probes for `gemini` and `aider`.
-- `ProviderSetupModal` — shown when CLI isn't installed; copyable install command +
-  install-page link + retry.
-- `docs/MULTI_PROVIDER_BRAINSTORM.md` — provider taxonomy, candidate statuses, the
-  5-maps abstraction, open questions.
-
-### Cat 7 — Ollama autostart
-- `OllamaService.daemonStart/Stop/state` — detects externally-managed daemons (tray
-  app, LaunchAgent, systemd) and doesn't duplicate them. Polls up to 15s for
-  reachability.
-- `maybeAutostartOllama` fires from `app.whenReady()` if any registered model has
-  `provider === 'Ollama'` or `command === 'ollama'`. Fire-and-forget; never blocks
-  startup.
-- `before-quit` SIGTERMs Studio-spawned daemon; external daemons left alone.
-
-### Cat 8 — Installer overhaul
-- Wizard mode: `oneClick: false` + `allowToChangeInstallationDirectory: true`.
-- BMP chrome: header (150×57), sidebar (164×314), uninstaller sidebar — vertical
-  gradient from accent purple. Generated by `build/gen-installer-assets.mjs`.
-- Opt-in Ollama install: MessageBox at start of `customInstall` asks the user;
-  `/SD IDNO` defaults to skip on silent installs; install path soft-fails so Studio
-  never gets blocked by Ollama errors.
-
-### Fix-pass (PR #13) — addresses "local AIs don't work at all"
-
-Root cause: `node-pty` on Windows does `CreateProcess` directly (no shell). Passing
-bare `'ollama'` failed because the binary is `ollama.exe`. Claude worked because
-`findClaudePath()` returned the bundled-runtime absolute path; everything else
-needed resolution.
-
-Fix: new `src/main/cli-resolver.ts` resolves bare commands via well-known install
-dirs + `where.exe` / `which` lookup. `pty-manager.ts` runs it before spawn.
-Diagnostic line printed to stderr on every spawn so future PATH issues are
-easy to diagnose.
-
-Same module + `shell: true` on Windows fixes `provider-detect.ts` finding `.cmd`
-shims (npm-installed gemini-cli + Python aider). Detection timeout bumped from
-4s → 8s for Aider's Python cold start.
-
-Other fixes in the pass: theme hydration race between App.tsx and SettingsPanel
-(now App is canonical), ModelsPanel launch order reordered (detect → key → license
-→ spawn), ThemeEditor stale-callback cleanup, ApiKeyModal setState-after-unmount
-guard, OpenRouter Aider entry's conflicting `--openai-api-base` removed.
-
-### Chat-skin overlay (PR #14)
-
-Toggleable ChatGPT/Claude.ai-style chat UI overlaid on the terminal pane. Same PTY
-underneath; presentation skin only.
-
-- Toggle off: small "✦ Chat" button top-right of xterm.
-- Toggle on: chat-style header with "Terminal view" button + scrollable message
-  area + bottom textarea (Enter sends, Shift+Enter newline).
-- xterm stays mounted with `visibility: hidden` when skin is on — full
-  scrollback preserved on toggle off.
-- Per-pane preference persisted in localStorage.
-- Echo suppression via `lastSentRef` so the assistant bubble doesn't start with
-  the user's own input.
-- Bounded memory (200 msgs × 100 KB each).
-
-Limitations documented in the LMM journal: not a protocol-aware chat client; no
-code highlighting; no tool-use UI. Future opt-in features tracked in the journal.
+| #13 | Local-AI PATH resolver (the "GPU ignored" bug — root cause was PATH, then…) | merged |
+| #14 | Chat-skin overlay v1 (now superseded by v2 in #17) | merged |
+| #15 | **GPU routing fix** + Liquid LFM catalog + Jetson Thor tier | merged |
+| #16 | Chat-skin redesign v1 + multi-model tab strip in Models panel | merged |
+| #17 | **Chat-skin v2** + per-pane popout skin + + tab picker + auth auto-detect + BitNet + TerminalTabs scaffolding | merged |
 
 ---
 
-## What's queued for the next push
+## What's live (deep dive)
 
-Nothing pre-defined for v3.1 yet. Open ideas surfaced during this push:
+### GPU routing (PR #15) — fixes "my dedicated GPU is ignored"
 
-- **Promotion to public repo.** Each Cat 4-8 feature still lives in testing only.
-  Cherry-pick or merge to `claude-code-studio` master when ready for an end-user
-  release.
-- **Real installer art.** The BMPs are functional placeholders (solid-color
-  gradient). A designer can drop in actual artwork at the same dimensions
-  (150×57 header, 164×314 sidebar) — no code change needed.
-- **OAuth providers beyond Anthropic.** Today only the env-var-based providers
-  (OpenAI / Gemini / OpenRouter) work via the universal key UI. Google's gemini-cli
-  supports an OAuth flow; surfacing that would need a per-provider OAuth handler
-  in main.
-- **Custom providers** (user-defined, not in the seed catalog). `KNOWN_PROVIDERS`
-  in `provider-auth-service.ts` is closed today. Opening would widen `ProviderId`
-  to `string`.
-- **Dynamic model lists.** Static catalog entries grow stale as providers ship
-  new models. A `provider.listModels()` IPC hitting `/models` endpoints would
-  keep the catalog fresh.
-- **Modal resize.** Cat 4.2 made BrowserWindows resizable. React modals
-  (AddModelModal, ThemeEditor, ApiKeyModal, ProviderSetupModal) remain fixed-size.
-  Resizable modals = a UX enhancement, not load-bearing.
-- **Real nsDialogs page for the Ollama opt-in.** Cat 8 used MessageBox for
-  portability; a custom-painted page would look more cohesive with the wizard.
-  Tracked in `journal/config/installer.nsh.lmm.md`.
+Root cause: Ollama reads GPU env vars (`CUDA_VISIBLE_DEVICES`, `HIP_VISIBLE_DEVICES`,
+`OLLAMA_VULKAN`, etc.) at `ollama serve` startup — NOT per-`ollama run`. Our code
+was injecting env into the wrong process. Fix in `src/main/gpu-prefs.ts` +
+`OllamaService.daemonStart()` now passes the right env via `buildDaemonEnv()`.
+
+UI: Models panel's hardware banner has a "GPU routing: Auto / Force GPU / Force CPU"
+dropdown plus a per-GPU picker if multiple dedicated GPUs are detected. Apply button
+restarts the daemon with the new env. New types: `GpuVendor`, `GpuBackend`, `GpuInfo`,
+`GpuMode`, `GpuPrefs` in `src/shared/types.ts`.
+
+### Chat skin v2 (PR #17) — fixes "looks horrible" + "CLI gets translated weirdly"
+
+Two passes addressing user feedback. Final state:
+
+- **Layout**: persona header at top (avatar + model name + subtitle); 720px-centered
+  column; soft rounded bubbles for BOTH roles (no per-message avatars); pill composer
+  with circular gradient send button.
+- **Markdown rendering** via `react-markdown` + `remark-gfm` + `react-syntax-highlighter`
+  (Prism, oneDark). Code blocks have a header bar with language + Copy button.
+- **Aggressive sanitizer** for incoming bytes:
+  - Detects screen-clear sequences (`\x1b[2J`, `\x1bc`, `\x1b[?1049[hl]`, `\x1b[H`) in
+    the RAW bytes before stripping. On detection: starts a NEW assistant message
+    instead of appending — stops the TUI-repaint duplication (the "Accessing workspace
+    Quick safety check…" appearing twice in the user's screenshot).
+  - Strips CSI/OSC/DCS, bare ESC/BEL/NUL, CR-overwrite lines, collapses 3+ newlines.
+- **`InteractivePromptBanner`** above any assistant bubble whose content matches
+  selection-menu patterns ("Enter to confirm", "Esc to cancel", "1. Yes 2. No",
+  "Select an option", "❯ <number>"). Tells the user to switch to Terminal view to
+  respond.
+- **Per-pane skin toggle** persisted via `localStorage` (`chat-skin:<paneId>`). Works
+  on TerminalPanel AND EmbeddedTerminal (so model panes + popout windows all support
+  the chat skin and remember per-pane choice across reloads).
+- **Streaming cursor** (▍ blinking at end of latest assistant message while a chunk
+  arrived within 800ms).
+
+### Auth auto-detect (PR #17) — fixes "Claude was authed but the app doesn't know"
+
+`ProviderAuthService.list()` now returns each entry with an `AuthSource` field:
+- `stored` — safeStorage entry exists (canonical).
+- `env` — env var is set in `process.env` (inherited from shell; spawned PTYs get it
+  too, no need to copy).
+- `cli-oauth` — Anthropic only: `~/.claude.json` or `~/.claude/oauth_*.json` exists
+  with non-trivial content (looks for `oauthAccount` / `access_token` /
+  `refresh_token`). Token is not exportable, we just acknowledge it.
+- `none` — nothing detected.
+
+ProviderKeysList shows colored tags next to each provider:
+- 🟢 "CLI OAuth" green — Anthropic via `claude /login`.
+- 🔵 "env var" blue.
+- 🟣 "saved" purple.
+
+Button label says "Override" instead of "Set" when an external source is detected.
+
+### Multi-model tab strip in Models panel (PR #16 + #17)
+
+Running models render as a horizontal tab bar (with status dot + name + ↗ popout +
+× close per tab). New "+ New" tab at the end opens `TabModelPicker` — a searchable
+catalog dropdown grouped by API / Local. Picking a model fires the existing launch
+flow (license + CLI-detect + API-key gates).
+
+The terminal popout (`models.popout(paneId, label)`) opens a new BrowserWindow
+that ALSO shows the chat-skin toggle and respects the per-paneId preference.
+
+### Catalog additions
+
+- **Liquid AI LFM2.5** — 2 entries (`ollama.lfm2.5-350m`, `ollama.lfm2.5-1.2b-instruct`)
+  via `hf.co/LiquidAI/...:Q4_K_M`. LFM1.0 custom license flagged. Edge tier.
+- **Jetson AGX Thor** — new `'jetson-thor'` hardware tier (workstation-equivalent
+  compute, 128 GB unified memory). 28 existing workstation-class catalog entries
+  tagged with it.
+- **BitNet b1.58 2B (Microsoft)** — added in PR #17. Uses `command: 'bitnet'` (the
+  bitnet.cpp runner — not Ollama). Flagged so users see the install requirement
+  before launch.
+
+### Audit fix-pass
+
+From the deep code audit (3 parallel Explore agents on main services + renderer +
+build). Real bugs fixed:
+- `cli-flags.ts` + `compact-controller.ts` config-write — both were direct
+  `writeFileSync` (non-atomic). Now use the standard tmp+rename pattern.
+- Sidebar buttons had no `aria-label` / `data-panel` — added both. (a11y win +
+  enabled the CDP-driven runtime verifier.)
+
+### Runtime verification harness
+
+`scripts/runtime-verify.mjs` — spawns Electron with `--remote-debugging-port=9222`,
+polls for React mount, enumerates `[data-panel]` sidebar buttons, clicks each one,
+captures any console/exception events, writes per-tab pass/fail to
+`runtime-verify-summary.md`. Latest run: **12/12 tabs pass with zero console errors**.
+
+To run again: `node scripts/runtime-verify.mjs` (will spawn Electron, ~3 min total).
 
 ---
 
-## Known issues / gotchas
+## Deferred — pick up here next session
 
-- **node-pty patches:** `scripts/patch-node-pty.js` runs in postinstall. Building
-  on a fresh machine requires the **Windows C++ Build Tools** (Visual Studio 2022
-  Desktop Development with C++ workload + Windows SDK). Without these,
-  `npm install` will fail at the node-pty rebuild step.
-- **Vite externals:** `vite.main.config.ts` externalizes `node-pty` and
-  `systeminformation`. Builder picks them up from `package.json` deps. Do not
-  inline them — the bundled main process emits bare `require()`s for them.
-- **NSIS Dev Mode:** Building Windows installers (`npm run dist`) requires
-  Windows Developer Mode enabled (for symlink support during electron-builder
-  packaging) **or** running as Administrator.
-- **Compact controller hooks:** Already wired in
-  `~/.claude/settings.json` for the user. The hooks shape was buggy at the start
-  of this session — fixed (removed duplicate malformed entries from Stop /
-  PreCompact / PostCompact arrays).
-- **Cat 7 daemon poll on Windows:** Ollama cold-start can hit 5-10s; we poll up
-  to 15s for reachability. If a future Ollama version is slower, increase the
-  TIMEOUT_MS in `ollama-service.ts daemonStart`.
+Three things the user asked for that I scoped + (in one case) wrote the code for,
+but did NOT wire into the live app this session:
+
+### 1. Wire `TerminalTabs.tsx` into `App.tsx`
+
+**Status**: the file exists at `src/renderer/components/terminal/TerminalTabs.tsx`
+with a full Windows-Terminal-style implementation. NOT YET used by App.tsx — App
+still renders `SplitLayout`.
+
+Why deferred: wiring it means migrating the session-state shape from
+`layout: SplitNode` to `tabs: TerminalTab[]` (+ `activeTabId`). Shipping that
+half-done would regress users who relied on the existing split-pane layout. Needs:
+
+- App.tsx state: drop `layout` + `activePaneId` (or keep activePaneId derived from
+  active tab), add `tabs` + `activeTabId`.
+- Replace `<SplitLayout … />` with `<TerminalTabs … />`.
+- Session persistence: write `{ tabs, activeTabId }` instead of `{ layout, activePanel }`.
+  Backward-compat: detect old shape on read and migrate to a single Claude tab.
+- The existing palette + snippets + hotkeys still use `activePaneId` — keep that
+  derived from the active tab so they continue to work.
+
+The TerminalTabs file itself has Claude profile + model-profile launch logic,
+profile picker dropdown, close + popout per tab.
+
+### 2. Claude "chat-mode" profile
+
+**Status**: scoped only — no code yet.
+
+User insight: when the chat skin is active, Claude CLI's interactive TUI gets
+translated into garbled chat text. The cleanest fix is to run Claude in a
+non-interactive structured-output mode when the chat skin is active.
+
+Implementation sketch:
+- Claude CLI supports `--output-format=stream-json --input-format=stream-json` — gives
+  structured JSON events instead of TUI. Bidirectional.
+- Add a new profile "Claude (Chat)" to the catalog that uses these flags. Its PTY
+  emits JSON; we parse it and render proper messages in the chat skin.
+- Add a JSON-stream parser in `src/renderer/components/chat-skin/` (or wherever).
+- The chat-skin overlay detects the profile and routes to the JSON renderer
+  instead of the markdown-over-sanitized-bytes path.
+- User picks "Claude" (TUI for terminal) or "Claude (Chat)" (JSON for chat skin)
+  at tab creation. Different tabs can use different modes.
+
+This is a substantial refactor. Schedule it together with item #1 (TerminalTabs
+wiring) since both touch the tab/profile model.
+
+### 3. Commands tab mirrors active model
+
+**Status**: scoped only — no code yet.
+
+User request: the Commands sidebar panel currently shows static / Claude-only
+commands. Make it derive from the currently active terminal tab's profile.
+
+Implementation sketch:
+- CommandsPanel reads `activePaneId` / activeTab + the tab's profile.
+- For Claude: existing slash-command list (already wired).
+- For other CLIs: a per-CLI commands map (claude / gemini / aider / aider+openrouter /
+  ollama generic). Manually curated.
+- Optionally: parse `<cli> --help` once per session and surface common flags.
+
+Implementation depends on item #1 (need to know which tab is active in a tab-based
+world).
+
+---
+
+## What still works (regression check from earlier sessions)
+
+- All 12 sidebar tabs render without console errors (latest CDP verifier run).
+- TypeScript compile clean.
+- Vite production build clean.
+- Local Ollama models spawn correctly (PATH resolver from PR #13 + GPU env from PR #15).
+- API key UI: pre-launch modal, PTY interceptor, env injection at PTY spawn — all wired.
+- 3 providers (Gemini / Aider / OpenRouter via Aider) in catalog.
+- Cat 7 Ollama daemon autostart if local models registered.
+- Cat 8 installer wizard + Ollama opt-in + BMP chrome.
+- Themes (13 built-ins + custom editor) + per-window state persistence.
+
+---
+
+## Known issues / gotchas (carry forward)
+
+- **node-pty patches**: postinstall requires Windows C++ Build Tools (VS 2022 +
+  Windows SDK).
+- **NSIS Dev Mode**: `npm run dist` needs Windows Developer Mode enabled OR running
+  as Administrator (for symlinks during electron-builder packaging).
+- **Cat 7 daemon poll**: 15s window. If Ollama is slow on the user's box, increase
+  the `TIMEOUT_MS` in `OllamaService.daemonStart`.
+- **Claude TUI in chat skin**: even with the v2 sanitizer, some selection prompts
+  won't render perfectly — the proper fix is item #2 above (chat-mode profile).
+- **TerminalTabs scaffold not wired**: see item #1 above.
 
 ---
 
@@ -201,46 +254,50 @@ node scripts/patch-node-pty.js
 # 4. Launch the app in dev mode
 npm start
 
-# 5. Build a Windows installer (optional — requires Dev Mode)
+# 5. (Optional) Build a Windows installer — REQUIRES Dev Mode
+#    Tried building this from the agent's shell on 2026-05-27 — failed at
+#    the NSIS step with "Cannot create symbolic link : A required privilege
+#    is not held by the client." winCodeSign unpacks symlinks to
+#    %LOCALAPPDATA%\electron-builder\Cache\winCodeSign\…\darwin\…\libcrypto.dylib
+#    which needs SeCreateSymbolicLinkPrivilege.
+#
+#    Two ways to fix on Windows:
+#      a) Settings → Privacy & Security → For developers → Developer Mode ON.
+#      b) Run the build shell as Administrator (right-click → Run as administrator).
+#    Then:
 npm run dist
+# Output: dist/Claude-Code-Studio-3.1.0-Windows.exe
+
+# 6. (Optional) Run the CDP-driven tab-by-tab verifier
+node scripts/runtime-verify.mjs
+# Output: runtime-verify-summary.md (markdown pass/fail per sidebar tab)
 ```
 
-If `npm install` fails on node-pty rebuild:
-1. Install Visual Studio 2022 with "Desktop development with C++" workload.
-2. Install Windows 10/11 SDK (any recent version).
-3. Re-run `npm install`.
-
-If pulling a model via Ollama fails: the Cat 7 autostart fires when local models
-are registered. If you have local models but no daemon process is visible, check
-that Ollama is installed (`ollama --version`) and re-launch Studio.
+If `npm install` fails on node-pty rebuild: install Visual Studio 2022 with the
+"Desktop development with C++" workload + Windows 10/11 SDK, then re-run.
 
 ---
 
-## Repo split (since 2026-05-27)
+## Repo split
 
-- **`claude-code-studio`** (public release) — slim. Contains only end-user
-  facing files: source, CHANGELOG, README, LICENSE, install/release docs.
-- **`claude-code-studio-testing`** (this repo) — full dev archive. Same source
-  plus: `journal/` (LMM dev journals), `docs/security-reviews/` (21 phase
-  audits), `docs/SESSION_LOG_*.md`, `docs/SHIPPING_CERTIFICATION.md`,
-  `docs/FRESH_VM_TEST.md`, `docs/INSTALLER_REDESIGN.md`, plus all R&D
-  features still in flight (currently all of Cat 4-8).
+- **`claude-code-studio`** (public release) — slim. End-user-facing only.
+- **`claude-code-studio-testing`** (this repo) — full dev archive + every R&D
+  feature in flight.
 
-**Promotion path:** R&D feature → merged to `testing/master` → cherry-picked /
-PRed to `claude-code-studio` master when ready to ship. Dev-only docs stay in
-testing.
+Promotion path: testing/master → cherry-pick / PR to public repo when ready
+to ship a public update.
 
 ---
 
 ## Pointers
 
-- **Plan for this R&D push:**
-  `~/.claude/plans/im-going-to-enable-lovely-cook.md` (Claude
-  local — not in repo).
-- **Per-file LMM journals:** `journal/` (mirrors `src/` paths).
+- **Plan file (Claude-local, not in repo):**
+  `~/.claude/plans/im-going-to-enable-lovely-cook.md`.
+- **Per-file LMM journals:** `journal/` mirrors `src/` paths.
 - **Multi-provider design notes:** `docs/MULTI_PROVIDER_BRAINSTORM.md`.
-- **Backlog:** `docs/BACKLOG.md` — v3.0.1+ ideas, kept current as we work.
-- **Historical handoff:** `docs/HANDOFF.md` — frozen at v1.0, kept for trail.
-- **Last v3 release notes:** `docs/RELEASE_NOTES_v3.0.0.md`.
+- **Backlog:** `docs/BACKLOG.md`.
 - **R&D kickoff session log:** `docs/SESSION_LOG_2026-05-27_rnd-kickoff.md`.
-- **Verification report (this fix-pass + chat skin):** `docs/VERIFICATION_2026-05-27.md`.
+- **Verification report:** `docs/VERIFICATION_2026-05-27.md`.
+- **Runtime verifier:** `scripts/runtime-verify.mjs` (writes
+  `runtime-verify-summary.md` to repo root).
+- **Audit + fix-pass detail:** PR #13 description on the testing repo.
