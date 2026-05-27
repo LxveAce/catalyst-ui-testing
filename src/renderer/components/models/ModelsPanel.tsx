@@ -91,6 +91,13 @@ export function ModelsPanel() {
   const [selectedRunningPaneId, setSelectedRunningPaneId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFirstRun, setShowFirstRun] = useState(false);
+  /** When the user clicks the "+" tab, open a small picker anchored to
+   *  the strip. Picker shows the catalog as a searchable list; choosing
+   *  an entry runs the same `handleLaunch` flow that the catalog cards
+   *  use. Lives outside the running-strip's conditional render because
+   *  the user can open it even with zero current tabs. */
+  const [showTabPicker, setShowTabPicker] = useState(false);
+  const [tabPickerQuery, setTabPickerQuery] = useState('');
   const detectedAtRef = useRef<string | null>(null);
 
   // First-run picker — check persisted onboarding flag once on mount. If
@@ -583,128 +590,193 @@ export function ModelsPanel() {
         </div>
       )}
 
-      {running.length > 0 && (
-        <div style={runningSectionStyle}>
-          {/* Tab strip — one tab per running model. Click to focus its
-              terminal below; × kills; ↗ pops out into its own window.
-              Designed so multiple models running simultaneously read as a
-              tabbed workspace rather than a list. */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 4,
-              alignItems: 'stretch',
-              borderBottom: '1px solid var(--border)',
-              marginBottom: 8,
-              overflowX: 'auto',
-              paddingBottom: 0,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 10,
-                color: 'var(--text-secondary)',
-                padding: '6px 8px 6px 0',
-                alignSelf: 'center',
-                flexShrink: 0,
-              }}
-            >
-              {running.length} running:
-            </div>
-            {running.map((r) => {
-              const isSel = r.paneId === selectedRunningPaneId;
-              return (
-                <div
-                  key={r.paneId}
-                  onClick={() => setSelectedRunningPaneId(r.paneId)}
+      <div style={runningSectionStyle}>
+        {/* Tab strip — terminal-app style. Each running model is a tab;
+            "+" at the end opens a model picker. Click tab to focus its
+            embedded terminal below. ↗ pops out as its own window
+            (preserves the chat-skin toggle). × kills.
+            Always rendered so the "+" is reachable even with zero tabs. */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 2,
+            alignItems: 'stretch',
+            borderBottom: '1px solid var(--border)',
+            marginBottom: 8,
+            overflowX: 'auto',
+            paddingBottom: 0,
+            position: 'relative',
+          }}
+        >
+          {running.map((r) => {
+            const isSel = r.paneId === selectedRunningPaneId;
+            return (
+              <div
+                key={r.paneId}
+                onClick={() => setSelectedRunningPaneId(r.paneId)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 10px 8px',
+                  cursor: 'pointer',
+                  borderRadius: '6px 6px 0 0',
+                  background: isSel ? 'var(--bg-primary)' : 'transparent',
+                  borderTop: isSel ? '1px solid var(--border)' : '1px solid transparent',
+                  borderLeft: isSel ? '1px solid var(--border)' : '1px solid transparent',
+                  borderRight: isSel ? '1px solid var(--border)' : '1px solid transparent',
+                  borderBottom: isSel ? '1px solid var(--bg-primary)' : 'none',
+                  marginBottom: -1,
+                  position: 'relative',
+                  top: isSel ? 1 : 0,
+                  flexShrink: 0,
+                }}
+              >
+                <span
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '6px 8px 8px',
-                    cursor: 'pointer',
-                    borderRadius: '6px 6px 0 0',
-                    background: isSel ? 'var(--bg-primary)' : 'transparent',
-                    borderTop: isSel ? '1px solid var(--border)' : '1px solid transparent',
-                    borderLeft: isSel ? '1px solid var(--border)' : '1px solid transparent',
-                    borderRight: isSel ? '1px solid var(--border)' : '1px solid transparent',
-                    borderBottom: isSel ? '1px solid var(--bg-primary)' : 'none',
-                    marginBottom: -1,
-                    position: 'relative',
-                    top: isSel ? 1 : 0,
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: isSel ? 'var(--accent)' : 'rgba(134,239,172,0.7)',
+                    boxShadow: isSel ? 'var(--shadow-glow)' : 'none',
                     flexShrink: 0,
                   }}
+                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: isSel ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    fontWeight: isSel ? 600 : 400,
+                    maxWidth: 140,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
                 >
-                  <span
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: '50%',
-                      background: isSel ? 'var(--accent)' : 'rgba(134,239,172,0.7)',
-                      boxShadow: isSel ? 'var(--shadow-glow)' : 'none',
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: isSel ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      fontWeight: isSel ? 600 : 400,
-                      maxWidth: 140,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
+                  {r.modelName}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void window.electronAPI.models
+                      .popout(r.paneId, r.modelName)
+                      .catch(() => undefined);
+                  }}
+                  title="Pop out into its own window"
+                  aria-label={`Pop out ${r.modelName}`}
+                  style={tabIconBtnStyle}
+                >
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
                   >
-                    {r.modelName}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void window.electronAPI.models.popout(r.paneId, r.modelName).catch(() => undefined);
-                    }}
-                    title="Pop out into its own window"
-                    aria-label={`Pop out ${r.modelName}`}
-                    style={tabIconBtnStyle}
-                  >
-                    {/* arrow-up-right "popout" glyph */}
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <line x1="7" y1="17" x2="17" y2="7" />
-                      <polyline points="7 7 17 7 17 17" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void handleKill(r.paneId);
-                    }}
-                    title="Kill this model"
-                    aria-label={`Close ${r.modelName}`}
-                    style={tabIconBtnStyle}
-                  >
-                    ×
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-          {selectedRunningPaneId && (
-            <div
+                    <line x1="7" y1="17" x2="17" y2="7" />
+                    <polyline points="7 7 17 7 17 17" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleKill(r.paneId);
+                  }}
+                  title="Kill this model"
+                  aria-label={`Close ${r.modelName}`}
+                  style={tabIconBtnStyle}
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
+
+          {/* "+" tab — opens the model picker dropdown. */}
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowTabPicker((v) => !v);
+                setTabPickerQuery('');
+              }}
+              title="Open a new model in a new tab"
+              aria-label="New model tab"
               style={{
-                height: 320,
-                border: '1px solid var(--border)',
-                borderRadius: '0 6px 6px 6px',
-                overflow: 'hidden',
-                background: 'var(--bg-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '6px 10px 8px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-secondary)',
+                fontSize: 13,
+                lineHeight: 1,
+                flexShrink: 0,
+                borderRadius: '6px 6px 0 0',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
               }}
             >
-              <EmbeddedTerminal paneId={selectedRunningPaneId} compact />
+              <span style={{ fontSize: 14, fontWeight: 500, lineHeight: 1 }}>+</span>
+              <span style={{ fontSize: 11 }}>New</span>
+            </button>
+            {showTabPicker && (
+              <TabModelPicker
+                models={models}
+                query={tabPickerQuery}
+                setQuery={setTabPickerQuery}
+                onPick={(m) => {
+                  setShowTabPicker(false);
+                  void handleLaunch(m);
+                }}
+                onClose={() => setShowTabPicker(false)}
+              />
+            )}
+          </div>
+
+          {/* Spacer so "no tabs yet" hint sits to the right of "+". */}
+          {running.length === 0 && (
+            <div
+              style={{
+                padding: '8px 10px',
+                fontSize: 10,
+                color: 'var(--text-secondary)',
+                alignSelf: 'center',
+              }}
+            >
+              No active models. Click "+ New" to launch one, or use a catalog card below.
             </div>
           )}
         </div>
-      )}
+
+        {selectedRunningPaneId && (
+          <div
+            style={{
+              height: 360,
+              border: '1px solid var(--border)',
+              borderRadius: '0 6px 6px 6px',
+              overflow: 'hidden',
+              background: 'var(--bg-primary)',
+            }}
+          >
+            <EmbeddedTerminal paneId={selectedRunningPaneId} compact />
+          </div>
+        )}
+      </div>
 
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {loading && <div style={mutedStyle}>Loading catalog…</div>}
@@ -1441,6 +1513,220 @@ const tabIconBtnStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
 };
+
+/**
+ * Anchored picker shown when the user clicks "+" on the tab strip.
+ * Renders the catalog as a searchable list with grouping by category
+ * (API / Local). Picking an entry runs the same `handleLaunch` flow
+ * the catalog cards use (which honors license-flag + CLI-detect +
+ * API-key gates).
+ *
+ * UX is intentionally similar to the terminal-app profile dropdown
+ * (Windows Terminal, iTerm): hit "+", pick a profile, get a new tab.
+ */
+function TabModelPicker({
+  models,
+  query,
+  setQuery,
+  onPick,
+  onClose,
+}: {
+  models: ModelDefinition[];
+  query: string;
+  setQuery: (q: string) => void;
+  onPick: (m: ModelDefinition) => void;
+  onClose: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Dismiss on Escape OR click outside the popover.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      if (!target?.closest('[data-tab-picker]')) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    // Bind after a tick so the "+" click that opened us doesn't immediately close.
+    const t = setTimeout(() => window.addEventListener('mousedown', onClick), 0);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onClick);
+    };
+  }, [onClose]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const all = models.filter((m) => {
+      if (!q) return true;
+      return (
+        m.name.toLowerCase().includes(q) ||
+        m.provider.toLowerCase().includes(q) ||
+        (m.description ?? '').toLowerCase().includes(q)
+      );
+    });
+    // Group by category for clearer scanability.
+    const api = all.filter((m) => m.category === 'api');
+    const local = all.filter((m) => m.category === 'local');
+    return { api, local };
+  }, [models, query]);
+
+  return (
+    <div
+      data-tab-picker
+      style={{
+        position: 'absolute',
+        top: '100%',
+        left: 0,
+        marginTop: 2,
+        width: 340,
+        maxHeight: 420,
+        zIndex: 50,
+        background: 'var(--bg-primary)',
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        boxShadow: '0 12px 36px rgba(0,0,0,0.5)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          padding: '8px 10px',
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search models…"
+          style={{
+            width: '100%',
+            padding: '6px 8px',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)',
+            fontSize: 12,
+            fontFamily: 'inherit',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+      </div>
+      <div style={{ overflowY: 'auto', flex: 1 }}>
+        {filtered.api.length === 0 && filtered.local.length === 0 && (
+          <div
+            style={{
+              padding: 16,
+              fontSize: 11,
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+            }}
+          >
+            No models match "{query}".
+          </div>
+        )}
+        {filtered.api.length > 0 && (
+          <PickerGroup label="API" models={filtered.api} onPick={onPick} />
+        )}
+        {filtered.local.length > 0 && (
+          <PickerGroup label="Local" models={filtered.local} onPick={onPick} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PickerGroup({
+  label,
+  models,
+  onPick,
+}: {
+  label: string;
+  models: ModelDefinition[];
+  onPick: (m: ModelDefinition) => void;
+}) {
+  return (
+    <div>
+      <div
+        style={{
+          padding: '6px 12px 4px',
+          fontSize: 10,
+          fontWeight: 600,
+          color: 'var(--text-secondary)',
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+          background: 'var(--bg-secondary)',
+        }}
+      >
+        {label} · {models.length}
+      </div>
+      {models.map((m) => (
+        <button
+          key={m.id}
+          onClick={() => onPick(m)}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 8,
+            padding: '8px 12px',
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            textAlign: 'left',
+            borderBottom: '1px solid rgba(255,255,255,0.03)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {m.name}
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                color: 'var(--text-secondary)',
+                marginTop: 1,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {m.provider}
+              {m.description ? ` · ${m.description}` : ''}
+            </div>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 const progressBarStyle: React.CSSProperties = {
   width: '100%',
