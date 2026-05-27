@@ -1,8 +1,9 @@
 # Claude Code Studio — Testing Repo STATUS
 
-> **Last updated:** 2026-05-27 (R&D kickoff session complete — Cat 1–9 all shipped)
+> **Last updated:** 2026-05-27 (post-fix-pass + chat-skin shipped)
 > **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`)
 > **Latest session log:** [`SESSION_LOG_2026-05-27_rnd-kickoff.md`](./SESSION_LOG_2026-05-27_rnd-kickoff.md)
+> **Latest verification report:** [`VERIFICATION_2026-05-27.md`](./VERIFICATION_2026-05-27.md)
 
 This is the always-current pickup doc. A fresh `git clone` + reading this file should
 tell the next Claude session (on any machine) exactly where the work stands.
@@ -15,9 +16,13 @@ The official release (`LxveAce/claude-code-studio` master) shipped **v3.0.0** on
 2026-05-26 with the multi-model catalog, file tree, cross-platform uninstall flow,
 and the v3.0.0 release docs.
 
-**As of 2026-05-27 end of session:** the entire R&D push (Categories 1-9) is **shipped
-to testing/master**. The official repo is slimmed of dev-only artifacts (journal/,
-security-reviews/, session logs, INSTALLER_REDESIGN.md, etc.); testing keeps the full
+**As of 2026-05-27 (after the fix-pass + chat skin):** the R&D push (Cat 1-9), a
+**post-audit fix pass** (PR #13 — addresses the user-reported "local AI models don't
+work at all" bug + multiple HIGH-severity issues from a thorough code-review audit),
+and a **chat-skin overlay** (PR #14 — toggleable ChatGPT/Claude.ai-style chat UI on
+terminal panes) are all shipped to testing/master. The official repo is slimmed of
+dev-only artifacts (journal/, security-reviews/, session logs, INSTALLER_REDESIGN.md,
+etc.); testing keeps the full
 archive. R&D features land on testing first via feature branches → PR → merge, then
 get promoted to the public repo when ready.
 
@@ -39,6 +44,8 @@ doc). Promotion to the public repo is the next step.
 | 7 | [#11](https://github.com/LxveAce/claude-code-studio-testing/pull/11) | Ollama daemon autostart on app launch |
 | 8 | [#12](https://github.com/LxveAce/claude-code-studio-testing/pull/12) | Installer wizard mode + BMP chrome + Ollama opt-in |
 | 9 | folded into #10 | Multi-provider brainstorm doc |
+| Fix-pass | [#13](https://github.com/LxveAce/claude-code-studio-testing/pull/13) | **Local AI PATH resolver** + provider-detect Windows .cmd + theme race + launch order + 5 more |
+| Skin | [#14](https://github.com/LxveAce/claude-code-studio-testing/pull/14) | **Chat-skin overlay** — toggleable ChatGPT/Claude.ai-style UI on terminal panes |
 
 Detail per category:
 
@@ -85,6 +92,45 @@ Detail per category:
 - Opt-in Ollama install: MessageBox at start of `customInstall` asks the user;
   `/SD IDNO` defaults to skip on silent installs; install path soft-fails so Studio
   never gets blocked by Ollama errors.
+
+### Fix-pass (PR #13) — addresses "local AIs don't work at all"
+
+Root cause: `node-pty` on Windows does `CreateProcess` directly (no shell). Passing
+bare `'ollama'` failed because the binary is `ollama.exe`. Claude worked because
+`findClaudePath()` returned the bundled-runtime absolute path; everything else
+needed resolution.
+
+Fix: new `src/main/cli-resolver.ts` resolves bare commands via well-known install
+dirs + `where.exe` / `which` lookup. `pty-manager.ts` runs it before spawn.
+Diagnostic line printed to stderr on every spawn so future PATH issues are
+easy to diagnose.
+
+Same module + `shell: true` on Windows fixes `provider-detect.ts` finding `.cmd`
+shims (npm-installed gemini-cli + Python aider). Detection timeout bumped from
+4s → 8s for Aider's Python cold start.
+
+Other fixes in the pass: theme hydration race between App.tsx and SettingsPanel
+(now App is canonical), ModelsPanel launch order reordered (detect → key → license
+→ spawn), ThemeEditor stale-callback cleanup, ApiKeyModal setState-after-unmount
+guard, OpenRouter Aider entry's conflicting `--openai-api-base` removed.
+
+### Chat-skin overlay (PR #14)
+
+Toggleable ChatGPT/Claude.ai-style chat UI overlaid on the terminal pane. Same PTY
+underneath; presentation skin only.
+
+- Toggle off: small "✦ Chat" button top-right of xterm.
+- Toggle on: chat-style header with "Terminal view" button + scrollable message
+  area + bottom textarea (Enter sends, Shift+Enter newline).
+- xterm stays mounted with `visibility: hidden` when skin is on — full
+  scrollback preserved on toggle off.
+- Per-pane preference persisted in localStorage.
+- Echo suppression via `lastSentRef` so the assistant bubble doesn't start with
+  the user's own input.
+- Bounded memory (200 msgs × 100 KB each).
+
+Limitations documented in the LMM journal: not a protocol-aware chat client; no
+code highlighting; no tool-use UI. Future opt-in features tracked in the journal.
 
 ---
 
@@ -197,3 +243,4 @@ testing.
 - **Historical handoff:** `docs/HANDOFF.md` — frozen at v1.0, kept for trail.
 - **Last v3 release notes:** `docs/RELEASE_NOTES_v3.0.0.md`.
 - **R&D kickoff session log:** `docs/SESSION_LOG_2026-05-27_rnd-kickoff.md`.
+- **Verification report (this fix-pass + chat skin):** `docs/VERIFICATION_2026-05-27.md`.
