@@ -751,6 +751,33 @@ export interface TraySettings {
   minimizeToTrayOnClose: boolean;
 }
 
+// Themes — user-defined accent presets persisted to <userData>/themes.json.
+// Built-in presets live in src/renderer/theme-presets.ts and are not
+// duplicated here; the shape mirrors `ThemePreset` from that file minus the
+// `custom` discriminator (always true for stored themes).
+export interface CustomTheme {
+  name: string;
+  accent: string;
+  accentLight: string;
+  gradient: string;
+  gradientSoft: string;
+  borderActive: string;
+  glow: string;
+}
+
+// Window state persistence — per-window-id geometry saved to
+// <userData>/window-state.json. Used by main + popout BrowserWindows so the
+// user's resize/position survives an app restart.
+export interface WindowState {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  maximized: boolean;
+}
+
+export type WindowStateMap = Record<string, WindowState>;
+
 // The full ElectronAPI shape lives in src/declarations.d.ts as an ambient
 // Window typing. Don't redeclare it here — keep this file for serializable
 // IPC payload types only.

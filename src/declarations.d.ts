@@ -160,6 +160,11 @@ interface Window {
       ) => Promise<import('./shared/types').NotificationSettings>;
       test: () => Promise<boolean>;
     };
+    themes: {
+      list: () => Promise<import('./shared/types').CustomTheme[]>;
+      save: (theme: import('./shared/types').CustomTheme) => Promise<import('./shared/types').CustomTheme[]>;
+      delete: (name: string) => Promise<import('./shared/types').CustomTheme[]>;
+    };
     updater: {
       getState: () => Promise<import('./shared/types').UpdaterState>;
       getSettings: () => Promise<import('./shared/types').UpdaterSettings>;
