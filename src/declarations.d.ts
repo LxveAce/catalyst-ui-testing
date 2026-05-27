@@ -165,6 +165,25 @@ interface Window {
       save: (theme: import('./shared/types').CustomTheme) => Promise<import('./shared/types').CustomTheme[]>;
       delete: (name: string) => Promise<import('./shared/types').CustomTheme[]>;
     };
+    providerAuth: {
+      hasKey: (provider: import('./shared/types').ProviderId) => Promise<boolean>;
+      setKey: (
+        provider: import('./shared/types').ProviderId,
+        key: string
+      ) => Promise<import('./shared/types').ProviderAuthEntry[]>;
+      list: () => Promise<import('./shared/types').ProviderAuthEntry[]>;
+      delete: (
+        provider: import('./shared/types').ProviderId
+      ) => Promise<import('./shared/types').ProviderAuthEntry[]>;
+      onKeyPrompt: (
+        cb: (evt: import('./shared/types').ProviderKeyPromptEvent) => void
+      ) => () => void;
+      submitKey: (
+        paneId: string,
+        provider: import('./shared/types').ProviderId,
+        key: string
+      ) => Promise<boolean>;
+    };
     updater: {
       getState: () => Promise<import('./shared/types').UpdaterState>;
       getSettings: () => Promise<import('./shared/types').UpdaterSettings>;

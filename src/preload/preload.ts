@@ -150,6 +150,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     save: (theme: unknown) => ipcRenderer.invoke(IPC.THEMES_SAVE, theme),
     delete: (name: string) => ipcRenderer.invoke(IPC.THEMES_DELETE, name),
   },
+  providerAuth: {
+    hasKey: (provider: string) =>
+      ipcRenderer.invoke(IPC.PROVIDER_AUTH_HAS_KEY, provider),
+    setKey: (provider: string, key: string) =>
+      ipcRenderer.invoke(IPC.PROVIDER_AUTH_SET_KEY, provider, key),
+    list: () => ipcRenderer.invoke(IPC.PROVIDER_AUTH_LIST),
+    delete: (provider: string) =>
+      ipcRenderer.invoke(IPC.PROVIDER_AUTH_DELETE, provider),
+    onKeyPrompt: (callback: (evt: unknown) => void) =>
+      subscribe<[unknown]>(IPC.PROVIDER_KEY_PROMPT, callback),
+    submitKey: (paneId: string, provider: string, key: string) =>
+      ipcRenderer.invoke(IPC.PROVIDER_KEY_SUBMIT, paneId, provider, key),
+  },
   updater: {
     getState: () => ipcRenderer.invoke(IPC.UPDATER_GET_STATE),
     getSettings: () => ipcRenderer.invoke(IPC.UPDATER_GET_SETTINGS),
