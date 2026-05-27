@@ -81,6 +81,46 @@ export const MODEL_CATALOG_SEED: ModelDefinition[] = [
     licenseUrl: 'https://github.com/Aider-AI/aider',
   },
 
+  // ---- Microsoft BitNet b1.58 — 1.58-bit ternary-weight, runs via custom
+  //      bitnet.cpp runner (NOT Ollama-compatible). Flagged so users know
+  //      they need to install Microsoft/BitNet themselves; the command
+  //      below assumes the bitnet runner is on PATH after that install.
+  //      See https://github.com/microsoft/BitNet
+  {
+    id: 'bitnet.b1.58-2b-4t',
+    name: 'BitNet b1.58 2B (Microsoft)',
+    description: "Microsoft's 1.58-bit ternary-weight 2B — ~0.4 GB RAM via bitnet.cpp. Not Ollama-compatible; needs the bitnet.cpp runner installed separately.",
+    category: 'local',
+    provider: 'bitnet.cpp',
+    command: 'bitnet',
+    args: ['run', '-m', 'BitNet-b1.58-2B-4T'],
+    huggingfaceName: 'microsoft/bitnet-b1.58-2B-4T',
+    paramsB: 2.4,
+    architecture: 'dense',
+    recommendedQuant: 'W1.58A8',
+    vramGB: 0.5,
+    ramGB: 0.6,
+    contextTokens: 4096,
+    license: 'MIT',
+    licenseFlag: true,
+    licenseUrl: 'https://github.com/microsoft/BitNet/blob/main/LICENSE',
+    releaseDate: '2025-04',
+    roles: ['edge', 'general-chat'],
+    hardwareTiers: ['toaster', 'low'],
+    strengths: [
+      '~0.4 GB RAM footprint (5-6× smaller than Qwen 2.5 1.5B)',
+      'CPU-first — 1.4-6× faster than fp16 peers',
+      '55-82% lower energy use',
+    ],
+    weaknesses: [
+      'Requires custom bitnet.cpp build — not on Ollama or stock llama.cpp',
+      'Only 4k context',
+      'Research-stage; Microsoft does not recommend for production',
+    ],
+    recommendedFor:
+      'Experimental CPU-only deployments where RAM/energy matter more than capability. Install bitnet.cpp first: github.com/microsoft/BitNet',
+  },
+
   // ---- Liquid AI LFM2.5 (open-weight edge models, Ollama via hf.co/...)
   {
     id: 'ollama.lfm2.5-350m',
