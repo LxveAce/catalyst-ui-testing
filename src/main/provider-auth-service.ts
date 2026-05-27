@@ -1,8 +1,9 @@
 import { app, safeStorage } from 'electron';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
-import type { ProviderAuthEntry, ProviderId } from '../shared/types';
+import type { AuthSource, ProviderAuthEntry, ProviderId } from '../shared/types';
 
 const STORE_FILE = 'provider-auth.json';
 const KNOWN_PROVIDERS: ProviderId[] = ['anthropic', 'openai', 'gemini', 'openrouter'];
@@ -63,14 +64,17 @@ export class ProviderAuthService {
     return Boolean(this.getRawKey(provider));
   }
 
-  /** List all known providers with presence + last-updated. */
+  /** List all known providers with presence + last-updated + auto-detected
+   *  source so the UI can show "already authenticated via Claude CLI" etc. */
   list(): ProviderAuthEntry[] {
+    const detected = this.detectExisting();
     return KNOWN_PROVIDERS.map((p) => {
       const entry = this.store[p];
       return {
         provider: p,
         hasKey: this.hasKey(p),
         lastUpdated: entry?.lastUpdated ?? null,
+        source: detected[p],
       };
     });
   }
@@ -143,6 +147,78 @@ export class ProviderAuthService {
     if (!raw) return {};
     const envKey = PROVIDER_ENV_KEY[provider];
     return { [envKey]: raw };
+  }
+
+  /**
+   * For each known provider, detect whether *some* form of auth is already
+   * present on the host so the UI doesn't pester the user to enter a key
+   * when their CLI is already wired up.
+   *
+   * Sources we recognize:
+   *   - 'stored': our safeStorage entry (the canonical "we have a key").
+   *   - 'env': the standard env var is already set in `process.env`
+   *     (inherited from the shell that launched the app). Spawned PTYs
+   *     inherit this too, so we don't need our own copy.
+   *   - 'cli-oauth' (Anthropic only): `~/.claude.json` exists with a
+   *     non-empty `oauthAccount` block, OR `~/.claude/oauth_*.json` file.
+   *     The actual token is not exportable; we just acknowledge it.
+   *   - 'none': nothing detected.
+   */
+  detectExisting(): Record<ProviderId, AuthSource> {
+    const out: Record<ProviderId, AuthSource> = {
+      anthropic: 'none',
+      openai: 'none',
+      gemini: 'none',
+      openrouter: 'none',
+    };
+    for (const p of KNOWN_PROVIDERS) {
+      if (this.hasKey(p)) {
+        out[p] = 'stored';
+        continue;
+      }
+      const envName = PROVIDER_ENV_KEY[p];
+      const envVal = process.env[envName];
+      if (typeof envVal === 'string' && envVal.trim().length > 0) {
+        out[p] = 'env';
+        continue;
+      }
+    }
+    // Special case: Anthropic also accepts OAuth via `claude /login`. The
+    // resulting token lives in the user's Claude config dir; check the
+    // most likely paths without parsing the file (the token's existence
+    // is what we care about, not its value).
+    if (out.anthropic === 'none') {
+      try {
+        const home = os.homedir();
+        const candidates = [
+          path.join(home, '.claude.json'),
+          path.join(home, '.claude', 'oauth_token.json'),
+          path.join(home, '.claude', 'auth.json'),
+        ];
+        for (const c of candidates) {
+          if (fs.existsSync(c)) {
+            // .claude.json is a settings file — having it doesn't prove
+            // auth. Check for any non-trivial content.
+            try {
+              const raw = fs.readFileSync(c, 'utf8');
+              if (
+                raw.includes('oauthAccount') ||
+                raw.includes('access_token') ||
+                raw.includes('refresh_token')
+              ) {
+                out.anthropic = 'cli-oauth';
+                break;
+              }
+            } catch {
+              // unreadable — skip
+            }
+          }
+        }
+      } catch {
+        // ignore — defaults to 'none'
+      }
+    }
+    return out;
   }
 
   private read(): StoreShape {
