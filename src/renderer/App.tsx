@@ -16,6 +16,7 @@ import { CliAuthOnboarding } from './components/auth/CliAuthOnboarding';
 import { ModelsPanel } from './components/models/ModelsPanel';
 import { PopoutView } from './components/models/PopoutView';
 import { FileTreePanel } from './components/project/FileTreePanel';
+import { ApiKeyModal } from './components/auth/ApiKeyModal';
 import {
   SplitLayout,
   splitPane,
@@ -26,6 +27,7 @@ import { buildChordMap, chordFromEvent } from './hotkeys';
 import type {
   HotkeyAction,
   HotkeyBinding,
+  ProviderKeyPromptEvent,
   SessionState,
   SplitNode,
 } from '../shared/types';
@@ -373,6 +375,45 @@ export function App() {
     return () => window.removeEventListener('keydown', handler);
   }, [bindings, dispatchAction]);
 
+  // PTY interceptor key-prompt subscription. When a spawned CLI prints an
+  // "Enter your API key" prompt that the main-side regex map recognized,
+  // we surface ApiKeyModal app-wide (it can come from any pane, not just
+  // when the user is on ModelsPanel). Dismiss closes without nagging.
+  const [interceptedPrompt, setInterceptedPrompt] =
+    useState<ProviderKeyPromptEvent | null>(null);
+  useEffect(() => {
+    let unsub: (() => void) | null = null;
+    try {
+      unsub = window.electronAPI.providerAuth.onKeyPrompt((evt) => {
+        // Only show one modal at a time. If another prompt fires while one
+        // is already open, ignore — the user can dismiss the first.
+        setInterceptedPrompt((curr) => curr ?? evt);
+      });
+    } catch {
+      // Provider-auth IPC missing — skip silently.
+    }
+    return () => {
+      try {
+        unsub?.();
+      } catch {
+        // ignore
+      }
+    };
+  }, []);
+
+  const onInterceptorKeySubmit = useCallback(
+    async (key: string) => {
+      if (!interceptedPrompt || !interceptedPrompt.paneId) return;
+      await window.electronAPI.providerAuth.submitKey(
+        interceptedPrompt.paneId,
+        interceptedPrompt.provider,
+        key
+      );
+      setInterceptedPrompt(null);
+    },
+    [interceptedPrompt]
+  );
+
   // Status-bar PID = the active pane's PID (multi-PTY aggregation happens in
   // main / ResourceMonitor; here we just show what's relevant to the user).
   const focusedPid = pidByPane[activePaneId] ?? 0;
@@ -474,6 +515,15 @@ export function App() {
             setActivePanel('terminal');
             sendToActive(text, true);
           }}
+        />
+      )}
+
+      {interceptedPrompt && (
+        <ApiKeyModal
+          provider={interceptedPrompt.provider}
+          source="pty-interceptor"
+          onSubmit={onInterceptorKeySubmit}
+          onDismiss={() => setInterceptedPrompt(null)}
         />
       )}
     </div>

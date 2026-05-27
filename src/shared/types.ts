@@ -778,6 +778,29 @@ export interface WindowState {
 
 export type WindowStateMap = Record<string, WindowState>;
 
+// Provider auth — universal API key store for non-Anthropic CLI providers
+// (Gemini, OpenAI access via Aider, OpenRouter, …). Persisted to
+// <userData>/provider-auth.json via Electron safeStorage; raw keys never
+// leave the main process. Renderer only sees presence/timestamps.
+export type ProviderId = 'anthropic' | 'openai' | 'gemini' | 'openrouter';
+
+export interface ProviderAuthEntry {
+  provider: ProviderId;
+  hasKey: boolean;
+  /** ISO 8601 timestamp when the key was last set. Null if never set. */
+  lastUpdated: string | null;
+}
+
+/** Renderer-visible info about a "we need an API key now" prompt from a
+ *  spawned CLI. Either from the pre-launch check or the PTY interceptor. */
+export interface ProviderKeyPromptEvent {
+  /** PTY pane id if this is from the interceptor; null for pre-launch. */
+  paneId: string | null;
+  provider: ProviderId;
+  /** Source of the prompt for analytics / debug. */
+  source: 'pre-launch' | 'pty-interceptor';
+}
+
 // The full ElectronAPI shape lives in src/declarations.d.ts as an ambient
 // Window typing. Don't redeclare it here — keep this file for serializable
 // IPC payload types only.
