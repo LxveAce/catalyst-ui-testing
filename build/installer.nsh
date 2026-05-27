@@ -59,6 +59,13 @@
 
 ; "1" if the user picked Yes on the Ollama prompt, "0" otherwise.
 ; Read by step 5 to decide whether to run the install.
+;
+; NSIS warning 6001 ("Variable not referenced or never set, wasting memory!")
+; is a false positive here because the only references live inside the
+; `customInstall` macro, which the script-scanner can't see at declaration
+; time. electron-builder compiles with /WX (warnings-as-errors), so we
+; disable just this one warning rather than the whole class.
+!pragma warning disable 6001
 Var OllamaWantsInstall
 
 ; ----------------------------------------------------------------------------
