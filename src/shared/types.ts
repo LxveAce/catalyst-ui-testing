@@ -811,6 +811,15 @@ export interface ProviderCliDetectResult {
   installUrl: string;
 }
 
+/** Live state of the Ollama daemon (Cat 7). `ownedByStudio` distinguishes
+ *  the daemon Studio spawned from an externally-managed Ollama (e.g.,
+ *  the Windows tray app), so we know whether `daemonStop` will affect it. */
+export interface OllamaDaemonState {
+  state: 'stopped' | 'starting' | 'running' | 'failed';
+  ownedByStudio: boolean;
+  lastError: string | null;
+}
+
 // The full ElectronAPI shape lives in src/declarations.d.ts as an ambient
 // Window typing. Don't redeclare it here — keep this file for serializable
 // IPC payload types only.
