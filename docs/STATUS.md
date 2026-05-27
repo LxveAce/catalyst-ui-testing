@@ -1,6 +1,6 @@
 # Claude Code Studio — Testing Repo STATUS
 
-> **Last updated:** 2026-05-27 (R&D kickoff — Cat 1–4 shipped, Cat 4 PR open)
+> **Last updated:** 2026-05-27 (R&D kickoff session complete — Cat 1–9 all shipped)
 > **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`)
 > **Latest session log:** [`SESSION_LOG_2026-05-27_rnd-kickoff.md`](./SESSION_LOG_2026-05-27_rnd-kickoff.md)
 
@@ -15,62 +15,105 @@ The official release (`LxveAce/claude-code-studio` master) shipped **v3.0.0** on
 2026-05-26 with the multi-model catalog, file tree, cross-platform uninstall flow,
 and the v3.0.0 release docs.
 
-**As of this session (2026-05-27):**
+**As of 2026-05-27 end of session:** the entire R&D push (Categories 1-9) is **shipped
+to testing/master**. The official repo is slimmed of dev-only artifacts (journal/,
+security-reviews/, session logs, INSTALLER_REDESIGN.md, etc.); testing keeps the full
+archive. R&D features land on testing first via feature branches → PR → merge, then
+get promoted to the public repo when ready.
 
-- This testing repo is **now content-identical to release v3.0.0** at the start of
-  the R&D push. We force-pushed testing/master = release HEAD (`d0af93a`) and then
-  the **official repo was slimmed** of dev-only artifacts (journal/, security-reviews/,
-  session logs, etc.) in commit `49b8fd9`. Testing keeps the full archive.
-- This testing repo is the **active dev branch** going forward. R&D lands here in
-  feature branches; once stable, features get promoted to the public repo via PR.
+**Testing is now ahead of main by 8 merged feature PRs** (Cat 3 + Cat 4-8 + Cat 9
+doc). Promotion to the public repo is the next step.
 
 ---
 
-## In progress
+## What shipped this session
 
-R&D feature branches — listed in execution order.
-See `SESSION_LOG_2026-05-27_rnd-kickoff.md` for the full plan and rationale.
-
-| Branch | Category | Status |
+| Cat | PR / commit | Topic |
 |---|---|---|
-| `feature/tracking-infra` | Cat 3 — STATUS.md + SESSION_LOG + issues | **merged to master** |
-| `feature/ui-foundations` | Cat 4 — themes + theme editor + resizable windows + state persistence | **PR open: [#8](https://github.com/LxveAce/claude-code-studio-testing/pull/8)** |
-| `feature/multi-provider-plumbing` | Cat 5 — universal API key UI + safeStorage + PTY interceptor | not started — issue [#3](https://github.com/LxveAce/claude-code-studio-testing/issues/3) |
-| `feature/providers-gemini-aider-openrouter` | Cat 6 — provider abstraction + Gemini/Aider/OpenRouter wiring | not started — issue [#4](https://github.com/LxveAce/claude-code-studio-testing/issues/4) (blocked by Cat 5) |
-| `feature/ollama-autostart` | Cat 7 — Ollama daemon autostart if local models registered | not started — issue [#5](https://github.com/LxveAce/claude-code-studio-testing/issues/5) |
-| `feature/installer-overhaul` | Cat 8 — modernized NSIS chrome + Ollama opt-in page | not started — issue [#6](https://github.com/LxveAce/claude-code-studio-testing/issues/6) |
+| 1 | force-push | Sync testing/master to `d0af93a` (release) |
+| 2 | `49b8fd9` on **main** | Slim public repo of dev artifacts |
+| 3 | `cd68563` | STATUS.md + SESSION_LOG + 6 GitHub issues |
+| 4 | [#8](https://github.com/LxveAce/claude-code-studio-testing/pull/8) | Themes + theme editor + resizable windows + state persistence |
+| 5 | [#9](https://github.com/LxveAce/claude-code-studio-testing/pull/9) | Universal API key UI + safeStorage + PTY interceptor |
+| 6 | [#10](https://github.com/LxveAce/claude-code-studio-testing/pull/10) | Gemini / Aider / OpenRouter catalog + CLI detection + setup modal |
+| 7 | [#11](https://github.com/LxveAce/claude-code-studio-testing/pull/11) | Ollama daemon autostart on app launch |
+| 8 | [#12](https://github.com/LxveAce/claude-code-studio-testing/pull/12) | Installer wizard mode + BMP chrome + Ollama opt-in |
+| 9 | folded into #10 | Multi-provider brainstorm doc |
 
-### Cat 4 (`feature/ui-foundations`) — what's in PR #8
+Detail per category:
 
-**Themes:**
-- 7 new built-in presets (Slate, Indigo, Crimson, Forest, Magenta, Midnight, Solarized).
-- Theme editor modal (Settings → Edit themes…) with color pickers + live preview + restore-on-dismiss.
-- Custom themes persist to `<userData>/themes.json` via `ThemeService` (atomic, validated).
-- `localStorage` key uses `custom:<name>` prefix to disambiguate built-ins vs customs.
-- `App.tsx` now applies the theme on startup (no longer waits for Settings panel mount).
+### Cat 4 — UI foundations
+- 7 new built-in themes (Slate, Indigo, Crimson, Forest, Magenta, Midnight, Solarized
+  → 13 total).
+- Theme editor modal in Settings → Edit themes…, with color pickers + live preview +
+  restore-on-dismiss. Custom themes persist to `<userData>/themes.json`.
+- All BrowserWindows resizable; per-window geometry persisted to
+  `<userData>/window-state.json`. Off-screen monitor recovery via
+  `screen.getAllDisplays()`.
 
-**Resizable windows + state persistence:**
-- New `WindowStateService` saves `{x,y,width,height,maximized}` per window id to `<userData>/window-state.json`.
-- Off-screen recovery if a saved monitor is unplugged.
-- Debounced writes (500 ms); flushed on `before-quit`.
-- Main BrowserWindow + model pop-out windows both restore on next launch. Pop-outs keyed `models-popout:<paneId>`.
+### Cat 5 — Multi-provider plumbing
+- `provider-auth-service` — per-provider API key store, encrypted via Electron
+  safeStorage. Raw keys never cross IPC.
+- `ApiKeyModal` — single component for both pre-launch and PTY-interceptor flows.
+  Dismiss = no nagging.
+- `pty-key-interceptor` — per-pane regex watch for "Enter your X API key" prompts on
+  attached panes only (Claude / Ollama exempt to avoid false positives).
+- ModelsPanel pre-launch check + env-var injection at PtyRegistry spawn.
+- ProviderKeysList in Settings shows all 4 known providers with set/replace/delete.
 
-**Verify (run on a checkout of `feature/ui-foundations`):**
-- `npm install` then `npm run dev`.
-- Settings → Accent Color → swap built-ins (instant CSS variable update).
-- Settings → "Edit themes…" → create custom → save → appears in the grid, persists across restart.
-- Resize main window + a model pop-out → close → relaunch → restored.
+### Cat 6 + Cat 9 — Providers
+- Catalog entries: `api.google.gemini-cli`, `api.aider.multi`, `api.openrouter.aider`.
+- `provider-detect` — session-cached `<cli> --version` probes for `gemini` and `aider`.
+- `ProviderSetupModal` — shown when CLI isn't installed; copyable install command +
+  install-page link + retry.
+- `docs/MULTI_PROVIDER_BRAINSTORM.md` — provider taxonomy, candidate statuses, the
+  5-maps abstraction, open questions.
+
+### Cat 7 — Ollama autostart
+- `OllamaService.daemonStart/Stop/state` — detects externally-managed daemons (tray
+  app, LaunchAgent, systemd) and doesn't duplicate them. Polls up to 15s for
+  reachability.
+- `maybeAutostartOllama` fires from `app.whenReady()` if any registered model has
+  `provider === 'Ollama'` or `command === 'ollama'`. Fire-and-forget; never blocks
+  startup.
+- `before-quit` SIGTERMs Studio-spawned daemon; external daemons left alone.
+
+### Cat 8 — Installer overhaul
+- Wizard mode: `oneClick: false` + `allowToChangeInstallationDirectory: true`.
+- BMP chrome: header (150×57), sidebar (164×314), uninstaller sidebar — vertical
+  gradient from accent purple. Generated by `build/gen-installer-assets.mjs`.
+- Opt-in Ollama install: MessageBox at start of `customInstall` asks the user;
+  `/SD IDNO` defaults to skip on silent installs; install path soft-fails so Studio
+  never gets blocked by Ollama errors.
 
 ---
 
-## Next up (priority order)
+## What's queued for the next push
 
-1. **Merge PR #8** once verified locally (themes + window state).
-2. **Category 5 (Multi-provider plumbing)** — universal API-key UI is a prereq for
-   Category 6. Issue #3.
-3. **Categories 6, 7, 8** can run in parallel feature branches once 5 is merged
-   (file overlap is limited — providers/auth vs. installer touch different subtrees).
-4. **Category 9 (Multi-provider brainstorm doc)** — written alongside Cat 6. Issue #7.
+Nothing pre-defined for v3.1 yet. Open ideas surfaced during this push:
+
+- **Promotion to public repo.** Each Cat 4-8 feature still lives in testing only.
+  Cherry-pick or merge to `claude-code-studio` master when ready for an end-user
+  release.
+- **Real installer art.** The BMPs are functional placeholders (solid-color
+  gradient). A designer can drop in actual artwork at the same dimensions
+  (150×57 header, 164×314 sidebar) — no code change needed.
+- **OAuth providers beyond Anthropic.** Today only the env-var-based providers
+  (OpenAI / Gemini / OpenRouter) work via the universal key UI. Google's gemini-cli
+  supports an OAuth flow; surfacing that would need a per-provider OAuth handler
+  in main.
+- **Custom providers** (user-defined, not in the seed catalog). `KNOWN_PROVIDERS`
+  in `provider-auth-service.ts` is closed today. Opening would widen `ProviderId`
+  to `string`.
+- **Dynamic model lists.** Static catalog entries grow stale as providers ship
+  new models. A `provider.listModels()` IPC hitting `/models` endpoints would
+  keep the catalog fresh.
+- **Modal resize.** Cat 4.2 made BrowserWindows resizable. React modals
+  (AddModelModal, ThemeEditor, ApiKeyModal, ProviderSetupModal) remain fixed-size.
+  Resizable modals = a UX enhancement, not load-bearing.
+- **Real nsDialogs page for the Ollama opt-in.** Cat 8 used MessageBox for
+  portability; a custom-painted page would look more cohesive with the wizard.
+  Tracked in `journal/config/installer.nsh.lmm.md`.
 
 ---
 
@@ -83,13 +126,16 @@ See `SESSION_LOG_2026-05-27_rnd-kickoff.md` for the full plan and rationale.
 - **Vite externals:** `vite.main.config.ts` externalizes `node-pty` and
   `systeminformation`. Builder picks them up from `package.json` deps. Do not
   inline them — the bundled main process emits bare `require()`s for them.
-- **NSIS Dev Mode:** Building Windows installers (`npm run dist:win`) requires
+- **NSIS Dev Mode:** Building Windows installers (`npm run dist`) requires
   Windows Developer Mode enabled (for symlink support during electron-builder
   packaging) **or** running as Administrator.
 - **Compact controller hooks:** Already wired in
   `~/.claude/settings.json` for the user. The hooks shape was buggy at the start
   of this session — fixed (removed duplicate malformed entries from Stop /
   PreCompact / PostCompact arrays).
+- **Cat 7 daemon poll on Windows:** Ollama cold-start can hit 5-10s; we poll up
+  to 15s for reachability. If a future Ollama version is slower, increase the
+  TIMEOUT_MS in `ollama-service.ts daemonStart`.
 
 ---
 
@@ -107,10 +153,10 @@ npm install
 node scripts/patch-node-pty.js
 
 # 4. Launch the app in dev mode
-npm run dev
+npm start
 
 # 5. Build a Windows installer (optional — requires Dev Mode)
-npm run dist:win
+npm run dist
 ```
 
 If `npm install` fails on node-pty rebuild:
@@ -118,9 +164,9 @@ If `npm install` fails on node-pty rebuild:
 2. Install Windows 10/11 SDK (any recent version).
 3. Re-run `npm install`.
 
-If pulling a model via Ollama fails: the daemon may not be running yet — start
-Ollama from its tray icon, or wait for the **Cat 7 (Ollama autostart)** feature
-which auto-launches the daemon when local models are registered.
+If pulling a model via Ollama fails: the Cat 7 autostart fires when local models
+are registered. If you have local models but no daemon process is visible, check
+that Ollama is installed (`ollama --version`) and re-launch Studio.
 
 ---
 
@@ -131,8 +177,8 @@ which auto-launches the daemon when local models are registered.
 - **`claude-code-studio-testing`** (this repo) — full dev archive. Same source
   plus: `journal/` (LMM dev journals), `docs/security-reviews/` (21 phase
   audits), `docs/SESSION_LOG_*.md`, `docs/SHIPPING_CERTIFICATION.md`,
-  `docs/FRESH_VM_TEST.md`, `docs/INSTALLER_REDESIGN.md`, plus any R&D
-  features still in flight.
+  `docs/FRESH_VM_TEST.md`, `docs/INSTALLER_REDESIGN.md`, plus all R&D
+  features still in flight (currently all of Cat 4-8).
 
 **Promotion path:** R&D feature → merged to `testing/master` → cherry-picked /
 PRed to `claude-code-studio` master when ready to ship. Dev-only docs stay in
@@ -143,10 +189,11 @@ testing.
 ## Pointers
 
 - **Plan for this R&D push:**
-  `C:\Users\mmrla\.claude\plans\im-going-to-enable-lovely-cook.md` (Claude
+  `~/.claude/plans/im-going-to-enable-lovely-cook.md` (Claude
   local — not in repo).
 - **Per-file LMM journals:** `journal/` (mirrors `src/` paths).
+- **Multi-provider design notes:** `docs/MULTI_PROVIDER_BRAINSTORM.md`.
 - **Backlog:** `docs/BACKLOG.md` — v3.0.1+ ideas, kept current as we work.
 - **Historical handoff:** `docs/HANDOFF.md` — frozen at v1.0, kept for trail.
 - **Last v3 release notes:** `docs/RELEASE_NOTES_v3.0.0.md`.
-- **Last v3 session log:** `docs/SESSION_LOG_2026-05-26_v3.0.0_release.md`.
+- **R&D kickoff session log:** `docs/SESSION_LOG_2026-05-27_rnd-kickoff.md`.
