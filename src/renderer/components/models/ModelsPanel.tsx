@@ -9,10 +9,24 @@ import type {
   OllamaInstalledModel,
   OllamaPullProgressEvent,
   OllamaVersionInfo,
+  ProviderId,
 } from '../../../shared/types';
 import { EmbeddedTerminal } from './EmbeddedTerminal';
 import { AddModelModal } from './AddModelModal';
 import { FirstRunPicker } from './FirstRunPicker';
+import { ApiKeyModal } from '../auth/ApiKeyModal';
+
+/** Map a ModelDefinition.provider display name → canonical ProviderId (or
+ *  null for providers that don't need an API key). Mirrors the main-process
+ *  `normalizeProvider` in provider-auth-service.ts. */
+function rendererNormalizeProvider(displayName: string): ProviderId | null {
+  const n = displayName.toLowerCase().trim();
+  if (n === 'anthropic') return 'anthropic';
+  if (n === 'openai') return 'openai';
+  if (n === 'google' || n === 'gemini') return 'gemini';
+  if (n === 'openrouter') return 'openrouter';
+  return null;
+}
 
 /**
  * v3.0 multi-model catalog panel — full-scope build (May 2026).
@@ -331,10 +345,15 @@ export function ModelsPanel() {
     }
   };
 
-  const handleLaunch = async (m: ModelDefinition) => {
-    if (m.licenseFlag && !confirm(`${m.name} is governed by "${m.license}". This license has commercial-use restrictions worth reviewing before regular use. Continue launch?`)) {
-      return;
-    }
+  /** Pre-launch state: when an API model needs a key and we don't have one,
+   *  we stash the pending model + provider here and show ApiKeyModal. On
+   *  successful key save we fall through to `performLaunch`. */
+  const [pendingLaunch, setPendingLaunch] = useState<{
+    model: ModelDefinition;
+    provider: ProviderId;
+  } | null>(null);
+
+  const performLaunch = useCallback(async (m: ModelDefinition) => {
     setBusy((p) => ({ ...p, [m.id]: true }));
     try {
       const cwd = await window.electronAPI.git.getCwd().catch(() => undefined);
@@ -356,6 +375,38 @@ export function ModelsPanel() {
     } finally {
       setBusy((p) => ({ ...p, [m.id]: false }));
     }
+  }, []);
+
+  const handleLaunch = async (m: ModelDefinition) => {
+    if (m.licenseFlag && !confirm(`${m.name} is governed by "${m.license}". This license has commercial-use restrictions worth reviewing before regular use. Continue launch?`)) {
+      return;
+    }
+    // Pre-launch key check for API providers. We only prompt for known
+    // providers that need a key (anthropic / openai / gemini / openrouter);
+    // local providers (Ollama) skip this entirely. If a key is on file we
+    // launch directly; if not, the modal opens and the user can dismiss
+    // without launching ("don't be overbearing").
+    const provider = rendererNormalizeProvider(m.provider);
+    if (provider) {
+      try {
+        const has = await window.electronAPI.providerAuth.hasKey(provider);
+        if (!has) {
+          setPendingLaunch({ model: m, provider });
+          return;
+        }
+      } catch {
+        // Provider-auth IPC missing — fall through to direct launch.
+      }
+    }
+    await performLaunch(m);
+  };
+
+  const onPendingKeySubmit = async (key: string) => {
+    if (!pendingLaunch) return;
+    const { model, provider } = pendingLaunch;
+    await window.electronAPI.providerAuth.setKey(provider, key);
+    setPendingLaunch(null);
+    await performLaunch(model);
   };
 
   const handleKill = async (paneId: string) => {
@@ -597,6 +648,15 @@ export function ModelsPanel() {
             void window.electronAPI.models.onboardingMarkShown(outcome).catch(() => undefined);
             if (outcome === 'completed') void refresh();
           }}
+        />
+      )}
+
+      {pendingLaunch && (
+        <ApiKeyModal
+          provider={pendingLaunch.provider}
+          source="pre-launch"
+          onSubmit={onPendingKeySubmit}
+          onDismiss={() => setPendingLaunch(null)}
         />
       )}
     </div>

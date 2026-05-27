@@ -24,6 +24,12 @@ import { probeDisk } from './disk-info';
 import { FirstRunService } from './first-run-service';
 import { ThemeService } from './theme-service';
 import { WindowStateService } from './window-state-service';
+import {
+  ProviderAuthService,
+  normalizeProvider,
+  PROVIDER_ENV_KEY,
+} from './provider-auth-service';
+import { PtyKeyInterceptor } from './pty-key-interceptor';
 import { readCliFlags, writeCliFlags, type CliFlags } from './cli-flags';
 import {
   listDir as projectListDir,
@@ -71,6 +77,7 @@ let costService: CostService | null = null;
 let cliService: CliService | null = null;
 let themeService: ThemeService | null = null;
 let windowStateService: WindowStateService | null = null;
+const ptyKeyInterceptor = new PtyKeyInterceptor();
 let isQuitting = false;
 /** Pane IDs whose PTY was killed by an explicit user "restart" — suppresses
  * the imminent "Claude exited" notification once per restart. Superseded the
@@ -293,12 +300,32 @@ function syncResourcePids() {
 
 function setupTerminal() {
   ptyRegistry.on('data', (paneId: string, data: string) => {
+    // Feed the key interceptor first — it's a no-op for unregistered panes,
+    // so the cost is one Map lookup per data event. If the pane has a
+    // registered provider and the data contains a key prompt, the
+    // interceptor fires `key-prompt` which we forward to the renderer.
+    try {
+      ptyKeyInterceptor.feed(paneId, data);
+    } catch {
+      // Never let interception break terminal data flow.
+    }
     safeSend(IPC.TERMINAL_DATA, paneId, data);
+  });
+
+  ptyKeyInterceptor.on('key-prompt', (payload: { paneId: string; provider: string }) => {
+    safeSend(IPC.PROVIDER_KEY_PROMPT, {
+      paneId: payload.paneId,
+      provider: payload.provider,
+      source: 'pty-interceptor',
+    });
   });
 
   ptyRegistry.on('exit', (paneId: string, code: number) => {
     safeSend(IPC.TERMINAL_EXIT, paneId, code);
     syncResourcePids();
+    // Stop watching this pane — even if the PTY is replaced, the interceptor
+    // attaches fresh on the next spawn.
+    ptyKeyInterceptor.detach(paneId);
     if (suppressedRestartPanes.has(paneId)) {
       suppressedRestartPanes.delete(paneId);
       return;
@@ -487,6 +514,16 @@ function setupModels() {
       // paneId = "model:<id>-<timestamp>" — bounded length, only allowed chars.
       const safeIdPart = model.id.replace(/[^A-Za-z0-9_\-:]/g, '_').slice(0, 40);
       const paneId = `model:${safeIdPart}-${Date.now().toString(36)}`.slice(0, 64);
+      // Map the model's provider display name → canonical ProviderId (or
+      // null for local/Ollama models that don't need an API key). If we
+      // have a key on file, inject it as the env var the spawned CLI
+      // expects (ANTHROPIC_API_KEY / OPENAI_API_KEY / etc.). The PTY
+      // interceptor also attaches so an interactive prompt from the CLI
+      // can be intercepted + answered via ApiKeyModal.
+      const providerId = normalizeProvider(model.provider);
+      const envInjection: Record<string, string> = providerId
+        ? ProviderAuthService.instance().envForProvider(providerId)
+        : {};
       try {
         // Tag for ResourceMonitor's `models` bucket — keeps its RAM/CPU
         // out of the `claude` bucket and out of `ollama` (the daemon is
@@ -495,8 +532,15 @@ function setupModels() {
         ptyRegistry.spawn(paneId, safeCwd, {
           command: model.command,
           args: model.args,
+          env: envInjection,
           label: model.name,
         });
+        // Only attach the interceptor if we have a provider we know how to
+        // recognize. Avoids extra work on Ollama / Claude (which already
+        // handle their own auth).
+        if (providerId) {
+          ptyKeyInterceptor.attach(paneId, providerId);
+        }
         syncResourcePids();
         return {
           ok: true,
@@ -979,6 +1023,56 @@ function setupThemes() {
   );
 }
 
+function setupProviderAuth() {
+  const svc = ProviderAuthService.instance();
+  ipcMain.handle(IPC.PROVIDER_AUTH_HAS_KEY, (_event, provider: unknown) => {
+    if (typeof provider !== 'string') return false;
+    const id = normalizeProvider(provider) ?? (provider as never);
+    try {
+      // hasKey throws on unknown provider; treat as "no key" for safety.
+      return svc.hasKey(id);
+    } catch {
+      return false;
+    }
+  });
+  ipcMain.handle(
+    IPC.PROVIDER_AUTH_SET_KEY,
+    (_event, provider: unknown, key: unknown) => {
+      if (typeof provider !== 'string') throw new Error('provider must be string');
+      if (typeof key !== 'string') throw new Error('key must be string');
+      const id = normalizeProvider(provider) ?? (provider as never);
+      return svc.setKey(id, key);
+    }
+  );
+  ipcMain.handle(IPC.PROVIDER_AUTH_LIST, () => svc.list());
+  ipcMain.handle(IPC.PROVIDER_AUTH_DELETE, (_event, provider: unknown) => {
+    if (typeof provider !== 'string') throw new Error('provider must be string');
+    const id = normalizeProvider(provider) ?? (provider as never);
+    return svc.delete(id);
+  });
+  ipcMain.handle(
+    IPC.PROVIDER_KEY_SUBMIT,
+    (_event, paneId: unknown, provider: unknown, key: unknown) => {
+      if (typeof paneId !== 'string') throw new Error('paneId must be string');
+      if (typeof provider !== 'string') throw new Error('provider must be string');
+      if (typeof key !== 'string') throw new Error('key must be string');
+      if (!PtyRegistry.isValidPaneId(paneId)) {
+        throw new Error('invalid paneId');
+      }
+      const id = normalizeProvider(provider) ?? (provider as never);
+      // Persist the key for next time.
+      svc.setKey(id, key);
+      // Write the key to the PTY stdin so the running CLI receives it as
+      // typed input. We append a newline so the CLI's read-line completes.
+      // The renderer should not also write — that would double-submit.
+      ptyRegistry.write(paneId, key + '\r');
+      // Reset interceptor state so a follow-up wrong-key prompt fires.
+      ptyKeyInterceptor.resetPromptState(paneId);
+      return true;
+    }
+  );
+}
+
 function setupUpdater() {
   ipcMain.handle(IPC.UPDATER_GET_STATE, () => getUpdater().getState());
   ipcMain.handle(IPC.UPDATER_GET_SETTINGS, () => getUpdater().getSettings());
@@ -1147,6 +1241,7 @@ app.whenReady().then(() => {
   setupSnippets();
   setupNotifications();
   setupThemes();
+  setupProviderAuth();
   setupUpdater();
   setupSession();
   setupCost();
