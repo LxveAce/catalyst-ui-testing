@@ -12,6 +12,7 @@ import type {
 } from '../../../shared/types';
 import { ACTION_LABELS, chordFromEvent } from '../../hotkeys';
 import { ThemeEditor } from './ThemeEditor';
+import { ProviderKeysList } from '../auth/ProviderKeysList';
 
 function hexToRgb(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -404,6 +405,11 @@ export function SettingsPanel() {
             );
           })}
         </div>
+      </div>
+
+      {/* Provider API keys (multi-provider plumbing — Cat 5). */}
+      <div style={{ marginBottom: 20 }}>
+        <ProviderKeysList />
       </div>
 
       {/* Terminal Settings */}
