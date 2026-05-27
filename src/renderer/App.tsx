@@ -29,7 +29,7 @@ import type {
   SessionState,
   SplitNode,
 } from '../shared/types';
-import { THEME_PRESETS, applyTheme } from './theme-presets';
+import { applyTheme, findThemePreset, parseThemeKey, type ThemePreset } from './theme-presets';
 
 export type SidebarPanel =
   | 'terminal'
@@ -95,16 +95,33 @@ export function App() {
           setLayout(restored.layout);
           setActivePanel(restored.activePanel as SidebarPanel);
           setActivePaneId(firstPaneId(restored.layout));
-          if (restored.theme) {
-            const preset = THEME_PRESETS.find((t) => t.name === restored.theme);
-            if (preset) applyTheme(preset);
-          }
         }
       } catch {
         // Bad session file — already handled in main; we just fall back.
-      } finally {
-        if (!cancelled) setHydrated(true);
       }
+      // Apply persisted theme from localStorage on startup. Supports both
+      // built-in presets and custom themes (loaded via themes:list IPC).
+      // Without this, the app renders with default CSS until the user opens
+      // Settings, which mounts SettingsPanel and applies the theme there.
+      try {
+        const parsed = parseThemeKey(localStorage.getItem('claude-studio-theme'));
+        if (parsed) {
+          if (parsed.custom) {
+            const customs = await window.electronAPI.themes.list();
+            const match = customs.find((t) => t.name === parsed.name);
+            if (match && !cancelled) {
+              const preset: ThemePreset = { ...match, custom: true };
+              applyTheme(preset);
+            }
+          } else {
+            const builtin = findThemePreset(parsed.name);
+            if (builtin && !cancelled) applyTheme(builtin);
+          }
+        }
+      } catch {
+        // Themes IPC missing or store malformed — defaults are fine.
+      }
+      if (!cancelled) setHydrated(true);
     })();
     return () => {
       cancelled = true;
