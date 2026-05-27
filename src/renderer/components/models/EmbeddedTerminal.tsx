@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
+import { ChatSkinOverlay } from '../chat-skin/ChatSkinOverlay';
+import { isSkinEnabled, setSkinEnabled } from '../chat-skin/skin-prefs';
 
 /**
  * Inline xterm.js viewer for a model PTY launched from the Models panel.
@@ -28,6 +30,17 @@ interface Props {
 export function EmbeddedTerminal({ paneId, compact = true }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
+  // Per-pane chat-skin toggle, persisted via skin-prefs (localStorage).
+  // Synced with TerminalPanel so the SAME paneId surfaces the SAME skin
+  // state whether viewed via TerminalPanel, EmbeddedTerminal, or PopoutView.
+  const [skinOn, setSkinOn] = useState<boolean>(() => isSkinEnabled(paneId));
+  const toggleSkin = useCallback(() => {
+    setSkinOn((prev) => {
+      const next = !prev;
+      setSkinEnabled(paneId, next);
+      return next;
+    });
+  }, [paneId]);
   const fitRef = useRef<FitAddon | null>(null);
 
   const fitIfChanged = useCallback(() => {
@@ -127,17 +140,56 @@ export function EmbeddedTerminal({ paneId, compact = true }: Props) {
 
   return (
     <div
-      ref={hostRef}
       style={{
+        position: 'relative',
         width: '100%',
         height: '100%',
         minHeight: 180,
-        background: '#0a0a14',
-        borderRadius: 6,
-        padding: 6,
-        boxSizing: 'border-box',
-        overflow: 'hidden',
       }}
-    />
+    >
+      <div
+        ref={hostRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          background: '#0a0a14',
+          borderRadius: 6,
+          padding: 6,
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          visibility: skinOn ? 'hidden' : 'visible',
+        }}
+      />
+
+      {!skinOn && (
+        <button
+          onClick={toggleSkin}
+          title="Switch to chat skin"
+          aria-label="Switch to chat skin"
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 4,
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-md, 8px)',
+            border: '1px solid var(--border, rgba(255,255,255,0.1))',
+            background: 'rgba(15,15,26,0.7)',
+            color: 'var(--text-secondary, #8b8b9e)',
+            backdropFilter: 'blur(4px)',
+            cursor: 'pointer',
+            fontSize: 11,
+            opacity: 0.6,
+            transition: 'opacity 120ms',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; }}
+        >
+          ✦ Chat
+        </button>
+      )}
+
+      <ChatSkinOverlay paneId={paneId} visible={skinOn} onToggleOff={toggleSkin} />
+    </div>
   );
 }
