@@ -177,4 +177,19 @@ export const IPC = {
   THEMES_LIST: 'themes:list',
   THEMES_SAVE: 'themes:save',
   THEMES_DELETE: 'themes:delete',
+
+  // Provider auth — universal API key store (v3.0.1+, R&D).
+  // Raw keys never cross IPC: `has-key` returns boolean, `list` returns
+  // {provider, hasKey, lastUpdated}[]. Only `set` accepts a key.
+  PROVIDER_AUTH_HAS_KEY: 'provider-auth:has-key',
+  PROVIDER_AUTH_SET_KEY: 'provider-auth:set-key',
+  PROVIDER_AUTH_LIST: 'provider-auth:list',
+  PROVIDER_AUTH_DELETE: 'provider-auth:delete',
+  /** Main → renderer: a spawned CLI just hit an API-key prompt we recognized.
+   *  Payload = ProviderKeyPromptEvent. Renderer shows ApiKeyModal. */
+  PROVIDER_KEY_PROMPT: 'provider-auth:key-prompt',
+  /** Renderer → main: user submitted a key in response to a key-prompt.
+   *  Payload = { paneId, provider, key }. Main writes the key to PTY stdin
+   *  and persists via provider-auth:set-key. */
+  PROVIDER_KEY_SUBMIT: 'provider-auth:key-submit',
 } as const;
