@@ -616,32 +616,89 @@ function setupAppMeta() {
   // Claude Code Studio.exe" alongside the app — we just shell it out
   // (detached so Studio can quit while the uninstaller is still running).
   ipcMain.handle(IPC.APP_OPEN_UNINSTALLER, () => {
-    if (process.platform !== 'win32') {
-      return { ok: false, error: `Uninstall via app is Windows-only — on ${process.platform} use the OS's app manager.` };
+    // 3.0.0 — cross-platform uninstall flow. Windows uses the NSIS
+    // uninstaller. macOS doesn't have one (drag-to-Trash idiom) so we
+    // open Finder at /Applications + return instructions. Linux varies
+    // by package format so we sniff exe path to give the right hint.
+    // Return shape: { ok, error, notice } — `notice` is non-error info
+    // the renderer should surface (e.g., "drag the app to Trash").
+    if (process.platform === 'win32') {
+      const exeDir = path.dirname(app.getPath('exe'));
+      // Per electron-builder's NSIS layout, the uninstaller lives in $INSTDIR.
+      // Name varies by productName: try both spellings before giving up.
+      const candidates = [
+        path.join(exeDir, 'Uninstall Claude Code Studio.exe'),
+        path.join(exeDir, 'Uninstall claude-code-studio.exe'),
+      ];
+      const uninstaller = candidates.find((p) => nodeFs.existsSync(p));
+      if (!uninstaller) {
+        return {
+          ok: false,
+          error: `Uninstaller not found next to the app exe. Searched: ${candidates.join(' ; ')}`,
+          notice: null,
+        };
+      }
+      try {
+        childSpawn(uninstaller, [], { detached: true, stdio: 'ignore' }).unref();
+        // Give the uninstaller a moment to start, then quit Studio so the
+        // uninstaller can remove files we have open.
+        setTimeout(() => app.quit(), 500);
+        return { ok: true, error: null, notice: null };
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e), notice: null };
+      }
     }
-    const exeDir = path.dirname(app.getPath('exe'));
-    // Per electron-builder's NSIS layout, the uninstaller lives in $INSTDIR.
-    // Name varies by `productName`: try both spellings before giving up.
-    const candidates = [
-      path.join(exeDir, 'Uninstall Claude Code Studio.exe'),
-      path.join(exeDir, 'Uninstall claude-code-studio.exe'),
-    ];
-    const uninstaller = candidates.find((p) => nodeFs.existsSync(p));
-    if (!uninstaller) {
+
+    if (process.platform === 'darwin') {
+      // macOS doesn't have a postinstall/uninstaller concept. The user
+      // drags the .app to Trash. We open /Applications so they can do
+      // that immediately, and return instructions. The renderer pairs
+      // this with the existing Reset User Data flow so the userData JSON
+      // gets wiped first (otherwise the Trash drag leaves it orphaned).
+      void shell.openPath('/Applications').catch(() => undefined);
       return {
-        ok: false,
-        error: `Uninstaller not found next to the app exe. Searched: ${candidates.join(' ; ')}`,
+        ok: true,
+        error: null,
+        notice:
+          'macOS doesn\'t have a built-in uninstaller. Finder is now open at /Applications — ' +
+          'drag "Claude Code Studio" to the Trash. If you also want to wipe settings + history, ' +
+          'click "Reset user data" first.',
       };
     }
-    try {
-      childSpawn(uninstaller, [], { detached: true, stdio: 'ignore' }).unref();
-      // Give the uninstaller a moment to start, then quit Studio so the
-      // uninstaller can remove files we have open.
-      setTimeout(() => app.quit(), 500);
-      return { ok: true, error: null };
-    } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+
+    if (process.platform === 'linux') {
+      // Try to detect install format from the exe path / standard install
+      // locations. AppImage = single file (just rm); .deb = apt; .rpm = dnf.
+      const exePath = app.getPath('exe');
+      let instructions: string;
+      if (process.env.APPIMAGE) {
+        // AppImage sets this env var to its own path at runtime.
+        instructions = `This is an AppImage build. To uninstall: delete the AppImage file at:\n  ${process.env.APPIMAGE}`;
+      } else if (exePath.startsWith('/usr/') || exePath.startsWith('/opt/')) {
+        instructions =
+          'Looks like a system install. To uninstall:\n' +
+          '  Debian/Ubuntu:  sudo apt remove claude-code-studio\n' +
+          '  Fedora/RHEL:    sudo dnf remove claude-code-studio\n' +
+          '  Arch:           sudo pacman -R claude-code-studio';
+      } else {
+        instructions =
+          `Located at: ${exePath}\n` +
+          'Remove via your package manager (apt/dnf/pacman) or just delete the file if it\'s a portable build.';
+      }
+      return {
+        ok: true,
+        error: null,
+        notice:
+          `Linux doesn't have an in-app uninstaller. ${instructions}\n\n` +
+          'Click "Reset user data" first if you also want to wipe settings + history.',
+      };
     }
+
+    return {
+      ok: false,
+      error: `Unsupported platform: ${process.platform}.`,
+      notice: null,
+    };
   });
 }
 
