@@ -1,6 +1,6 @@
 # Claude Code Studio — Testing Repo STATUS
 
-> **Last updated:** 2026-05-27 (R&D kickoff)
+> **Last updated:** 2026-05-27 (R&D kickoff — Cat 1–4 shipped, Cat 4 PR open)
 > **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`)
 > **Latest session log:** [`SESSION_LOG_2026-05-27_rnd-kickoff.md`](./SESSION_LOG_2026-05-27_rnd-kickoff.md)
 
@@ -28,30 +28,49 @@ and the v3.0.0 release docs.
 
 ## In progress
 
-R&D feature branches — each kicked off in this session, listed in execution order.
+R&D feature branches — listed in execution order.
 See `SESSION_LOG_2026-05-27_rnd-kickoff.md` for the full plan and rationale.
 
 | Branch | Category | Status |
 |---|---|---|
-| `feature/tracking-infra` | Cat 3 — STATUS.md + SESSION_LOG + issues | **in flight (this commit)** |
-| `feature/ui-foundations` | Cat 4 — themes + theme editor + resizable windows + state persistence | not started |
-| `feature/multi-provider-plumbing` | Cat 5 — universal API key UI + safeStorage + PTY interceptor | not started |
-| `feature/providers-gemini-aider-openrouter` | Cat 6 — provider abstraction + Gemini/Aider/OpenRouter wiring | not started |
-| `feature/ollama-autostart` | Cat 7 — Ollama daemon autostart if local models registered | not started |
-| `feature/installer-overhaul` | Cat 8 — modernized NSIS chrome + Ollama opt-in page | not started |
+| `feature/tracking-infra` | Cat 3 — STATUS.md + SESSION_LOG + issues | **merged to master** |
+| `feature/ui-foundations` | Cat 4 — themes + theme editor + resizable windows + state persistence | **PR open: [#8](https://github.com/LxveAce/claude-code-studio-testing/pull/8)** |
+| `feature/multi-provider-plumbing` | Cat 5 — universal API key UI + safeStorage + PTY interceptor | not started — issue [#3](https://github.com/LxveAce/claude-code-studio-testing/issues/3) |
+| `feature/providers-gemini-aider-openrouter` | Cat 6 — provider abstraction + Gemini/Aider/OpenRouter wiring | not started — issue [#4](https://github.com/LxveAce/claude-code-studio-testing/issues/4) (blocked by Cat 5) |
+| `feature/ollama-autostart` | Cat 7 — Ollama daemon autostart if local models registered | not started — issue [#5](https://github.com/LxveAce/claude-code-studio-testing/issues/5) |
+| `feature/installer-overhaul` | Cat 8 — modernized NSIS chrome + Ollama opt-in page | not started — issue [#6](https://github.com/LxveAce/claude-code-studio-testing/issues/6) |
+
+### Cat 4 (`feature/ui-foundations`) — what's in PR #8
+
+**Themes:**
+- 7 new built-in presets (Slate, Indigo, Crimson, Forest, Magenta, Midnight, Solarized).
+- Theme editor modal (Settings → Edit themes…) with color pickers + live preview + restore-on-dismiss.
+- Custom themes persist to `<userData>/themes.json` via `ThemeService` (atomic, validated).
+- `localStorage` key uses `custom:<name>` prefix to disambiguate built-ins vs customs.
+- `App.tsx` now applies the theme on startup (no longer waits for Settings panel mount).
+
+**Resizable windows + state persistence:**
+- New `WindowStateService` saves `{x,y,width,height,maximized}` per window id to `<userData>/window-state.json`.
+- Off-screen recovery if a saved monitor is unplugged.
+- Debounced writes (500 ms); flushed on `before-quit`.
+- Main BrowserWindow + model pop-out windows both restore on next launch. Pop-outs keyed `models-popout:<paneId>`.
+
+**Verify (run on a checkout of `feature/ui-foundations`):**
+- `npm install` then `npm run dev`.
+- Settings → Accent Color → swap built-ins (instant CSS variable update).
+- Settings → "Edit themes…" → create custom → save → appears in the grid, persists across restart.
+- Resize main window + a model pop-out → close → relaunch → restored.
 
 ---
 
 ## Next up (priority order)
 
-1. **Category 4 (UI foundations)** — themes + resizable windows + state persistence.
-   Foundational; everything else builds on top.
+1. **Merge PR #8** once verified locally (themes + window state).
 2. **Category 5 (Multi-provider plumbing)** — universal API-key UI is a prereq for
-   Category 6.
-3. **Categories 6, 7, 8** can run in parallel feature branches once 4 + 5 are merged
-   (file overlap is limited — themes/windows vs. providers/auth vs. installer touch
-   different subtrees).
-4. **Category 9 (Multi-provider brainstorm doc)** — written alongside Cat 6.
+   Category 6. Issue #3.
+3. **Categories 6, 7, 8** can run in parallel feature branches once 5 is merged
+   (file overlap is limited — providers/auth vs. installer touch different subtrees).
+4. **Category 9 (Multi-provider brainstorm doc)** — written alongside Cat 6. Issue #7.
 
 ---
 
