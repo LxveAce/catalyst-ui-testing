@@ -130,3 +130,51 @@ If continuing on a different computer:
 - **Compact controller repo:**
   https://github.com/LxveAce/claude-compact-controller
 - **LMM repo:** https://github.com/anjaustin/lmm
+
+---
+
+## End-of-session summary (appended 2026-05-27, late session)
+
+Categories 1–9 all shipped in this session. testing/master is at commit
+`4045362` (merge of #12, Cat 8 installer overhaul). Final shape:
+
+### Final commits on testing/master (newest first)
+- `4045362` — Merge #12 (Cat 8 installer overhaul)
+- `fab842d` — feat(installer-overhaul): wizard mode + BMP chrome + opt-in Ollama
+- `fc84f1d` — Merge #11 (Cat 7 Ollama autostart)
+- `551e5a4` — feat(ollama-autostart): start daemon on app launch if local models
+- `59ba859` — Merge #10 (Cat 6 + 9 providers + brainstorm)
+- `17f0764` — feat(providers): Gemini + Aider + OpenRouter + detection + setup modal
+- `3113d48` — Merge #9 (Cat 5 multi-provider plumbing)
+- `a9951db` — feat(multi-provider-plumbing): universal API key UI + safeStorage + interceptor
+- `51badf2` — Merge #8 (Cat 4 UI foundations)
+- `47cb8ef` — docs(status): Cat 4 PR open
+- `6dc3fbf` — feat(ui-foundations): theme editor + themes + resizable windows
+- `cd68563` — docs(testing): tracking infra — STATUS.md + R&D kickoff session log
+- `d0af93a` — (public release HEAD — synced from origin/master at session start)
+
+### Verification posture
+- All TypeScript compile checks (`npx tsc --noEmit`) returned clean.
+- All Vite production builds (`npm run vite:build`) completed successfully.
+- No runtime smoke-test was performed — the Electron app launches and clicks
+  through the new UI surfaces remain a manual verification task for the user.
+- The Cat 8 installer artifact (`npm run dist`) was NOT built in this session;
+  the BMP generator script ran successfully and the BMPs are committed, but
+  producing + testing a Windows installer in a clean VM is the user's next
+  step before promotion to the public repo.
+
+### What the next session should do first
+- Read `docs/STATUS.md`.
+- Decide whether to promote any of Cat 4–8 to the public `claude-code-studio`
+  repo, or continue iterating on testing.
+- Optionally run `npm run dist` on Windows to validate the Cat 8 installer
+  changes in a real environment.
+
+### Tools used during this session, recap
+- **LMM**: 11 new `.lmm.md` entries written (Cat 4: 4; Cat 5: 4; Cat 6: 2;
+  Cat 7: 1; Cat 8: 1 — plus the existing journal/ tree from the v3.0.0 work
+  remains in testing).
+- **Claude Compact Controller**: hooks active throughout; vault writes happened
+  silently in the background. No recovery was triggered.
+- **GitHub Issues + PRs**: 6 issues filed (#2–#7), 5 PRs opened + merged
+  (#8–#12).
