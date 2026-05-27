@@ -585,57 +585,121 @@ export function ModelsPanel() {
 
       {running.length > 0 && (
         <div style={runningSectionStyle}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            Running ({running.length})
-          </div>
-          {running.map((r) => {
-            const isSel = r.paneId === selectedRunningPaneId;
-            return (
-              <div
-                key={r.paneId}
-                style={{
-                  ...runningRowStyle,
-                  background: isSel ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
-                  borderRadius: 4,
-                  padding: isSel ? '6px 8px' : '4px 0',
-                  cursor: 'pointer',
-                }}
-                onClick={() => setSelectedRunningPaneId(r.paneId)}
-              >
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-primary)', fontWeight: 500 }}>
-                    {isSel && '▸ '}{r.modelName}
-                  </div>
-                  <div style={{ fontSize: 9, color: 'var(--text-muted)', fontFamily: 'ui-monospace, Menlo, Consolas, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {r.commandLine}
-                  </div>
+          {/* Tab strip — one tab per running model. Click to focus its
+              terminal below; × kills; ↗ pops out into its own window.
+              Designed so multiple models running simultaneously read as a
+              tabbed workspace rather than a list. */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 4,
+              alignItems: 'stretch',
+              borderBottom: '1px solid var(--border)',
+              marginBottom: 8,
+              overflowX: 'auto',
+              paddingBottom: 0,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                color: 'var(--text-secondary)',
+                padding: '6px 8px 6px 0',
+                alignSelf: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {running.length} running:
+            </div>
+            {running.map((r) => {
+              const isSel = r.paneId === selectedRunningPaneId;
+              return (
+                <div
+                  key={r.paneId}
+                  onClick={() => setSelectedRunningPaneId(r.paneId)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 8px 8px',
+                    cursor: 'pointer',
+                    borderRadius: '6px 6px 0 0',
+                    background: isSel ? 'var(--bg-primary)' : 'transparent',
+                    borderTop: isSel ? '1px solid var(--border)' : '1px solid transparent',
+                    borderLeft: isSel ? '1px solid var(--border)' : '1px solid transparent',
+                    borderRight: isSel ? '1px solid var(--border)' : '1px solid transparent',
+                    borderBottom: isSel ? '1px solid var(--bg-primary)' : 'none',
+                    marginBottom: -1,
+                    position: 'relative',
+                    top: isSel ? 1 : 0,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: isSel ? 'var(--accent)' : 'rgba(134,239,172,0.7)',
+                      boxShadow: isSel ? 'var(--shadow-glow)' : 'none',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: isSel ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontWeight: isSel ? 600 : 400,
+                      maxWidth: 140,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {r.modelName}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void window.electronAPI.models.popout(r.paneId, r.modelName).catch(() => undefined);
+                    }}
+                    title="Pop out into its own window"
+                    aria-label={`Pop out ${r.modelName}`}
+                    style={tabIconBtnStyle}
+                  >
+                    {/* arrow-up-right "popout" glyph */}
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <line x1="7" y1="17" x2="17" y2="7" />
+                      <polyline points="7 7 17 7 17 17" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleKill(r.paneId);
+                    }}
+                    title="Kill this model"
+                    aria-label={`Close ${r.modelName}`}
+                    style={tabIconBtnStyle}
+                  >
+                    ×
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void window.electronAPI.models.popout(r.paneId, r.modelName).catch(() => undefined);
-                  }}
-                  style={popoutBtnStyle}
-                  title="Pop out into its own window"
-                >
-                  Pop out
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void handleKill(r.paneId);
-                  }}
-                  style={killBtnStyle}
-                >
-                  Kill
-                </button>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
           {selectedRunningPaneId && (
-            <div style={{ marginTop: 6, height: 220 }}>
+            <div
+              style={{
+                height: 320,
+                border: '1px solid var(--border)',
+                borderRadius: '0 6px 6px 6px',
+                overflow: 'hidden',
+                background: 'var(--bg-primary)',
+              }}
+            >
               <EmbeddedTerminal paneId={selectedRunningPaneId} compact />
             </div>
           )}
@@ -1360,6 +1424,22 @@ const popoutBtnStyle: React.CSSProperties = {
   borderRadius: 4,
   cursor: 'pointer',
   marginRight: 4,
+};
+
+/** Tab-strip icon button (popout / close). Quiet by default, brightens on
+ *  hover. Inline-only — used in the running-models tab strip. */
+const tabIconBtnStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  color: 'var(--text-secondary)',
+  padding: '2px 5px',
+  fontSize: 11,
+  lineHeight: 1,
+  borderRadius: 4,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 };
 
 const progressBarStyle: React.CSSProperties = {
