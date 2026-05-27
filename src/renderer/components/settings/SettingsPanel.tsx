@@ -769,11 +769,17 @@ function DangerZoneSection() {
   };
 
   const handleUninstall = async () => {
-    if (!confirm('Launch the Claude Code Studio uninstaller? The app will close.')) return;
+    if (!confirm('Launch the Claude Code Studio uninstaller? On Windows the app will close immediately; on macOS / Linux you\'ll see instructions for completing the uninstall manually.')) return;
     setBusyUninstall(true);
     try {
       const result = await window.electronAPI.app.openUninstaller();
-      if (!result.ok) alert(`Uninstall couldn't start: ${result.error}`);
+      if (!result.ok) {
+        alert(`Uninstall couldn't start: ${result.error ?? 'unknown error'}`);
+      } else if (result.notice) {
+        // macOS / Linux path — surfaces platform-specific manual steps.
+        alert(result.notice);
+      }
+      // Windows path: ok && !notice → uninstaller spawned + app quits. No alert.
     } catch (e) {
       alert(`Uninstall couldn't start: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
