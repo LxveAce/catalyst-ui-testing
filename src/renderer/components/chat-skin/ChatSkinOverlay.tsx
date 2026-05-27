@@ -101,13 +101,18 @@ export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
   }, [paneId]);
 
   const appendAssistantChunk = useCallback((rawData: string) => {
+    // Decide BEFORE sanitizing whether this chunk contains a screen-clear
+    // / alt-screen-enter sequence. When Claude (or any TUI) repaints, our
+    // sanitizer would silently merge the new paint with the old text — the
+    // user sees the same content "doubled up." Detecting the reset in the
+    // RAW bytes (before stripping) lets us start a fresh assistant message.
+    const startsNewPaint = /\x1b\[2J|\x1bc|\x1b\[\?1049[hl]|\x1b\[H/.test(rawData);
+
     let cleaned = sanitizeForChat(rawData);
     if (!cleaned) return;
 
     const last = lastSentRef.current;
     if (last && Date.now() - last.at < ECHO_SUPPRESS_WINDOW_MS) {
-      // Trim a leading echo of what we sent (ignoring leading whitespace
-      // since some CLIs prefix the echo with their prompt indent).
       const trimmedCleaned = cleaned.trimStart();
       if (trimmedCleaned.startsWith(last.text)) {
         cleaned = trimmedCleaned.slice(last.text.length).replace(/^[\r\n]+/, '');
@@ -119,8 +124,19 @@ export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
     setLastChunkAt(Date.now());
     setMessages((prev) => {
       const lastMsg = prev[prev.length - 1];
-      if (lastMsg && lastMsg.role === 'assistant') {
+      // If the CLI just cleared the screen, start a fresh assistant
+      // message so the new paint doesn't visually duplicate the old one.
+      if (lastMsg && lastMsg.role === 'assistant' && !startsNewPaint) {
         const nextText = (lastMsg.text + cleaned).slice(0, MAX_MESSAGE_CHARS);
+        // Also drop the previous message if the new full text starts with
+        // it — that's the "redraw of the same content" case.
+        if (lastMsg.text && cleaned.includes(lastMsg.text.trim().slice(0, 80))) {
+          // Just replace with the new content instead of doubling.
+          return [
+            ...prev.slice(0, -1),
+            { ...lastMsg, text: cleaned.slice(0, MAX_MESSAGE_CHARS) },
+          ];
+        }
         return [...prev.slice(0, -1), { ...lastMsg, text: nextText }];
       }
       return cap([
@@ -351,6 +367,15 @@ function PersonaAvatar({ size = 32 }: { size?: number }) {
 
 function MessageBubble({ message, showCursor }: { message: ChatMessage; showCursor: boolean }) {
   const isUser = message.role === 'user';
+  // Detect Claude/Codex/Aider-style interactive selection prompts. These
+  // require keyboard-only responses (Enter / Esc / numeric pick) that the
+  // chat skin's send-text path can't deliver cleanly. Surface a callout
+  // pointing the user back to Terminal view rather than letting them
+  // type something that won't work.
+  const looksInteractive =
+    !isUser && /(Enter to confirm|Esc to cancel|↵ to confirm|press enter|Select an option|❯\s*\d|\b\d\.\s.+\s\d\.\s)/i.test(
+      message.text
+    );
   return (
     <div
       style={{
@@ -361,26 +386,65 @@ function MessageBubble({ message, showCursor }: { message: ChatMessage; showCurs
       <div
         style={{
           maxWidth: '85%',
-          padding: '12px 16px',
-          borderRadius: 18,
-          background: isUser
-            ? 'var(--accent-dim, rgba(124,58,237,0.16))'
-            : 'rgba(255,255,255,0.04)',
-          border: '1px solid var(--border)',
-          color: 'var(--text-primary)',
-          fontSize: 15,
-          lineHeight: 1.65,
-          wordBreak: 'break-word',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
         }}
       >
-        {isUser ? (
-          <div style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>
-        ) : (
-          <>
-            <AssistantMarkdown text={message.text} />
-            {showCursor && <span className="ccs-chat-caret" />}
-          </>
-        )}
+        {looksInteractive && <InteractivePromptBanner />}
+        <div
+          style={{
+            padding: '12px 16px',
+            borderRadius: 18,
+            background: isUser
+              ? 'var(--accent-dim, rgba(124,58,237,0.16))'
+              : 'rgba(255,255,255,0.04)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-primary)',
+            fontSize: 15,
+            lineHeight: 1.65,
+            wordBreak: 'break-word',
+          }}
+        >
+          {isUser ? (
+            <div style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>
+          ) : (
+            <>
+              <AssistantMarkdown text={message.text} />
+              {showCursor && <span className="ccs-chat-caret" />}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InteractivePromptBanner() {
+  return (
+    <div
+      style={{
+        padding: '8px 12px',
+        borderRadius: 10,
+        background: 'rgba(251, 191, 36, 0.10)',
+        border: '1px solid rgba(251, 191, 36, 0.35)',
+        fontSize: 12,
+        lineHeight: 1.5,
+        color: '#fcd34d',
+        display: 'flex',
+        gap: 8,
+        alignItems: 'flex-start',
+      }}
+    >
+      <span aria-hidden="true">⚠</span>
+      <div>
+        <div style={{ fontWeight: 600, marginBottom: 2 }}>
+          The CLI is waiting for an interactive choice
+        </div>
+        <div style={{ color: 'rgba(252,211,77,0.85)' }}>
+          Selection menus need keyboard-only responses (Enter / Esc / arrow keys / number picks).
+          Click "Terminal" in the header to respond, then come back here.
+        </div>
       </div>
     </div>
   );
