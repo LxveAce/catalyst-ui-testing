@@ -302,6 +302,12 @@ interface Window {
       onPullProgress: (
         cb: (evt: import('./shared/types').OllamaPullProgressEvent) => void
       ) => () => void;
+      daemonState: () => Promise<import('./shared/types').OllamaDaemonState>;
+      daemonStart: () => Promise<{ ok: boolean; error: string | null }>;
+      daemonStop: () => Promise<import('./shared/types').OllamaDaemonState>;
+      onDaemonStateChanged: (
+        cb: (state: import('./shared/types').OllamaDaemonState) => void
+      ) => () => void;
     };
     hardware: {
       detect: (force?: boolean) => Promise<import('./shared/types').HardwareProfile>;
