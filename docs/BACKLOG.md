@@ -33,6 +33,31 @@ when user provides them. Likely items to investigate:
   `$INSTDIR\resources\runtime` — userData isn't touched, which may or
   may not be intentional).
 
+**Auto-updater 404 on beta builds.** User caught during beta.2 testing
+(2026-05-26 evening):
+
+```
+Cannot find latest.yml in the latest release artifacts
+(https://github.com/LxveAce/claude-code-studio/releases/download/v1.0.0/latest.yml):
+HttpError: 404
+```
+
+Root cause: `electron-updater` queries GitHub for the latest *published*
+release, which is still `v1.0.0` (v2.0.0 is in drafts, beta.x builds
+aren't on origin at all). The v1.0.0 release predates the
+electron-updater migration so it has no `latest.yml` asset — hence the
+404. The 404 currently bubbles up as a visible unhandled exception
+instead of being swallowed gracefully.
+
+Fix options to weigh in beta.3:
+1. **Detect beta builds** (`app.getVersion()` includes `-beta.`) and
+   disable the updater entirely in that case — no GitHub queries.
+   Simplest, no user-facing log noise. Probably right.
+2. Catch the 404 in `UpdaterService` and log-at-debug instead of letting
+   it bubble. Plus #1 — defense in depth.
+3. Long-term: publish a `latest.yml` to the v1.0.0 release retroactively
+   (or to v2.0.0 once promoted) so the updater has something to read.
+
 ---
 
 ## ★ v3.0.0-beta.2 red-team fixes (2026-05-26)
