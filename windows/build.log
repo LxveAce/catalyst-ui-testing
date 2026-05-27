@@ -1,0 +1,967 @@
+
+> claude-code-studio@3.0.0 dist
+> npm run vite:build && electron-builder --win --publish never
+
+
+> claude-code-studio@3.0.0 vite:build
+> node scripts/build-vite.mjs
+
+[build-vite] building main...
+[36mvite v8.0.14 [32mbuilding ssr environment for production...[36m[39m
+[2Ktransforming...✓ 37 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/index.js  287.60 kB │ gzip: 76.19 kB
+
+[32m✓ built in 68ms[39m
+[build-vite] building preload...
+[36mvite v8.0.14 [32mbuilding ssr environment for production...[36m[39m
+[2Ktransforming...✓ 3 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/build/preload.js  20.30 kB │ gzip: 5.30 kB
+
+[32m✓ built in 20ms[39m
+[build-vite] building renderer...
+[36mvite v8.0.14 [32mbuilding client environment for production...[36m[39m
+[2Ktransforming...✓ 902 modules transformed.
+rendering chunks...
+computing gzip size...
+.vite/renderer/main_window/index.html                     0.82 kB │ gzip:   0.45 kB
+.vite/renderer/main_window/assets/index-BMRO1LvP.css      5.93 kB │ gzip:   1.75 kB
+.vite/renderer/main_window/assets/index-ggH0EydA.js   1,593.37 kB │ gzip: 483.45 kB
+
+[32m✓ built in 584ms[39m
+[33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[build-vite] complete in 0.8s.
+  • electron-builder  version=26.8.1 os=10.0.26100
+  • loaded configuration  file=D:\a\claude-code-studio-testing\claude-code-studio-testing\electron-builder.yml
+  • effective config  config=directories:
+  output: dist
+  buildResources: build
+appId: com.lxveace.claude-code-studio
+productName: Claude Code Studio
+copyright: Copyright © 2026 LxveAce
+extraMetadata:
+  main: .vite/build/index.js
+files:
+  - filter:
+      - .vite/**/*
+      - package.json
+asar: true
+asarUnpack:
+  - '**/node_modules/node-pty/**'
+npmRebuild: false
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: Claude-Code-Studio-${version}-Windows.${ext}
+mac:
+  target:
+    - target: dmg
+      arch: arm64
+  category: public.app-category.developer-tools
+  artifactName: Claude-Code-Studio-${version}-Mac.${ext}
+  hardenedRuntime: false
+  identity: null
+dmg:
+  contents:
+    - x: 110
+      'y': 150
+    - x: 250
+      'y': 150
+      type: link
+      path: /Applications
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+    - target: rpm
+      arch:
+        - x64
+  category: Development
+  artifactName: Claude-Code-Studio-${version}-Linux.${ext}
+appImage:
+  artifactName: Claude-Code-Studio-${version}-Linux-Universal.${ext}
+deb:
+  artifactName: Claude-Code-Studio-${version}-Linux-Debian.${ext}
+rpm:
+  artifactName: Claude-Code-Studio-${version}-Linux-Fedora.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Claude Code Studio
+  artifactName: Claude-Code-Studio-${version}-Windows.${ext}
+  differentialPackage: false
+  include: build/installer.nsh
+  installerHeader: build/installerHeader.bmp
+  installerSidebar: build/installerSidebar.bmp
+  uninstallerSidebar: build/uninstallerSidebar.bmp
+publish:
+  - provider: github
+    owner: LxveAce
+    repo: claude-code-studio
+    releaseType: draft
+
+  • "electron-squirrel-startup" dependency is not required for NSIS
+  • no event listeners found  event=beforePack
+  • skipped dependencies rebuild  reason=npmRebuild is set to false
+  • packaging       platform=win32 arch=x64 electron=42.2.0 appOutDir=dist\win-unpacked
+  • no custom electronDist provided, unpacking default Electron distribution
+  • spawning        command=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\app-builder-bin\win\x64\app-builder.exe unpack-electron --configuration [{"platform":"win32","arch":"x64","version":"42.2.0"}] --output D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\win-unpacked --distMacOsAppName Electron.app
+  • map async       taskCount=2
+  • map async       taskCount=1
+  • computing effective URL  initialUrl=https://github.com/electron/electron/releases/download/v42.2.0/electron-v42.2.0-win32-x64.zip
+                             currentUrl=https://release-assets.githubusercontent.com/github-production-release-asset/9384267/a9e97cca-9c4e-4c7a-8218-389570bc9822?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-05-27T21%3A59%3A13Z&rscd=attachment%3B+filename%3Delectron-v42.2.0-win32-x64.zip&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-05-27T20%3A58%3A42Z&ske=2026-05-27T21%3A59%3A13Z&sks=b&skv=2018-11-09&sig=4Q2ahbTHzao1Es1zqNhmk0RVysCZhyiSF0hXthZplTA%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3OTkxOTkyNCwibmJmIjoxNzc5OTE2MzI0LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.tOHdghrltOGQqrTLANwpwIJDr5TJPKKW4nK8LLcU69I&response-content-disposition=attachment%3B%20filename%3Delectron-v42.2.0-win32-x64.zip&response-content-type=application%2Foctet-stream
+  • downloading     url=https://github.com/electron/electron/releases/download/v42.2.0/electron-v42.2.0-win32-x64.zip length=144267493 contentType=application/octet-stream
+  • downloading     url=https://github.com/electron/electron/releases/download/v42.2.0/electron-v42.2.0-win32-x64.zip size=144 MB parts=8
+  • map async       taskCount=8
+  • download part   range=bytes=126234052-144267492 index=7
+  • download part   range=bytes=0-18033435 index=0
+  • download part   range=bytes=54100308-72133743 index=3
+  • download part   range=bytes=90167180-108200615 index=5
+  • download part   range=bytes=108200616-126234051 index=6
+  • download part   range=bytes=18033436-36066871 index=1
+  • download part   range=bytes=72133744-90167179 index=4
+  • download part   range=bytes=36066872-54100307 index=2
+  • downloaded      url=https://github.com/electron/electron/releases/download/v42.2.0/electron-v42.2.0-win32-x64.zip duration=843ms
+  • map async       taskCount=75
+  • exited          command=app-builder.exe code=0 pid=7972
+  • no event listeners found  event=afterExtract
+  • spawning        command=npm prefix -w cwd=D:\a\claude-code-studio-testing\claude-code-studio-testing
+  • exited          command=npm code=1 pid=8080
+  • searching for node modules  pm=npm searchDir=D:\a\claude-code-studio-testing\claude-code-studio-testing
+  • node modules collection complete  packageName=claude-code-studio depCount=150
+  • collected node modules  pm=npm nodeModules=[{"name":"@babel/runtime","version":"7.29.7","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@babel\\runtime"},{"name":"@octokit/auth-token","version":"5.1.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\auth-token"},{"name":"@octokit/core","version":"6.1.6","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\core"},{"name":"@octokit/endpoint","version":"10.1.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\endpoint"},{"name":"@octokit/graphql","version":"8.2.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\graphql"},{"name":"@octokit/openapi-types","version":"25.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\openapi-types"},{"name":"@octokit/plugin-paginate-rest","version":"11.6.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\plugin-paginate-rest","dependencies":[{"name":"@octokit/openapi-types","version":"24.2.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\plugin-rest-endpoint-methods\\node_modules\\@octokit\\openapi-types"},{"name":"@octokit/types","version":"13.10.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\plugin-rest-endpoint-methods\\node_modules\\@octokit\\types"}]},{"name":"@octokit/plugin-request-log","version":"5.3.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\plugin-request-log"},{"name":"@octokit/plugin-rest-endpoint-methods","version":"13.5.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\plugin-rest-endpoint-methods","dependencies":[{"name":"@octokit/openapi-types","version":"24.2.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\plugin-rest-endpoint-methods\\node_modules\\@octokit\\openapi-types"},{"name":"@octokit/types","version":"13.10.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\plugin-rest-endpoint-methods\\node_modules\\@octokit\\types"}]},{"name":"@octokit/request","version":"9.2.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\request"},{"name":"@octokit/request-error","version":"6.1.8","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\request-error"},{"name":"@octokit/rest","version":"21.1.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\rest"},{"name":"@octokit/types","version":"14.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@octokit\\types"},{"name":"@types/debug","version":"4.1.13","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@types\\debug"},{"name":"@types/estree","version":"1.0.9","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@types\\estree"},{"name":"@types/estree-jsx","version":"1.0.5","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@types\\estree-jsx"},{"name":"@types/hast","version":"3.0.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@types\\hast"},{"name":"@types/mdast","version":"4.0.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@types\\mdast"},{"name":"@types/ms","version":"2.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@types\\ms"},{"name":"@types/unist","version":"3.0.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@types\\unist"},{"name":"@ungap/structured-clone","version":"1.3.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@ungap\\structured-clone"},{"name":"@xterm/addon-fit","version":"0.11.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@xterm\\addon-fit"},{"name":"@xterm/xterm","version":"6.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\@xterm\\xterm"},{"name":"argparse","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\argparse"},{"name":"bail","version":"2.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\bail"},{"name":"before-after-hook","version":"3.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\before-after-hook"},{"name":"builder-util-runtime","version":"9.5.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\builder-util-runtime"},{"name":"ccount","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\ccount"},{"name":"character-entities","version":"2.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\character-entities"},{"name":"character-entities-html4","version":"2.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\character-entities-html4"},{"name":"character-entities-legacy","version":"3.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\character-entities-legacy"},{"name":"character-reference-invalid","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\character-reference-invalid"},{"name":"comma-separated-tokens","version":"2.0.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\comma-separated-tokens"},{"name":"debug","version":"4.4.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark\\node_modules\\debug","dependencies":[{"name":"ms","version":"2.1.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark\\node_modules\\ms"}]},{"name":"decode-named-character-reference","version":"1.3.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\decode-named-character-reference"},{"name":"dequal","version":"2.0.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\dequal"},{"name":"devlop","version":"1.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\devlop"},{"name":"electron-squirrel-startup","version":"1.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\electron-squirrel-startup","dependencies":[{"name":"debug","version":"2.6.9","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\debug"}]},{"name":"electron-updater","version":"6.8.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\electron-updater"},{"name":"escape-string-regexp","version":"5.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-find-and-replace\\node_modules\\escape-string-regexp"},{"name":"estree-util-is-identifier-name","version":"3.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\estree-util-is-identifier-name"},{"name":"extend","version":"3.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\extend"},{"name":"fast-content-type-parse","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\fast-content-type-parse"},{"name":"fault","version":"1.0.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\fault"},{"name":"format","version":"0.2.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\format"},{"name":"fs-extra","version":"10.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\fs-extra"},{"name":"graceful-fs","version":"4.2.11","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\graceful-fs"},{"name":"hast-util-parse-selector","version":"2.2.5","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\hast-util-parse-selector"},{"name":"hast-util-to-jsx-runtime","version":"2.3.6","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\hast-util-to-jsx-runtime"},{"name":"hast-util-whitespace","version":"3.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\hast-util-whitespace"},{"name":"hastscript","version":"6.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\hastscript","dependencies":[{"name":"@types/hast","version":"2.3.10","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\hastscript\\node_modules\\@types\\hast"},{"name":"@types/unist","version":"2.0.11","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\hastscript\\node_modules\\@types\\unist"},{"name":"comma-separated-tokens","version":"1.0.8","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\hastscript\\node_modules\\comma-separated-tokens"},{"name":"property-information","version":"5.6.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\hastscript\\node_modules\\property-information"},{"name":"space-separated-tokens","version":"1.1.5","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\hastscript\\node_modules\\space-separated-tokens"}]},{"name":"highlight.js","version":"10.7.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\highlight.js"},{"name":"highlightjs-vue","version":"1.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\highlightjs-vue"},{"name":"html-url-attributes","version":"3.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\html-url-attributes"},{"name":"inline-style-parser","version":"0.2.7","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\inline-style-parser"},{"name":"is-alphabetical","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\is-alphabetical"},{"name":"is-alphanumerical","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\is-alphanumerical"},{"name":"is-decimal","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\is-decimal"},{"name":"is-hexadecimal","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\is-hexadecimal"},{"name":"is-plain-obj","version":"4.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\is-plain-obj"},{"name":"js-yaml","version":"4.1.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\js-yaml"},{"name":"jsonfile","version":"6.2.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\jsonfile"},{"name":"lazy-val","version":"1.0.5","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\lazy-val"},{"name":"lodash.escaperegexp","version":"4.1.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\lodash.escaperegexp"},{"name":"lodash.isequal","version":"4.5.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\lodash.isequal"},{"name":"longest-streak","version":"3.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\longest-streak"},{"name":"lowlight","version":"1.20.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\lowlight"},{"name":"markdown-table","version":"3.0.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\markdown-table"},{"name":"mdast-util-find-and-replace","version":"3.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-find-and-replace"},{"name":"mdast-util-from-markdown","version":"2.0.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-from-markdown"},{"name":"mdast-util-gfm","version":"3.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-gfm"},{"name":"mdast-util-gfm-autolink-literal","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-gfm-autolink-literal"},{"name":"mdast-util-gfm-footnote","version":"2.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-gfm-footnote"},{"name":"mdast-util-gfm-strikethrough","version":"2.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-gfm-strikethrough"},{"name":"mdast-util-gfm-table","version":"2.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-gfm-table"},{"name":"mdast-util-gfm-task-list-item","version":"2.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-gfm-task-list-item"},{"name":"mdast-util-mdx-expression","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-mdx-expression"},{"name":"mdast-util-mdx-jsx","version":"3.2.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-mdx-jsx"},{"name":"mdast-util-mdxjs-esm","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-mdxjs-esm"},{"name":"mdast-util-phrasing","version":"4.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-phrasing"},{"name":"mdast-util-to-hast","version":"13.2.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-to-hast"},{"name":"mdast-util-to-markdown","version":"2.1.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-to-markdown"},{"name":"mdast-util-to-string","version":"4.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\mdast-util-to-string"},{"name":"micromark","version":"4.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark"},{"name":"micromark-core-commonmark","version":"2.0.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-core-commonmark"},{"name":"micromark-extension-gfm","version":"3.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-extension-gfm"},{"name":"micromark-extension-gfm-autolink-literal","version":"2.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-extension-gfm-autolink-literal"},{"name":"micromark-extension-gfm-footnote","version":"2.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-extension-gfm-footnote"},{"name":"micromark-extension-gfm-strikethrough","version":"2.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-extension-gfm-strikethrough"},{"name":"micromark-extension-gfm-table","version":"2.1.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-extension-gfm-table"},{"name":"micromark-extension-gfm-tagfilter","version":"2.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-extension-gfm-tagfilter"},{"name":"micromark-extension-gfm-task-list-item","version":"2.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-extension-gfm-task-list-item"},{"name":"micromark-factory-destination","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-factory-destination"},{"name":"micromark-factory-label","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-factory-label"},{"name":"micromark-factory-space","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-factory-space"},{"name":"micromark-factory-title","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-factory-title"},{"name":"micromark-factory-whitespace","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-factory-whitespace"},{"name":"micromark-util-character","version":"2.1.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-character"},{"name":"micromark-util-chunked","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-chunked"},{"name":"micromark-util-classify-character","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-classify-character"},{"name":"micromark-util-combine-extensions","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-combine-extensions"},{"name":"micromark-util-decode-numeric-character-reference","version":"2.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-decode-numeric-character-reference"},{"name":"micromark-util-decode-string","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-decode-string"},{"name":"micromark-util-encode","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-encode"},{"name":"micromark-util-html-tag-name","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-html-tag-name"},{"name":"micromark-util-normalize-identifier","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-normalize-identifier"},{"name":"micromark-util-resolve-all","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-resolve-all"},{"name":"micromark-util-sanitize-uri","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-sanitize-uri"},{"name":"micromark-util-subtokenize","version":"2.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-subtokenize"},{"name":"micromark-util-symbol","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-symbol"},{"name":"micromark-util-types","version":"2.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\micromark-util-types"},{"name":"ms","version":"2.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\ms"},{"name":"node-addon-api","version":"7.1.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\node-addon-api"},{"name":"node-pty","version":"1.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\node-pty"},{"name":"parse-entities","version":"4.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\parse-entities","dependencies":[{"name":"@types/unist","version":"2.0.11","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\hastscript\\node_modules\\@types\\unist"}]},{"name":"prismjs","version":"1.30.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\prismjs"},{"name":"property-information","version":"7.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\property-information"},{"name":"react","version":"19.2.6","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\react"},{"name":"react-dom","version":"19.2.6","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\react-dom"},{"name":"react-markdown","version":"9.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\react-markdown"},{"name":"react-resizable-panels","version":"3.0.6","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\react-resizable-panels"},{"name":"react-syntax-highlighter","version":"15.6.6","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\react-syntax-highlighter"},{"name":"refractor","version":"3.6.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\refractor","dependencies":[{"name":"character-entities","version":"1.2.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\refractor\\node_modules\\character-entities"},{"name":"character-entities-legacy","version":"1.1.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\refractor\\node_modules\\character-entities-legacy"},{"name":"character-reference-invalid","version":"1.1.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\refractor\\node_modules\\character-reference-invalid"},{"name":"is-alphabetical","version":"1.0.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\refractor\\node_modules\\is-alphabetical"},{"name":"is-alphanumerical","version":"1.0.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\refractor\\node_modules\\is-alphanumerical"},{"name":"is-decimal","version":"1.0.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\refractor\\node_modules\\is-decimal"},{"name":"is-hexadecimal","version":"1.0.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\refractor\\node_modules\\is-hexadecimal"},{"name":"parse-entities","version":"2.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\refractor\\node_modules\\parse-entities"},{"name":"prismjs","version":"1.27.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\refractor\\node_modules\\prismjs"}]},{"name":"remark-gfm","version":"4.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\remark-gfm"},{"name":"remark-parse","version":"11.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\remark-parse"},{"name":"remark-rehype","version":"11.1.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\remark-rehype"},{"name":"remark-stringify","version":"11.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\remark-stringify"},{"name":"sax","version":"1.6.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\sax"},{"name":"scheduler","version":"0.27.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\scheduler"},{"name":"semver","version":"7.7.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\electron-updater\\node_modules\\semver"},{"name":"space-separated-tokens","version":"2.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\space-separated-tokens"},{"name":"stringify-entities","version":"4.0.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\stringify-entities"},{"name":"style-to-js","version":"1.1.21","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\style-to-js"},{"name":"style-to-object","version":"1.0.14","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\style-to-object"},{"name":"systeminformation","version":"5.31.6","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\systeminformation"},{"name":"tiny-typed-emitter","version":"2.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\tiny-typed-emitter"},{"name":"trim-lines","version":"3.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\trim-lines"},{"name":"trough","version":"2.2.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\trough"},{"name":"unified","version":"11.0.5","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\unified"},{"name":"unist-util-is","version":"6.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\unist-util-is"},{"name":"unist-util-position","version":"5.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\unist-util-position"},{"name":"unist-util-stringify-position","version":"4.0.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\unist-util-stringify-position"},{"name":"unist-util-visit","version":"5.1.0","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\unist-util-visit"},{"name":"unist-util-visit-parents","version":"6.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\unist-util-visit-parents"},{"name":"universal-user-agent","version":"7.0.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\universal-user-agent"},{"name":"universalify","version":"2.0.1","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\universalify"},{"name":"vfile","version":"6.0.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\vfile"},{"name":"vfile-message","version":"4.0.3","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\vfile-message"},{"name":"xtend","version":"4.0.2","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\xtend"},{"name":"zwitch","version":"2.0.4","dir":"D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\node_modules\\zwitch"}]
+  • duplicate dependency references  dependencies=["@octokit/request@9.2.4","@octokit/types@14.1.0","@octokit/types@14.1.0","@octokit/types@14.1.0","@octokit/request-error@6.1.8","@octokit/types@14.1.0","@octokit/core@6.1.6","@octokit/core@6.1.6","@octokit/core@6.1.6","glob@7.2.3","once@1.4.0","minimatch@3.1.5","jsonfile@6.2.1","@types/hast@3.0.4","devlop@1.1.0","@types/hast@3.0.4","@types/hast@3.0.4","@types/mdast@4.0.4","devlop@1.1.0","mdast-util-from-markdown@2.0.3","mdast-util-to-markdown@2.1.2","@types/estree-jsx@1.0.5","@types/hast@3.0.4","@types/mdast@4.0.4","devlop@1.1.0","mdast-util-from-markdown@2.0.3","mdast-util-to-markdown@2.1.2","decode-named-character-reference@1.3.0","vfile-message@4.0.3","@types/estree-jsx@1.0.5","@types/hast@3.0.4","@types/mdast@4.0.4","devlop@1.1.0","mdast-util-from-markdown@2.0.3","mdast-util-to-markdown@2.1.2","unist-util-stringify-position@4.0.0","@types/hast@3.0.4","@types/mdast@4.0.4","devlop@1.1.0","unist-util-position@5.0.0","unist-util-visit@5.1.0","vfile@6.0.3","@types/mdast@4.0.4","@types/mdast@4.0.4","devlop@1.1.0","@types/mdast@4.0.4","decode-named-character-reference@1.3.0","micromark-util-character@2.1.1","micromark-util-decode-numeric-character-reference@2.0.2","decode-named-character-reference@1.3.0","devlop@1.1.0","micromark-core-commonmark@2.0.3","micromark-factory-space@2.0.1","micromark-util-character@2.1.1","micromark-util-chunked@2.0.1","micromark-util-combine-extensions@2.0.1","micromark-util-decode-numeric-character-reference@2.0.2","micromark-util-normalize-identifier@2.0.1","micromark-util-resolve-all@2.0.1","micromark-util-sanitize-uri@2.0.1","devlop@1.1.0","micromark-util-chunked@2.0.1","unist-util-stringify-position@4.0.0","unified@11.0.5","@types/hast@3.0.4","@types/mdast@4.0.4","mdast-util-to-hast@13.2.1","unified@11.0.5","vfile@6.0.3","devlop@1.1.0","vfile@6.0.3","unist-util-is@6.0.1","vfile-message@4.0.3","react-dom@19.2.6","@types/mdast@4.0.4","mdast-util-from-markdown@2.0.3","@types/mdast@4.0.4","devlop@1.1.0","@types/mdast@4.0.4","unist-util-is@6.0.1","unist-util-visit-parents@6.0.2","micromark-util-character@2.1.1","@types/mdast@4.0.4","devlop@1.1.0","mdast-util-from-markdown@2.0.3","mdast-util-to-markdown@2.1.2","micromark-util-normalize-identifier@2.0.1","@types/mdast@4.0.4","mdast-util-from-markdown@2.0.3","mdast-util-to-markdown@2.1.2","@types/mdast@4.0.4","devlop@1.1.0","mdast-util-from-markdown@2.0.3","mdast-util-to-markdown@2.1.2","@types/mdast@4.0.4","devlop@1.1.0","mdast-util-from-markdown@2.0.3","mdast-util-to-markdown@2.1.2","@types/mdast@4.0.4","@types/mdast@4.0.4","unist-util-is@6.0.1","mdast-util-to-string@4.0.0","micromark-util-character@2.1.1","micromark-util-decode-string@2.0.1","unist-util-visit@5.1.0","micromark-util-character@2.1.1","micromark-util-sanitize-uri@2.0.1","devlop@1.1.0","decode-named-character-reference@1.3.0","devlop@1.1.0","micromark-util-character@2.1.1","devlop@1.1.0","micromark-util-character@2.1.1","micromark-factory-space@2.0.1","micromark-factory-space@2.0.1","micromark-util-character@2.1.1","micromark-factory-space@2.0.1","micromark-util-character@2.1.1","micromark-util-character@2.1.1","micromark-util-chunked@2.0.1","micromark-util-classify-character@2.0.1","micromark-util-normalize-identifier@2.0.1","micromark-util-resolve-all@2.0.1","micromark-util-subtokenize@2.1.0","micromark-util-character@2.1.1","micromark-util-character@2.1.1","micromark-util-normalize-identifier@2.0.1","micromark-util-sanitize-uri@2.0.1","devlop@1.1.0","micromark-util-classify-character@2.0.1","devlop@1.1.0","micromark-factory-space@2.0.1","micromark-util-character@2.1.1","devlop@1.1.0","micromark-factory-space@2.0.1","micromark-util-character@2.1.1","micromark-util-chunked@2.0.1","remark-parse@11.0.0","@types/mdast@4.0.4","mdast-util-to-markdown@2.1.2","unified@11.0.5","unified@11.0.5"]
+  • identified module  dep=@babel/runtime from=node_modules\@babel\runtime to=dist\win-unpacked\resources\app\node_modules\@babel\runtime filesCount=248
+  • identified module  dep=@octokit/auth-token from=node_modules\@octokit\auth-token to=dist\win-unpacked\resources\app\node_modules\@octokit\auth-token filesCount=9
+  • identified module  dep=@octokit/core from=node_modules\@octokit\core to=dist\win-unpacked\resources\app\node_modules\@octokit\core filesCount=4
+  • identified module  dep=@octokit/endpoint from=node_modules\@octokit\endpoint to=dist\win-unpacked\resources\app\node_modules\@octokit\endpoint filesCount=19
+  • identified module  dep=@octokit/graphql from=node_modules\@octokit\graphql to=dist\win-unpacked\resources\app\node_modules\@octokit\graphql filesCount=9
+  • identified module  dep=@octokit/openapi-types from=node_modules\@octokit\openapi-types to=dist\win-unpacked\resources\app\node_modules\@octokit\openapi-types filesCount=2
+  • identified module  dep=@octokit/plugin-paginate-rest from=node_modules\@octokit\plugin-paginate-rest to=dist\win-unpacked\resources\app\node_modules\@octokit\plugin-paginate-rest filesCount=12
+  • identified module  dep=@octokit/openapi-types from=node_modules\@octokit\plugin-rest-endpoint-methods\node_modules\@octokit\openapi-types to=dist\win-unpacked\resources\app\node_modules\@octokit\plugin-paginate-rest\node_modules\@octokit\openapi-types filesCount=2
+  • identified module  dep=@octokit/types from=node_modules\@octokit\plugin-rest-endpoint-methods\node_modules\@octokit\types to=dist\win-unpacked\resources\app\node_modules\@octokit\plugin-paginate-rest\node_modules\@octokit\types filesCount=2
+  • identified module  dep=@octokit/plugin-request-log from=node_modules\@octokit\plugin-request-log to=dist\win-unpacked\resources\app\node_modules\@octokit\plugin-request-log filesCount=4
+  • identified module  dep=@octokit/plugin-rest-endpoint-methods from=node_modules\@octokit\plugin-rest-endpoint-methods to=dist\win-unpacked\resources\app\node_modules\@octokit\plugin-rest-endpoint-methods filesCount=10
+  • identified module  dep=@octokit/openapi-types from=node_modules\@octokit\plugin-rest-endpoint-methods\node_modules\@octokit\openapi-types to=dist\win-unpacked\resources\app\node_modules\@octokit\plugin-rest-endpoint-methods\node_modules\@octokit\openapi-types filesCount=2
+  • identified module  dep=@octokit/types from=node_modules\@octokit\plugin-rest-endpoint-methods\node_modules\@octokit\types to=dist\win-unpacked\resources\app\node_modules\@octokit\plugin-rest-endpoint-methods\node_modules\@octokit\types filesCount=2
+  • identified module  dep=@octokit/request from=node_modules\@octokit\request to=dist\win-unpacked\resources\app\node_modules\@octokit\request filesCount=10
+  • identified module  dep=@octokit/request-error from=node_modules\@octokit\request-error to=dist\win-unpacked\resources\app\node_modules\@octokit\request-error filesCount=3
+  • identified module  dep=@octokit/rest from=node_modules\@octokit\rest to=dist\win-unpacked\resources\app\node_modules\@octokit\rest filesCount=6
+  • identified module  dep=@octokit/types from=node_modules\@octokit\types to=dist\win-unpacked\resources\app\node_modules\@octokit\types filesCount=2
+  • identified module  dep=@types/debug from=node_modules\@types\debug to=dist\win-unpacked\resources\app\node_modules\@types\debug filesCount=2
+  • identified module  dep=@types/estree from=node_modules\@types\estree to=dist\win-unpacked\resources\app\node_modules\@types\estree filesCount=2
+  • identified module  dep=@types/estree-jsx from=node_modules\@types\estree-jsx to=dist\win-unpacked\resources\app\node_modules\@types\estree-jsx filesCount=2
+  • identified module  dep=@types/hast from=node_modules\@types\hast to=dist\win-unpacked\resources\app\node_modules\@types\hast filesCount=2
+  • identified module  dep=@types/mdast from=node_modules\@types\mdast to=dist\win-unpacked\resources\app\node_modules\@types\mdast filesCount=2
+  • identified module  dep=@types/ms from=node_modules\@types\ms to=dist\win-unpacked\resources\app\node_modules\@types\ms filesCount=2
+  • identified module  dep=@types/unist from=node_modules\@types\unist to=dist\win-unpacked\resources\app\node_modules\@types\unist filesCount=2
+  • identified module  dep=@ungap/structured-clone from=node_modules\@ungap\structured-clone to=dist\win-unpacked\resources\app\node_modules\@ungap\structured-clone filesCount=14
+  • identified module  dep=@xterm/addon-fit from=node_modules\@xterm\addon-fit to=dist\win-unpacked\resources\app\node_modules\@xterm\addon-fit filesCount=7
+  • identified module  dep=@xterm/xterm from=node_modules\@xterm\xterm to=dist\win-unpacked\resources\app\node_modules\@xterm\xterm filesCount=155
+  • identified module  dep=argparse from=node_modules\argparse to=dist\win-unpacked\resources\app\node_modules\argparse filesCount=5
+  • identified module  dep=bail from=node_modules\bail to=dist\win-unpacked\resources\app\node_modules\bail filesCount=3
+  • identified module  dep=before-after-hook from=node_modules\before-after-hook to=dist\win-unpacked\resources\app\node_modules\before-after-hook filesCount=6
+  • identified module  dep=builder-util-runtime from=node_modules\builder-util-runtime to=dist\win-unpacked\resources\app\node_modules\builder-util-runtime filesCount=28
+  • identified module  dep=ccount from=node_modules\ccount to=dist\win-unpacked\resources\app\node_modules\ccount filesCount=3
+  • identified module  dep=character-entities from=node_modules\character-entities to=dist\win-unpacked\resources\app\node_modules\character-entities filesCount=3
+  • identified module  dep=character-entities-html4 from=node_modules\character-entities-html4 to=dist\win-unpacked\resources\app\node_modules\character-entities-html4 filesCount=3
+  • identified module  dep=character-entities-legacy from=node_modules\character-entities-legacy to=dist\win-unpacked\resources\app\node_modules\character-entities-legacy filesCount=3
+  • identified module  dep=character-reference-invalid from=node_modules\character-reference-invalid to=dist\win-unpacked\resources\app\node_modules\character-reference-invalid filesCount=3
+  • identified module  dep=comma-separated-tokens from=node_modules\comma-separated-tokens to=dist\win-unpacked\resources\app\node_modules\comma-separated-tokens filesCount=3
+  • identified module  dep=debug from=node_modules\micromark\node_modules\debug to=dist\win-unpacked\resources\app\node_modules\debug filesCount=6
+  • identified module  dep=ms from=node_modules\micromark\node_modules\ms to=dist\win-unpacked\resources\app\node_modules\debug\node_modules\ms filesCount=3
+  • identified module  dep=decode-named-character-reference from=node_modules\decode-named-character-reference to=dist\win-unpacked\resources\app\node_modules\decode-named-character-reference filesCount=6
+  • identified module  dep=dequal from=node_modules\dequal to=dist\win-unpacked\resources\app\node_modules\dequal filesCount=8
+  • identified module  dep=devlop from=node_modules\devlop to=dist\win-unpacked\resources\app\node_modules\devlop filesCount=4
+  • identified module  dep=electron-squirrel-startup from=node_modules\electron-squirrel-startup to=dist\win-unpacked\resources\app\node_modules\electron-squirrel-startup filesCount=4
+  • identified module  dep=debug from=node_modules\debug to=dist\win-unpacked\resources\app\node_modules\electron-squirrel-startup\node_modules\debug filesCount=10
+  • identified module  dep=electron-updater from=node_modules\electron-updater to=dist\win-unpacked\resources\app\node_modules\electron-updater filesCount=66
+  • identified module  dep=escape-string-regexp from=node_modules\mdast-util-find-and-replace\node_modules\escape-string-regexp to=dist\win-unpacked\resources\app\node_modules\escape-string-regexp filesCount=3
+  • identified module  dep=estree-util-is-identifier-name from=node_modules\estree-util-is-identifier-name to=dist\win-unpacked\resources\app\node_modules\estree-util-is-identifier-name filesCount=4
+  • identified module  dep=extend from=node_modules\extend to=dist\win-unpacked\resources\app\node_modules\extend filesCount=6
+  • identified module  dep=fast-content-type-parse from=node_modules\fast-content-type-parse to=dist\win-unpacked\resources\app\node_modules\fast-content-type-parse filesCount=10
+  • identified module  dep=fault from=node_modules\fault to=dist\win-unpacked\resources\app\node_modules\fault filesCount=3
+  • identified module  dep=format from=node_modules\format to=dist\win-unpacked\resources\app\node_modules\format filesCount=6
+  • identified module  dep=fs-extra from=node_modules\fs-extra to=dist\win-unpacked\resources\app\node_modules\fs-extra filesCount=30
+  • identified module  dep=graceful-fs from=node_modules\graceful-fs to=dist\win-unpacked\resources\app\node_modules\graceful-fs filesCount=6
+  • identified module  dep=hast-util-parse-selector from=node_modules\hast-util-parse-selector to=dist\win-unpacked\resources\app\node_modules\hast-util-parse-selector filesCount=3
+  • identified module  dep=hast-util-to-jsx-runtime from=node_modules\hast-util-to-jsx-runtime to=dist\win-unpacked\resources\app\node_modules\hast-util-to-jsx-runtime filesCount=6
+  • identified module  dep=hast-util-whitespace from=node_modules\hast-util-whitespace to=dist\win-unpacked\resources\app\node_modules\hast-util-whitespace filesCount=4
+  • identified module  dep=hastscript from=node_modules\hastscript to=dist\win-unpacked\resources\app\node_modules\hastscript filesCount=7
+  • identified module  dep=@types/hast from=node_modules\hastscript\node_modules\@types\hast to=dist\win-unpacked\resources\app\node_modules\hastscript\node_modules\@types\hast filesCount=2
+  • identified module  dep=@types/unist from=node_modules\hastscript\node_modules\@types\unist to=dist\win-unpacked\resources\app\node_modules\hastscript\node_modules\@types\unist filesCount=2
+  • identified module  dep=comma-separated-tokens from=node_modules\hastscript\node_modules\comma-separated-tokens to=dist\win-unpacked\resources\app\node_modules\hastscript\node_modules\comma-separated-tokens filesCount=3
+  • identified module  dep=property-information from=node_modules\hastscript\node_modules\property-information to=dist\win-unpacked\resources\app\node_modules\hastscript\node_modules\property-information filesCount=22
+  • identified module  dep=space-separated-tokens from=node_modules\hastscript\node_modules\space-separated-tokens to=dist\win-unpacked\resources\app\node_modules\hastscript\node_modules\space-separated-tokens filesCount=3
+  • identified module  dep=highlight.js from=node_modules\highlight.js to=dist\win-unpacked\resources\app\node_modules\highlight.js filesCount=396
+  • identified module  dep=highlightjs-vue from=node_modules\highlightjs-vue to=dist\win-unpacked\resources\app\node_modules\highlightjs-vue filesCount=5
+  • identified module  dep=html-url-attributes from=node_modules\html-url-attributes to=dist\win-unpacked\resources\app\node_modules\html-url-attributes filesCount=6
+  • identified module  dep=inline-style-parser from=node_modules\inline-style-parser to=dist\win-unpacked\resources\app\node_modules\inline-style-parser filesCount=12
+  • identified module  dep=is-alphabetical from=node_modules\is-alphabetical to=dist\win-unpacked\resources\app\node_modules\is-alphabetical filesCount=3
+  • identified module  dep=is-alphanumerical from=node_modules\is-alphanumerical to=dist\win-unpacked\resources\app\node_modules\is-alphanumerical filesCount=3
+  • identified module  dep=is-decimal from=node_modules\is-decimal to=dist\win-unpacked\resources\app\node_modules\is-decimal filesCount=3
+  • identified module  dep=is-hexadecimal from=node_modules\is-hexadecimal to=dist\win-unpacked\resources\app\node_modules\is-hexadecimal filesCount=3
+  • identified module  dep=is-plain-obj from=node_modules\is-plain-obj to=dist\win-unpacked\resources\app\node_modules\is-plain-obj filesCount=3
+  • identified module  dep=js-yaml from=node_modules\js-yaml to=dist\win-unpacked\resources\app\node_modules\js-yaml filesCount=31
+  • identified module  dep=jsonfile from=node_modules\jsonfile to=dist\win-unpacked\resources\app\node_modules\jsonfile filesCount=4
+  • identified module  dep=lazy-val from=node_modules\lazy-val to=dist\win-unpacked\resources\app\node_modules\lazy-val filesCount=3
+  • identified module  dep=lodash.escaperegexp from=node_modules\lodash.escaperegexp to=dist\win-unpacked\resources\app\node_modules\lodash.escaperegexp filesCount=3
+  • identified module  dep=lodash.isequal from=node_modules\lodash.isequal to=dist\win-unpacked\resources\app\node_modules\lodash.isequal filesCount=3
+  • identified module  dep=longest-streak from=node_modules\longest-streak to=dist\win-unpacked\resources\app\node_modules\longest-streak filesCount=3
+  • identified module  dep=lowlight from=node_modules\lowlight to=dist\win-unpacked\resources\app\node_modules\lowlight filesCount=4
+  • identified module  dep=markdown-table from=node_modules\markdown-table to=dist\win-unpacked\resources\app\node_modules\markdown-table filesCount=4
+  • identified module  dep=mdast-util-find-and-replace from=node_modules\mdast-util-find-and-replace to=dist\win-unpacked\resources\app\node_modules\mdast-util-find-and-replace filesCount=6
+  • identified module  dep=mdast-util-from-markdown from=node_modules\mdast-util-from-markdown to=dist\win-unpacked\resources\app\node_modules\mdast-util-from-markdown filesCount=10
+  • identified module  dep=mdast-util-gfm from=node_modules\mdast-util-gfm to=dist\win-unpacked\resources\app\node_modules\mdast-util-gfm filesCount=5
+  • identified module  dep=mdast-util-gfm-autolink-literal from=node_modules\mdast-util-gfm-autolink-literal to=dist\win-unpacked\resources\app\node_modules\mdast-util-gfm-autolink-literal filesCount=4
+  • identified module  dep=mdast-util-gfm-footnote from=node_modules\mdast-util-gfm-footnote to=dist\win-unpacked\resources\app\node_modules\mdast-util-gfm-footnote filesCount=5
+  • identified module  dep=mdast-util-gfm-strikethrough from=node_modules\mdast-util-gfm-strikethrough to=dist\win-unpacked\resources\app\node_modules\mdast-util-gfm-strikethrough filesCount=4
+  • identified module  dep=mdast-util-gfm-table from=node_modules\mdast-util-gfm-table to=dist\win-unpacked\resources\app\node_modules\mdast-util-gfm-table filesCount=4
+  • identified module  dep=mdast-util-gfm-task-list-item from=node_modules\mdast-util-gfm-task-list-item to=dist\win-unpacked\resources\app\node_modules\mdast-util-gfm-task-list-item filesCount=4
+  • identified module  dep=mdast-util-mdx-expression from=node_modules\mdast-util-mdx-expression to=dist\win-unpacked\resources\app\node_modules\mdast-util-mdx-expression filesCount=5
+  • identified module  dep=mdast-util-mdx-jsx from=node_modules\mdast-util-mdx-jsx to=dist\win-unpacked\resources\app\node_modules\mdast-util-mdx-jsx filesCount=5
+  • identified module  dep=mdast-util-mdxjs-esm from=node_modules\mdast-util-mdxjs-esm to=dist\win-unpacked\resources\app\node_modules\mdast-util-mdxjs-esm filesCount=4
+  • identified module  dep=mdast-util-phrasing from=node_modules\mdast-util-phrasing to=dist\win-unpacked\resources\app\node_modules\mdast-util-phrasing filesCount=4
+  • identified module  dep=mdast-util-to-hast from=node_modules\mdast-util-to-hast to=dist\win-unpacked\resources\app\node_modules\mdast-util-to-hast filesCount=59
+  • identified module  dep=mdast-util-to-markdown from=node_modules\mdast-util-to-markdown to=dist\win-unpacked\resources\app\node_modules\mdast-util-to-markdown filesCount=99
+  • identified module  dep=mdast-util-to-string from=node_modules\mdast-util-to-string to=dist\win-unpacked\resources\app\node_modules\mdast-util-to-string filesCount=4
+  • identified module  dep=micromark from=node_modules\micromark to=dist\win-unpacked\resources\app\node_modules\micromark filesCount=50
+  • identified module  dep=micromark-core-commonmark from=node_modules\micromark-core-commonmark to=dist\win-unpacked\resources\app\node_modules\micromark-core-commonmark filesCount=94
+  • identified module  dep=micromark-extension-gfm from=node_modules\micromark-extension-gfm to=dist\win-unpacked\resources\app\node_modules\micromark-extension-gfm filesCount=3
+  • identified module  dep=micromark-extension-gfm-autolink-literal from=node_modules\micromark-extension-gfm-autolink-literal to=dist\win-unpacked\resources\app\node_modules\micromark-extension-gfm-autolink-literal filesCount=8
+  • identified module  dep=micromark-extension-gfm-footnote from=node_modules\micromark-extension-gfm-footnote to=dist\win-unpacked\resources\app\node_modules\micromark-extension-gfm-footnote filesCount=8
+  • identified module  dep=micromark-extension-gfm-strikethrough from=node_modules\micromark-extension-gfm-strikethrough to=dist\win-unpacked\resources\app\node_modules\micromark-extension-gfm-strikethrough filesCount=8
+  • identified module  dep=micromark-extension-gfm-table from=node_modules\micromark-extension-gfm-table to=dist\win-unpacked\resources\app\node_modules\micromark-extension-gfm-table filesCount=20
+  • identified module  dep=micromark-extension-gfm-tagfilter from=node_modules\micromark-extension-gfm-tagfilter to=dist\win-unpacked\resources\app\node_modules\micromark-extension-gfm-tagfilter filesCount=4
+  • identified module  dep=micromark-extension-gfm-task-list-item from=node_modules\micromark-extension-gfm-task-list-item to=dist\win-unpacked\resources\app\node_modules\micromark-extension-gfm-task-list-item filesCount=8
+  • identified module  dep=micromark-factory-destination from=node_modules\micromark-factory-destination to=dist\win-unpacked\resources\app\node_modules\micromark-factory-destination filesCount=6
+  • identified module  dep=micromark-factory-label from=node_modules\micromark-factory-label to=dist\win-unpacked\resources\app\node_modules\micromark-factory-label filesCount=6
+  • identified module  dep=micromark-factory-space from=node_modules\micromark-factory-space to=dist\win-unpacked\resources\app\node_modules\micromark-factory-space filesCount=6
+  • identified module  dep=micromark-factory-title from=node_modules\micromark-factory-title to=dist\win-unpacked\resources\app\node_modules\micromark-factory-title filesCount=6
+  • identified module  dep=micromark-factory-whitespace from=node_modules\micromark-factory-whitespace to=dist\win-unpacked\resources\app\node_modules\micromark-factory-whitespace filesCount=6
+  • identified module  dep=micromark-util-character from=node_modules\micromark-util-character to=dist\win-unpacked\resources\app\node_modules\micromark-util-character filesCount=6
+  • identified module  dep=micromark-util-chunked from=node_modules\micromark-util-chunked to=dist\win-unpacked\resources\app\node_modules\micromark-util-chunked filesCount=6
+  • identified module  dep=micromark-util-classify-character from=node_modules\micromark-util-classify-character to=dist\win-unpacked\resources\app\node_modules\micromark-util-classify-character filesCount=6
+  • identified module  dep=micromark-util-combine-extensions from=node_modules\micromark-util-combine-extensions to=dist\win-unpacked\resources\app\node_modules\micromark-util-combine-extensions filesCount=4
+  • identified module  dep=micromark-util-decode-numeric-character-reference from=node_modules\micromark-util-decode-numeric-character-reference to=dist\win-unpacked\resources\app\node_modules\micromark-util-decode-numeric-character-reference filesCount=6
+  • identified module  dep=micromark-util-decode-string from=node_modules\micromark-util-decode-string to=dist\win-unpacked\resources\app\node_modules\micromark-util-decode-string filesCount=6
+  • identified module  dep=micromark-util-encode from=node_modules\micromark-util-encode to=dist\win-unpacked\resources\app\node_modules\micromark-util-encode filesCount=4
+  • identified module  dep=micromark-util-html-tag-name from=node_modules\micromark-util-html-tag-name to=dist\win-unpacked\resources\app\node_modules\micromark-util-html-tag-name filesCount=4
+  • identified module  dep=micromark-util-normalize-identifier from=node_modules\micromark-util-normalize-identifier to=dist\win-unpacked\resources\app\node_modules\micromark-util-normalize-identifier filesCount=6
+  • identified module  dep=micromark-util-resolve-all from=node_modules\micromark-util-resolve-all to=dist\win-unpacked\resources\app\node_modules\micromark-util-resolve-all filesCount=4
+  • identified module  dep=micromark-util-sanitize-uri from=node_modules\micromark-util-sanitize-uri to=dist\win-unpacked\resources\app\node_modules\micromark-util-sanitize-uri filesCount=6
+  • identified module  dep=micromark-util-subtokenize from=node_modules\micromark-util-subtokenize to=dist\win-unpacked\resources\app\node_modules\micromark-util-subtokenize filesCount=10
+  • identified module  dep=micromark-util-symbol from=node_modules\micromark-util-symbol to=dist\win-unpacked\resources\app\node_modules\micromark-util-symbol filesCount=12
+  • identified module  dep=micromark-util-types from=node_modules\micromark-util-types to=dist\win-unpacked\resources\app\node_modules\micromark-util-types filesCount=3
+  • identified module  dep=ms from=node_modules\ms to=dist\win-unpacked\resources\app\node_modules\ms filesCount=3
+  • identified module  dep=node-addon-api from=node_modules\node-addon-api to=dist\win-unpacked\resources\app\node_modules\node-addon-api filesCount=18
+  • identified module  dep=node-pty from=node_modules\node-pty to=dist\win-unpacked\resources\app\node_modules\node-pty filesCount=281
+  • identified module  dep=parse-entities from=node_modules\parse-entities to=dist\win-unpacked\resources\app\node_modules\parse-entities filesCount=5
+  • identified module  dep=@types/unist from=node_modules\hastscript\node_modules\@types\unist to=dist\win-unpacked\resources\app\node_modules\parse-entities\node_modules\@types\unist filesCount=2
+  • identified module  dep=prismjs from=node_modules\prismjs to=dist\win-unpacked\resources\app\node_modules\prismjs filesCount=698
+  • identified module  dep=property-information from=node_modules\property-information to=dist\win-unpacked\resources\app\node_modules\property-information filesCount=37
+  • identified module  dep=react from=node_modules\react to=dist\win-unpacked\resources\app\node_modules\react filesCount=26
+  • identified module  dep=react-dom from=node_modules\react-dom to=dist\win-unpacked\resources\app\node_modules\react-dom filesCount=42
+  • identified module  dep=react-markdown from=node_modules\react-markdown to=dist\win-unpacked\resources\app\node_modules\react-markdown filesCount=6
+  • identified module  dep=react-resizable-panels from=node_modules\react-resizable-panels to=dist\win-unpacked\resources\app\node_modules\react-resizable-panels filesCount=7
+  • identified module  dep=react-syntax-highlighter from=node_modules\react-syntax-highlighter to=dist\win-unpacked\resources\app\node_modules\react-syntax-highlighter filesCount=1969
+  • identified module  dep=refractor from=node_modules\refractor to=dist\win-unpacked\resources\app\node_modules\refractor filesCount=281
+  • identified module  dep=character-entities from=node_modules\refractor\node_modules\character-entities to=dist\win-unpacked\resources\app\node_modules\refractor\node_modules\character-entities filesCount=3
+  • identified module  dep=character-entities-legacy from=node_modules\refractor\node_modules\character-entities-legacy to=dist\win-unpacked\resources\app\node_modules\refractor\node_modules\character-entities-legacy filesCount=3
+  • identified module  dep=character-reference-invalid from=node_modules\refractor\node_modules\character-reference-invalid to=dist\win-unpacked\resources\app\node_modules\refractor\node_modules\character-reference-invalid filesCount=3
+  • identified module  dep=is-alphabetical from=node_modules\refractor\node_modules\is-alphabetical to=dist\win-unpacked\resources\app\node_modules\refractor\node_modules\is-alphabetical filesCount=3
+  • identified module  dep=is-alphanumerical from=node_modules\refractor\node_modules\is-alphanumerical to=dist\win-unpacked\resources\app\node_modules\refractor\node_modules\is-alphanumerical filesCount=3
+  • identified module  dep=is-decimal from=node_modules\refractor\node_modules\is-decimal to=dist\win-unpacked\resources\app\node_modules\refractor\node_modules\is-decimal filesCount=3
+  • identified module  dep=is-hexadecimal from=node_modules\refractor\node_modules\is-hexadecimal to=dist\win-unpacked\resources\app\node_modules\refractor\node_modules\is-hexadecimal filesCount=3
+  • identified module  dep=parse-entities from=node_modules\refractor\node_modules\parse-entities to=dist\win-unpacked\resources\app\node_modules\refractor\node_modules\parse-entities filesCount=5
+  • identified module  dep=prismjs from=node_modules\refractor\node_modules\prismjs to=dist\win-unpacked\resources\app\node_modules\refractor\node_modules\prismjs filesCount=657
+  • identified module  dep=remark-gfm from=node_modules\remark-gfm to=dist\win-unpacked\resources\app\node_modules\remark-gfm filesCount=5
+  • identified module  dep=remark-parse from=node_modules\remark-parse to=dist\win-unpacked\resources\app\node_modules\remark-parse filesCount=4
+  • identified module  dep=remark-rehype from=node_modules\remark-rehype to=dist\win-unpacked\resources\app\node_modules\remark-rehype filesCount=6
+  • identified module  dep=remark-stringify from=node_modules\remark-stringify to=dist\win-unpacked\resources\app\node_modules\remark-stringify filesCount=4
+  • identified module  dep=sax from=node_modules\sax to=dist\win-unpacked\resources\app\node_modules\sax filesCount=3
+  • identified module  dep=scheduler from=node_modules\scheduler to=dist\win-unpacked\resources\app\node_modules\scheduler filesCount=14
+  • identified module  dep=semver from=node_modules\electron-updater\node_modules\semver to=dist\win-unpacked\resources\app\node_modules\semver filesCount=51
+  • identified module  dep=space-separated-tokens from=node_modules\space-separated-tokens to=dist\win-unpacked\resources\app\node_modules\space-separated-tokens filesCount=3
+  • identified module  dep=stringify-entities from=node_modules\stringify-entities to=dist\win-unpacked\resources\app\node_modules\stringify-entities filesCount=11
+  • identified module  dep=style-to-js from=node_modules\style-to-js to=dist\win-unpacked\resources\app\node_modules\style-to-js filesCount=16
+  • identified module  dep=style-to-object from=node_modules\style-to-object to=dist\win-unpacked\resources\app\node_modules\style-to-object filesCount=15
+  • identified module  dep=systeminformation from=node_modules\systeminformation to=dist\win-unpacked\resources\app\node_modules\systeminformation filesCount=25
+  • identified module  dep=tiny-typed-emitter from=node_modules\tiny-typed-emitter to=dist\win-unpacked\resources\app\node_modules\tiny-typed-emitter filesCount=3
+  • identified module  dep=trim-lines from=node_modules\trim-lines to=dist\win-unpacked\resources\app\node_modules\trim-lines filesCount=3
+  • identified module  dep=trough from=node_modules\trough to=dist\win-unpacked\resources\app\node_modules\trough filesCount=6
+  • identified module  dep=unified from=node_modules\unified to=dist\win-unpacked\resources\app\node_modules\unified filesCount=7
+  • identified module  dep=unist-util-is from=node_modules\unist-util-is to=dist\win-unpacked\resources\app\node_modules\unist-util-is filesCount=6
+  • identified module  dep=unist-util-position from=node_modules\unist-util-position to=dist\win-unpacked\resources\app\node_modules\unist-util-position filesCount=4
+  • identified module  dep=unist-util-stringify-position from=node_modules\unist-util-stringify-position to=dist\win-unpacked\resources\app\node_modules\unist-util-stringify-position filesCount=4
+  • identified module  dep=unist-util-visit from=node_modules\unist-util-visit to=dist\win-unpacked\resources\app\node_modules\unist-util-visit filesCount=5
+  • identified module  dep=unist-util-visit-parents from=node_modules\unist-util-visit-parents to=dist\win-unpacked\resources\app\node_modules\unist-util-visit-parents filesCount=9
+  • identified module  dep=universal-user-agent from=node_modules\universal-user-agent to=dist\win-unpacked\resources\app\node_modules\universal-user-agent filesCount=7
+  • identified module  dep=universalify from=node_modules\universalify to=dist\win-unpacked\resources\app\node_modules\universalify filesCount=3
+  • identified module  dep=vfile from=node_modules\vfile to=dist\win-unpacked\resources\app\node_modules\vfile filesCount=19
+  • identified module  dep=vfile-message from=node_modules\vfile-message to=dist\win-unpacked\resources\app\node_modules\vfile-message filesCount=4
+  • identified module  dep=xtend from=node_modules\xtend to=dist\win-unpacked\resources\app\node_modules\xtend filesCount=5
+  • identified module  dep=zwitch from=node_modules\zwitch to=dist\win-unpacked\resources\app\node_modules\zwitch filesCount=3
+  • not packed into asar archive  file=node_modules\node-pty\build\Release\winpty-agent.exe reason=contains executable code
+  • updating asar integrity executable resource  executablePath=dist\win-unpacked\Claude Code Studio.exe
+  • spawning        command=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\app-builder-bin\win\x64\app-builder.exe icon --format ico --root D:\a\claude-code-studio-testing\claude-code-studio-testing\build --root D:\a\claude-code-studio-testing\claude-code-studio-testing --out D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\.icon-ico
+  • path doesn't exist  path=D:\a\claude-code-studio-testing\claude-code-studio-testing\build\icon.ico
+  • path doesn't exist  path=D:\a\claude-code-studio-testing\claude-code-studio-testing\icon.ico
+  • path doesn't exist  path=D:\a\claude-code-studio-testing\claude-code-studio-testing\build\icons
+  • path doesn't exist  path=D:\a\claude-code-studio-testing\claude-code-studio-testing\icons
+  • path doesn't exist  path=D:\a\claude-code-studio-testing\claude-code-studio-testing\build\icon.png
+  • path doesn't exist  path=D:\a\claude-code-studio-testing\claude-code-studio-testing\icon.png
+  • path doesn't exist  path=D:\a\claude-code-studio-testing\claude-code-studio-testing\build\icon.icns
+  • path doesn't exist  path=D:\a\claude-code-studio-testing\claude-code-studio-testing\icon.icns
+  • no icons found, using provided fallback sources  
+  • exited          command=app-builder.exe code=0 pid=9200 out={"icons":null,"isFallback":true}
+  • default Electron icon is used  reason=application icon is not set
+  • spawning        command=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\app-builder-bin\win\x64\app-builder.exe rcedit --args ["D:\\a\\claude-code-studio-testing\\claude-code-studio-testing\\dist\\win-unpacked\\Claude Code Studio.exe","--set-version-string","FileDescription","Claude Code Studio","--set-version-string","ProductName","Claude Code Studio","--set-version-string","LegalCopyright","Copyright © 2026 LxveAce","--set-file-version","3.0.0","--set-p c3688a8d712204f1211c89bab961b37096ad11edf6c85d13500e38111da53b1d (sha256 hash) (sha256 hash) Code Studio","--set-version-string","OriginalFilename","","--set-version-string","CompanyName","LxveAce"]
+  • computing effective URL  initialUrl=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z
+                             currentUrl=https://release-assets.githubusercontent.com/github-production-release-asset/65527128/f73f2200-5d53-11ea-8264-ddd345f11ee4?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-05-27T21%3A48%3A57Z&rscd=attachment%3B+filename%3DwinCodeSign-2.6.0.7z&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-05-27T20%3A48%3A25Z&ske=2026-05-27T21%3A48%3A57Z&sks=b&skv=2018-11-09&sig=eqUeOxpY1pJUBMXE9mGvv59IKmOlP9YGlejjcxtJzsk%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3OTkxNjUwNywibmJmIjoxNzc5OTE2MjA3LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.EG5A2NsELeMHNt2_ZaNAIEOZeXEa_OVq-w4bfiyZgkI&response-content-disposition=attachment%3B%20filename%3DwinCodeSign-2.6.0.7z&response-content-type=application%2Foctet-stream
+  • downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z length=5635384 contentType=application/octet-stream
+  • downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z size=5.6 MB parts=1
+  • map async       taskCount=1
+  • download part   range=bytes=0-5635383 index=0
+  • downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/winCodeSign-2.6.0/winCodeSign-2.6.0.7z duration=469ms
+  • execute command  command='D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\711081587.7z' '-oC:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\711081587'
+                     workingDirectory=C:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign
+  • command executed  executable=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\7zip-bin\win\x64\7za.exe
+                      out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 5635384 bytes (5504 KiB)
+    
+    Extracting archive: C:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\711081587.7z
+    --
+    Path = C:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\711081587.7z
+    Type = 7z
+    Physical Size = 5635384
+    Headers Size = 1492
+    Method = LZMA2:24m LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    Everything is Ok
+    
+    Folders: 13
+    Files: 83
+    Size:       24762883
+    Compressed: 5635384
+    
+  • execute command  command='C:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0\rcedit-x64.exe' 'D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\win-unpacked\Claude Code Studio.exe' --set-version-string FileDescription 'Claude Code Studio' --set-version-string ProductName 'Claude Code Studio' --set-version-string LegalCopyright 'Copyright © 2026 LxveAce' --set-file-version 3.0.0 --set-product-version 3.0.0.0 --set-version-string InternalName 'Claude Code Studio' --set-version-string OriginalFilename '' --set-version-string CompanyName LxveAce
+                     workingDirectory=
+  • command executed  executable=C:\Users\runneradmin\AppData\Local\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0\rcedit-x64.exe
+  • exited          command=app-builder.exe code=0 pid=7440
+  • signing with signtool.exe  path=dist\win-unpacked\Claude Code Studio.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+wine&sign: 1s 266ms
+  • signing with signtool.exe  path=dist\win-unpacked\resources\app.asar.unpacked\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\OpenConsole.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\win-unpacked\resources\app.asar.unpacked\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-arm64\OpenConsole.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\win-unpacked\resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\winpty-agent.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\win-unpacked\resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty\OpenConsole.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\win-unpacked\resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64\winpty-agent.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\win-unpacked\resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64\conpty\OpenConsole.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=dist\win-unpacked\resources\app.asar.unpacked\node_modules\node-pty\build\Release\winpty-agent.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • no event listeners found  event=afterSign
+  • building        target=nsis file=dist\Claude-Code-Studio-3.0.0-Windows.exe archs=x64 oneClick=false perMachine=false
+  • no event listeners found  event=artifactBuildStarted
+  • spawning        command=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\app-builder-bin\win\x64\app-builder.exe download-artifact --name nsis-3.0.4.1-nsis-3.0.4.1 --url https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-3.0.4.1/nsis-3.0.4.1.7z --sha512 VKMiizYdmNdJOWpRGz4trl4lD++BvYP2irAXpMilheUP0pc93iKlWAoP843Vlraj8YG19CVn0j+dCo/hURz9+Q==
+  • computing effective URL  initialUrl=https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-3.0.4.1/nsis-3.0.4.1.7z
+                             currentUrl=https://release-assets.githubusercontent.com/github-production-release-asset/65527128/10518a80-10f6-11ea-8d2f-403bab81b4cd?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-05-27T21%3A48%3A32Z&rscd=attachment%3B+filename%3Dnsis-3.0.4.1.7z&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-05-27T20%3A48%3A25Z&ske=2026-05-27T21%3A48%3A32Z&sks=b&skv=2018-11-09&sig=aKcv2iGbktM%2BGBhIoyZXx4w4U6mf1nGepb%2BNzhWHOYU%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3OTkxNjU1MSwibmJmIjoxNzc5OTE2MjUxLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.2OjMgr2TAdWaQ9i_bZYQLCvQ-tQ-rWSpX9_3QzsVA6U&response-content-disposition=attachment%3B%20filename%3Dnsis-3.0.4.1.7z&response-content-type=application%2Foctet-stream
+  • downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-3.0.4.1/nsis-3.0.4.1.7z length=1287512 contentType=application/octet-stream
+  • downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-3.0.4.1/nsis-3.0.4.1.7z size=1.3 MB parts=1
+  • map async       taskCount=1
+  • download part   range=bytes=0-1287511 index=0
+  • downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-3.0.4.1/nsis-3.0.4.1.7z duration=418ms
+  • execute command  command='D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\197683359.7z' '-oC:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\197683359'
+                     workingDirectory=C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis
+  • command executed  executable=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\7zip-bin\win\x64\7za.exe
+                      out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 1287512 bytes (1258 KiB)
+    
+    Extracting archive: C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\197683359.7z
+    --
+    Path = C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\197683359.7z
+    Type = 7z
+    Physical Size = 1287512
+    Headers Size = 4285
+    Method = LZMA2:23 LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    Everything is Ok
+    
+    Folders: 23
+    Files: 343
+    Size:       7280179
+    Compressed: 1287512
+    
+  • exited          command=app-builder.exe code=0 pid=5716 out=C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\nsis-3.0.4.1-nsis-3.0.4.1
+  • signing with signtool.exe  path=dist\win-unpacked\resources\elevate.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • executing       file=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\7zip-bin\win\x64\7za.exe args=a -bd -mx=9 -mtc=off -mtm=off -mta=off D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\claude-code-studio-3.0.0-x64.nsis.7z . -xr!*.avi -xr!*.mov -xr!*.m4v -xr!*.mp4 -xr!*.m4p -xr!*.qt -xr!*.mkv -xr!*.webm -xr!*.vmdk cwd=D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\win-unpacked
+nsis package, x64: 112s 37ms
+  • executing       file=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\7zip-bin\win\x64\7za.exe args=l D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\claude-code-studio-3.0.0-x64.nsis.7z
+  • executed        file=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\7zip-bin\win\x64\7za.exe stdout=
+7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+                      Scanning the drive for archives:
+1 file, 97762236 bytes (94 MiB)
+                      Listing archive: D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\claude-code-studio-3.0.0-x64.nsis.7z
+                      --
+Path = D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\claude-code-studio-3.0.0-x64.nsis.7z
+Type = 7z
+Physical Size = 97762236
+Headers Size = 5107
+Method = LZMA2:26 LZMA:20 BCJ2
+Solid = +
+Blocks = 2
+                         Date      Time    Attr         Size   Compressed  Name
+------------------- ----- ------------ ------------  ------------------------
+                    D....            0            0  locales
+                    D....            0            0  resources
+                    D....            0            0  resources\app.asar.unpacked
+                    D....            0            0  resources\app.asar.unpacked\node_modules
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\bin
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\bin\win32-x64-146
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\deps
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.tlog
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.tlog
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.tlog
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\src
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\src\win
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_c.F2910C6B.tlog
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\src
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\src\win
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.tlog
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\src
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\src\win
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Font-Report-June2016
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\ship
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\gen
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\include
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\libwinpty
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\unix-adapter
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\lib
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\lib\shared
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\lib\worker
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\node-addon-api
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\Release
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\Release\obj
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\Release\obj\node_addon_api_except
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\Release\obj\node_addon_api_except\node_add.F34AD94D.tlog
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\prebuilds
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\prebuilds\darwin-arm64
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\prebuilds\darwin-x64
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64\conpty
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\scripts
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\src
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\src\shared
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\src\win
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\src\worker
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\third_party
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\third_party\conpty
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\third_party\conpty\1.23.251008001
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-arm64
+                    D....            0            0  resources\app.asar.unpacked\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64
+                    ....A       119889     23715788  chrome_100_percent.pak
+                    ....A       197073               chrome_200_percent.pak
+                    ....A     10876464               icudtl.dat
+                    ....A         1096               LICENSE.electron.txt
+                    ....A     20367095               LICENSES.chromium.html
+                    ....A       620482               locales\af.pak
+                    ....A      1006731               locales\am.pak
+                    ....A      1109621               locales\ar.pak
+                    ....A      1150764               locales\bg.pak
+                    ....A      1479936               locales\bn.pak
+                    ....A       699590               locales\ca.pak
+                    ....A       726068               locales\cs.pak
+                    ....A       652593               locales\da.pak
+                    ....A       700770               locales\de.pak
+                    ....A      1265039               locales\el.pak
+                    ....A       565496               locales\en-GB.pak
+                    ....A       571518               locales\en-US.pak
+                    ....A       690698               locales\es-419.pak
+                    ....A       686798               locales\es.pak
+                    ....A       627098               locales\et.pak
+                    ....A      1038159               locales\fa.pak
+                    ....A       638637               locales\fi.pak
+                    ....A       723751               locales\fil.pak
+                    ....A       746462               locales\fr.pak
+                    ....A      1462607               locales\gu.pak
+                    ....A       908719               locales\he.pak
+                    ....A      1549614               locales\hi.pak
+                    ....A       698895               locales\hr.pak
+                    ....A       747469               locales\hu.pak
+                    ....A       618244               locales\id.pak
+                    ....A       675911               locales\it.pak
+                    ....A       824124               locales\ja.pak
+                    ....A      1680794               locales\kn.pak
+                    ....A       701209               locales\ko.pak
+                    ....A       759941               locales\lt.pak
+                    ....A       757295               locales\lv.pak
+                    ....A      1728748               locales\ml.pak
+                    ....A      1431694               locales\mr.pak
+                    ....A       651309               locales\ms.pak
+                    ....A       623206               locales\nb.pak
+                    ....A       649224               locales\nl.pak
+                    ....A       725422               locales\pl.pak
+                    ....A       680477               locales\pt-BR.pak
+                    ....A       684179               locales\pt-PT.pak
+                    ....A       710046               locales\ro.pak
+                    ....A      1177875               locales\ru.pak
+                    ....A       738142               locales\sk.pak
+                    ....A       706741               locales\sl.pak
+                    ....A      1088559               locales\sr.pak
+                    ....A       630691               locales\sv.pak
+                    ....A       667148               locales\sw.pak
+                    ....A      1720238               locales\ta.pak
+                    ....A      1591909               locales\te.pak
+                    ....A      1337523               locales\th.pak
+                    ....A       679647               locales\tr.pak
+                    ....A      1185632               locales\uk.pak
+                    ....A      1021689               locales\ur.pak
+                    ....A       808100               locales\vi.pak
+                    ....A       577808               locales\zh-CN.pak
+                    ....A       570087               locales\zh-TW.pak
+                    ....A          124               resources\app-update.yml
+                    ....A     30934649               resources\app.asar
+                    ....A       311808               resources\app.asar.unpacked\node_modules\node-pty\bin\win32-x64-146\node-pty.node
+                    ....A        13005               resources\app.asar.unpacked\node_modules\node-pty\build\conpty.vcxproj
+                    ....A         3018               resources\app.asar.unpacked\node_modules\node-pty\build\conpty.vcxproj.filters
+                    ....A        12934               resources\app.asar.unpacked\node_modules\node-pty\build\conpty_console_list.vcxproj
+                    ....A         2552               resources\app.asar.unpacked\node_modules\node-pty\build\conpty_console_list.vcxproj.filters
+                    ....A          348               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.dll.recipe
+                    ....A        49712               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.tlog\CL.command.1.tlog
+                    ....A         3948               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.tlog\Cl.items.tlog
+                    ....A       507512               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.tlog\CL.read.1.tlog
+                    ....A         7954               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.tlog\CL.write.1.tlog
+                    ....A         7782               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.tlog\link.command.1.tlog
+                    ....A        13532               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.tlog\link.read.1.tlog
+                    ....A         2686               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.tlog\link.secondary.1.tlog
+                    ....A         4942               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.tlog\link.write.1.tlog
+                    ....A          218               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty\winpty.tlog\winpty.lastbuildstate
+                    ....A          354               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.exe.recipe
+                    ....A       103378               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.tlog\CL.command.1.tlog
+                    ....A         8321               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.tlog\Cl.items.tlog
+                    ....A      1158850               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.tlog\CL.read.1.tlog
+                    ....A        16760               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.tlog\CL.write.1.tlog
+                    ....A        15256               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.tlog\link.command.1.tlog
+                    ....A        23886               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.tlog\link.read.1.tlog
+                    ....A         5065               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.tlog\link.secondary.1.tlog
+                    ....A        10128               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.tlog\link.write.1.tlog
+                    ....A          218               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\Release\obj\winpty-agent\winpty-agent.tlog\winpty-agent.lastbuildstate
+                    ....A        20132               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\winpty-agent.vcxproj
+                    ....A        83226               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\winpty-agent.vcxproj.filters
+                    ....A        14197               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\winpty-debugserver.vcxproj
+                    ....A        25218               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\winpty-debugserver.vcxproj.filters
+                    ....A        15824               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\winpty.vcxproj
+                    ....A        40063               resources\app.asar.unpacked\node_modules\node-pty\build\deps\winpty\src\winpty.vcxproj.filters
+                    ....A        13638               resources\app.asar.unpacked\node_modules\node-pty\build\pty.vcxproj
+                    ....A         3018               resources\app.asar.unpacked\node_modules\node-pty\build\pty.vcxproj.filters
+                    ....A         1046               resources\app.asar.unpacked\node_modules\node-pty\build\Release\conpty.exp
+                    ....A      1952310               resources\app.asar.unpacked\node_modules\node-pty\build\Release\conpty.iobj
+                    ....A       728144               resources\app.asar.unpacked\node_modules\node-pty\build\Release\conpty.ipdb
+                    ....A         2066               resources\app.asar.unpacked\node_modules\node-pty\build\Release\conpty.lib
+                    ....A       311808               resources\app.asar.unpacked\node_modules\node-pty\build\Release\conpty.node
+                    ....A         1071               resources\app.asar.unpacked\node_modules\node-pty\build\Release\conpty_console_list.exp
+                    ....A       470533               resources\app.asar.unpacked\node_modules\node-pty\build\Release\conpty_console_list.iobj
+                    ....A       150480               resources\app.asar.unpacked\node_modules\node-pty\build\Release\conpty_console_list.ipdb
+                    ....A         2322               resources\app.asar.unpacked\node_modules\node-pty\build\Release\conpty_console_list.lib
+                    ....A       134656               resources\app.asar.unpacked\node_modules\node-pty\build\Release\conpty_console_list.node
+                    ....A          537               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.node.recipe
+                    ....A        10182               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.tlog\CL.command.1.tlog
+                    ....A          705               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.tlog\Cl.items.tlog
+                    ....A       117748               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.tlog\CL.read.1.tlog
+                    ....A         2310               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.tlog\CL.write.1.tlog
+                    ....A          218               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.tlog\conpty.lastbuildstate
+                    ....A         2436               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.tlog\link.command.1.tlog
+                    ....A         6178               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.tlog\link.read.1.tlog
+                    ....A          815               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.tlog\link.secondary.1.tlog
+                    ....A         1202               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\conpty.tlog\link.write.1.tlog
+                    ....A           59               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\src\win\conpty.nativecodeanalysis.xml
+                    ....A           59               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\src\win\path_util.nativecodeanalysis.xml
+                    ....A           59               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty\win_delay_load_hook.nativecodeanalysis.xml
+                    ....A         7024               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_c.F2910C6B.tlog\CL.command.1.tlog
+                    ....A          526               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_c.F2910C6B.tlog\Cl.items.tlog
+                    ....A        64612               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_c.F2910C6B.tlog\CL.read.1.tlog
+                    ....A         1730               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_c.F2910C6B.tlog\CL.write.1.tlog
+                    ....A          218               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_c.F2910C6B.tlog\conpty_console_list.lastbuildstate
+                    ....A         2278               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_c.F2910C6B.tlog\link.command.1.tlog
+                    ....A         5668               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_c.F2910C6B.tlog\link.read.1.tlog
+                    ....A          778               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_c.F2910C6B.tlog\link.secondary.1.tlog
+                    ....A         1076               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_c.F2910C6B.tlog\link.write.1.tlog
+                    ....A          550               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\conpty_console_list.node.recipe
+                    ....A           59               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\src\win\conpty_console_list.nativecodeanalysis.xml
+                    ....A           59               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\conpty_console_list\win_delay_load_hook.nativecodeanalysis.xml
+                    ....A          894               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.node.recipe
+                    ....A        10548               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.tlog\CL.command.1.tlog
+                    ....A          696               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.tlog\Cl.items.tlog
+                    ....A       118262               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.tlog\CL.read.1.tlog
+                    ....A         2274               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.tlog\CL.write.1.tlog
+                    ....A         2818               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.tlog\link.command.1.tlog
+                    ....A         6568               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.tlog\link.read.1.tlog
+                    ....A          900               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.tlog\link.secondary.1.tlog
+                    ....A         1384               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.tlog\link.write.1.tlog
+                    ....A          218               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\pty.tlog\pty.lastbuildstate
+                    ....A           59               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\src\win\path_util.nativecodeanalysis.xml
+                    ....A           59               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\src\win\winpty.nativecodeanalysis.xml
+                    ....A           59               resources\app.asar.unpacked\node_modules\node-pty\build\Release\obj\pty\win_delay_load_hook.nativecodeanalysis.xml
+                    ....A         1039               resources\app.asar.unpacked\node_modules\node-pty\build\Release\pty.exp
+                    ....A      1763872               resources\app.asar.unpacked\node_modules\node-pty\build\Release\pty.iobj
+                    ....A       654480               resources\app.asar.unpacked\node_modules\node-pty\build\Release\pty.ipdb
+                    ....A         2028               resources\app.asar.unpacked\node_modules\node-pty\build\Release\pty.lib
+                    ....A       307712               resources\app.asar.unpacked\node_modules\node-pty\build\Release\pty.node
+                    ....A      4034377               resources\app.asar.unpacked\node_modules\node-pty\build\Release\winpty-agent.iobj
+                    ....A      1287744               resources\app.asar.unpacked\node_modules\node-pty\build\Release\winpty-agent.ipdb
+                    ....A         3320               resources\app.asar.unpacked\node_modules\node-pty\build\Release\winpty.exp
+                    ....A      2158612               resources\app.asar.unpacked\node_modules\node-pty\build\Release\winpty.iobj
+                    ....A       824368               resources\app.asar.unpacked\node_modules\node-pty\build\Release\winpty.ipdb
+                    ....A         5762               resources\app.asar.unpacked\node_modules\node-pty\build\Release\winpty.lib
+                    ....A           55               resources\app.asar.unpacked\node_modules\node-pty\deps\.editorconfig
+                    ....A          439               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\.drone.yml
+                    ....A         6478               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\configure
+                    ....A         1085               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\LICENSE
+                    ....A         4722               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\Makefile
+                    ....A          213               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\build32.sh
+                    ....A          217               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\build64.sh
+                    ....A         6068               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\color-test.sh
+                    ....A         3228               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\ConinMode.ps1
+                    ....A         1558               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\DebugClient.py
+                    ....A         2396               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\DebugServer.py
+                    ....A           97               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\DumpLines.py
+                    ....A         1974               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\EnableExtendedFlags.txt
+                    ....A        14988               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\font-notes.txt
+                    ....A        16408               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Font-Report-June2016\CP437-Consolas.txt
+                    ....A        19641               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Font-Report-June2016\CP437-Lucida.txt
+                    ....A        19593               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Font-Report-June2016\CP932.txt
+                    ....A        19650               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Font-Report-June2016\CP936.txt
+                    ....A        19588               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Font-Report-June2016\CP949.txt
+                    ....A        19656               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Font-Report-June2016\CP950.txt
+                    ....A          870               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Font-Report-June2016\MinimumWindowWidths.txt
+                    ....A          147               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Font-Report-June2016\Results.txt
+                    ....A         7851               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Font-Report-June2016\Windows10SetFontBugginess.txt
+                    ....A          529               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\FormatChar.h
+                    ....A         1952               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\IdentifyConsoleWindow.ps1
+                    ....A         4325               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\MouseInputNotes.txt
+                    ....A         9856               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Notes.txt
+                    ....A           65               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\misc\Spew.py
+                    ....A         5551               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\README.md
+                    ....A        13667               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\RELEASES.md
+                    ....A         1230               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\ship\build-pty4j-libpty.bat
+                    ....A         1698               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\ship\common_ship.py
+                    ....A         5415               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\ship\make_msvc_package.py
+                    ....A         4022               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\ship\ship.py
+                    ....A         3520               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\Agent.h
+                    ....A         1283               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\AgentCreateDesktop.h
+                    ....A         1266               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\ConsoleFont.h
+                    ....A         3950               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\ConsoleInput.h
+                    ....A         1444               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\ConsoleInputReencoding.h
+                    ....A         1524               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\ConsoleLine.h
+                    ....A         2204               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\Coord.h
+                    ....A         1434               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\DebugShowInput.h
+                    ....A         1271               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\DefaultInputMap.h
+                    ....A         1242               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\DsrSender.h
+                    ....A         1603               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\EventLoop.h
+                    ....A         3369               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\InputMap.h
+                    ....A         2411               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\LargeConsoleRead.h
+                    ....A         4130               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\NamedPipe.h
+                    ....A         3760               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\Scraper.h
+                    ....A         2365               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\SimplePool.h
+                    ....A         4437               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\SmallRect.h
+                    ....A         2262               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\Terminal.h
+                    ....A         5298               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\UnicodeEncoding.h
+                    ....A         2347               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\Win32Console.h
+                    ....A         3244               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\agent\Win32ConsoleBuffer.h
+                    ....A         2378               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\configurations.gypi
+                    ....A          106               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\gen\GenVersion.h
+                    ....A         9420               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\include\winpty.h
+                    ....A         5697               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\include\winpty_constants.h
+                    ....A         1278               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\libwinpty\AgentLocation.h
+                    ....A         1961               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\libwinpty\LibWinptyException.h
+                    ....A         2379               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\libwinpty\WinptyInternal.h
+                    ....A         1418               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\AgentMsg.h
+                    ....A         2836               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\BackgroundDesktop.h
+                    ....A         3376               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\Buffer.h
+                    ....A         1696               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\DebugClient.h
+                    ....A         2015               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\GenRandom.h
+                    ....A          274               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\GetCommitHash.bat
+                    ....A         2183               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\Mutex.h
+                    ....A         2282               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\OsModule.h
+                    ....A         1870               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\OwnedHandle.h
+                    ....A         1528               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\PrecompiledHeader.h
+                    ....A         8506               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\StringBuilder.h
+                    ....A         2677               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\StringUtil.h
+                    ....A         2171               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\TimeMeasurement.h
+                    ....A         2019               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\UnixCtrlChars.h
+                    ....A          578               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\UpdateGenVersion.bat
+                    ....A         3465               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\WindowsSecurity.h
+                    ....A         1345               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\WindowsVersion.h
+                    ....A         2829               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\WinptyAssert.h
+                    ....A         1643               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\WinptyException.h
+                    ....A         1246               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\WinptyVersion.h
+                    ....A         3668               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\shared\winpty_snprintf.h
+                    ....A         2058               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\unix-adapter\InputHandler.h
+                    ....A         1943               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\unix-adapter\OutputHandler.h
+                    ....A         1410               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\unix-adapter\Util.h
+                    ....A         1549               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\unix-adapter\WakeupFd.h
+                    ....A         8463               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\src\winpty.gyp
+                    ....A         2425               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\vcbuild.bat
+                    ....A           10               resources\app.asar.unpacked\node_modules\node-pty\deps\winpty\VERSION.txt
+                    ....A          721               resources\app.asar.unpacked\node_modules\node-pty\lib\conpty_console_list_agent.js
+                    ....A          475               resources\app.asar.unpacked\node_modules\node-pty\lib\conpty_console_list_agent.js.map
+                    ....A         1600               resources\app.asar.unpacked\node_modules\node-pty\lib\eventEmitter2.js
+                    ....A         1155               resources\app.asar.unpacked\node_modules\node-pty\lib\eventEmitter2.js.map
+                    ....A         1266               resources\app.asar.unpacked\node_modules\node-pty\lib\eventEmitter2.test.js
+                    ....A         1396               resources\app.asar.unpacked\node_modules\node-pty\lib\eventEmitter2.test.js.map
+                    ....A         2008               resources\app.asar.unpacked\node_modules\node-pty\lib\index.js
+                    ....A          987               resources\app.asar.unpacked\node_modules\node-pty\lib\index.js.map
+                    ....A          233               resources\app.asar.unpacked\node_modules\node-pty\lib\interfaces.js
+                    ....A          124               resources\app.asar.unpacked\node_modules\node-pty\lib\interfaces.js.map
+                    ....A          348               resources\app.asar.unpacked\node_modules\node-pty\lib\shared\conout.js
+                    ....A          204               resources\app.asar.unpacked\node_modules\node-pty\lib\shared\conout.js.map
+                    ....A         7454               resources\app.asar.unpacked\node_modules\node-pty\lib\terminal.js
+                    ....A         5845               resources\app.asar.unpacked\node_modules\node-pty\lib\terminal.js.map
+                    ....A         6250               resources\app.asar.unpacked\node_modules\node-pty\lib\terminal.test.js
+                    ....A         4151               resources\app.asar.unpacked\node_modules\node-pty\lib\terminal.test.js.map
+                    ....A          807               resources\app.asar.unpacked\node_modules\node-pty\lib\testUtils.test.js
+                    ....A          622               resources\app.asar.unpacked\node_modules\node-pty\lib\testUtils.test.js.map
+                    ....A          228               resources\app.asar.unpacked\node_modules\node-pty\lib\types.js
+                    ....A          114               resources\app.asar.unpacked\node_modules\node-pty\lib\types.js.map
+                    ....A        13372               resources\app.asar.unpacked\node_modules\node-pty\lib\unixTerminal.js
+                    ....A         9657               resources\app.asar.unpacked\node_modules\node-pty\lib\unixTerminal.js.map
+                    ....A        19310               resources\app.asar.unpacked\node_modules\node-pty\lib\unixTerminal.test.js
+                    ....A        11425               resources\app.asar.unpacked\node_modules\node-pty\lib\unixTerminal.test.js.map
+                    ....A         1548               resources\app.asar.unpacked\node_modules\node-pty\lib\utils.js
+                    ....A         1142               resources\app.asar.unpacked\node_modules\node-pty\lib\utils.js.map
+                    ....A         6119               resources\app.asar.unpacked\node_modules\node-pty\lib\windowsConoutConnection.js
+                    ....A         1660               resources\app.asar.unpacked\node_modules\node-pty\lib\windowsConoutConnection.js.map
+                    ....A        12388               resources\app.asar.unpacked\node_modules\node-pty\lib\windowsPtyAgent.js
+                    ....A         9105               resources\app.asar.unpacked\node_modules\node-pty\lib\windowsPtyAgent.js.map
+                    ....A         4147               resources\app.asar.unpacked\node_modules\node-pty\lib\windowsPtyAgent.test.js
+                    ....A         2951               resources\app.asar.unpacked\node_modules\node-pty\lib\windowsPtyAgent.test.js.map
+                    ....A         7852               resources\app.asar.unpacked\node_modules\node-pty\lib\windowsTerminal.js
+                    ....A         5021               resources\app.asar.unpacked\node_modules\node-pty\lib\windowsTerminal.js.map
+                    ....A        10760               resources\app.asar.unpacked\node_modules\node-pty\lib\windowsTerminal.test.js
+                    ....A         8847               resources\app.asar.unpacked\node_modules\node-pty\lib\windowsTerminal.test.js.map
+                    ....A          848               resources\app.asar.unpacked\node_modules\node-pty\lib\worker\conoutSocketWorker.js
+                    ....A          635               resources\app.asar.unpacked\node_modules\node-pty\lib\worker\conoutSocketWorker.js.map
+                    ....A         3326               resources\app.asar.unpacked\node_modules\node-pty\LICENSE
+                    ....A        11472               resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\node_addon_api.vcxproj
+                    ....A         3379               resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\node_addon_api.vcxproj.filters
+                    ....A        11507               resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\node_addon_api_except.vcxproj
+                    ....A         3379               resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\node_addon_api_except.vcxproj.filters
+                    ....A        11502               resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\node_addon_api_maybe.vcxproj
+                    ....A         3379               resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\node_addon_api_maybe.vcxproj.filters
+                    ....A          273               resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\Release\obj\node_addon_api_except\node_add.F34AD94D.tlog\Cl.items.tlog
+                    ....A          218               resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\Release\obj\node_addon_api_except\node_add.F34AD94D.tlog\node_addon_api_except.lastbuildstate
+                    ....A          359               resources\app.asar.unpacked\node_modules\node-pty\node-addon-api\Release\obj\node_addon_api_except\node_addon_api_except.recipe
+                    ....A          915               resources\app.asar.unpacked\node_modules\node-pty\package.json
+                    ....A        85496               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\darwin-arm64\pty.node
+                    ....A        50480               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\darwin-arm64\spawn-helper
+                    ....A        52864               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\darwin-x64\pty.node
+                    ....A         9248               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\darwin-x64\spawn-helper
+                    ....A       302592               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64\conpty.node
+                    ....A       122368               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64\conpty_console_list.node
+                    ....A       293376               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64\pty.node
+                    ....A       312320               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty.node
+                    ....A       134656               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty_console_list.node
+                    ....A       303104               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\pty.node
+                    ....A          260               resources\app.asar.unpacked\node_modules\node-pty\scripts\gen-compile-commands.js
+                    ....A         2188               resources\app.asar.unpacked\node_modules\node-pty\scripts\increment-version.js
+                    ....A         2573               resources\app.asar.unpacked\node_modules\node-pty\scripts\post-install.js
+                    ....A         1172               resources\app.asar.unpacked\node_modules\node-pty\scripts\prebuild.js
+                    ....A          582               resources\app.asar.unpacked\node_modules\node-pty\src\conpty_console_list_agent.ts
+                    ....A          975               resources\app.asar.unpacked\node_modules\node-pty\src\eventEmitter2.test.ts
+                    ....A         1111               resources\app.asar.unpacked\node_modules\node-pty\src\eventEmitter2.ts
+                    ....A         2153               resources\app.asar.unpacked\node_modules\node-pty\src\index.ts
+                    ....A         2880               resources\app.asar.unpacked\node_modules\node-pty\src\interfaces.ts
+                    ....A          291               resources\app.asar.unpacked\node_modules\node-pty\src\shared\conout.ts
+                    ....A         4355               resources\app.asar.unpacked\node_modules\node-pty\src\terminal.test.ts
+                    ....A         6683               resources\app.asar.unpacked\node_modules\node-pty\src\terminal.ts
+                    ....A          567               resources\app.asar.unpacked\node_modules\node-pty\src\testUtils.test.ts
+                    ....A          323               resources\app.asar.unpacked\node_modules\node-pty\src\tsconfig.json
+                    ....A          306               resources\app.asar.unpacked\node_modules\node-pty\src\types.ts
+                    ....A        13110               resources\app.asar.unpacked\node_modules\node-pty\src\unixTerminal.test.ts
+                    ....A        10999               resources\app.asar.unpacked\node_modules\node-pty\src\unixTerminal.ts
+                    ....A          998               resources\app.asar.unpacked\node_modules\node-pty\src\utils.ts
+                    ....A         1727               resources\app.asar.unpacked\node_modules\node-pty\src\win\conpty.h
+                    ....A          695               resources\app.asar.unpacked\node_modules\node-pty\src\win\path_util.h
+                    ....A         2752               resources\app.asar.unpacked\node_modules\node-pty\src\windowsConoutConnection.ts
+                    ....A         3419               resources\app.asar.unpacked\node_modules\node-pty\src\windowsPtyAgent.test.ts
+                    ....A        10378               resources\app.asar.unpacked\node_modules\node-pty\src\windowsPtyAgent.ts
+                    ....A         8172               resources\app.asar.unpacked\node_modules\node-pty\src\windowsTerminal.test.ts
+                    ....A         5735               resources\app.asar.unpacked\node_modules\node-pty\src\windowsTerminal.ts
+                    ....A          713               resources\app.asar.unpacked\node_modules\node-pty\src\worker\conoutSocketWorker.ts
+                    ....A      6873130               resources.pak
+                    ....A       346432               snapshot_blob.bin
+                    ....A       721176               v8_context_snapshot.bin
+                    ....A          106               vk_swiftshader_icd.json
+                    ....A    226508800     74041341  Claude Code Studio.exe
+                    ....A      4741488               d3dcompiler_47.dll
+                    ....A     25722880               dxcompiler.dll
+                    ....A      1509760               dxil.dll
+                    ....A      3046912               ffmpeg.dll
+                    ....A       507904               libEGL.dll
+                    ....A      8106496               libGLESv2.dll
+                    ....A       308224               resources\app.asar.unpacked\node_modules\node-pty\build\Release\winpty-agent.exe
+                    ....A       257024               resources\app.asar.unpacked\node_modules\node-pty\build\Release\winpty.dll
+                    ....A       106528               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64\conpty\conpty.dll
+                    ....A      1194024               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64\conpty\OpenConsole.exe
+                    ....A       286720               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64\winpty-agent.exe
+                    ....A       236032               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-arm64\winpty.dll
+                    ....A       109600               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty\conpty.dll
+                    ....A      1148448               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty\OpenConsole.exe
+                    ....A       307712               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\winpty-agent.exe
+                    ....A       256000               resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\winpty.dll
+                    ....A       106528               resources\app.asar.unpacked\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-arm64\conpty.dll
+                    ....A      1194024               resources\app.asar.unpacked\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-arm64\OpenConsole.exe
+                    ....A       109600               resources\app.asar.unpacked\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\conpty.dll
+                    ....A      1148448               resources\app.asar.unpacked\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\OpenConsole.exe
+                    ....A       107520               resources\elevate.exe
+                    ....A      5611520               vk_swiftshader.dll
+                    ....A       954368               vulkan-1.dll
+------------------- ----- ------------ ------------  ------------------------
+                             423488382     97757129  357 files, 68 folders
+
+  • spawning        command=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\app-builder-bin\win\x64\app-builder.exe download-artifact --name nsis-resources-3.4.1-nsis-resources-3.4.1 --url https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-resources-3.4.1/nsis-resources-3.4.1.7z --sha512 Dqd6g+2buwwvoG1Vyf6BHR1b+25QMmPcwZx40atOT57gH27rkjOei1L0JTldxZu4NFoEmW4kJgZ3DlSWVON3+Q==
+  • computing effective URL  initialUrl=https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-resources-3.4.1/nsis-resources-3.4.1.7z
+                             currentUrl=https://release-assets.githubusercontent.com/github-production-release-asset/65527128/64ac4a00-a87a-11e9-901b-f221c4fd0776?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-05-27T22%3A02%3A25Z&rscd=attachment%3B+filename%3Dnsis-resources-3.4.1.7z&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-05-27T21%3A01%3A54Z&ske=2026-05-27T22%3A02%3A25Z&sks=b&skv=2018-11-09&sig=E1N3CnooyMjC2xGvJKfQWfh9tvfBbdLbXjTtlO9e37A%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3OTkxNjY0NywibmJmIjoxNzc5OTE2MzQ3LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.kguntM2qBeu1cYuy4J-AFa7KTDpy3IhW2kWTqifFWu4&response-content-disposition=attachment%3B%20filename%3Dnsis-resources-3.4.1.7z&response-content-type=application%2Foctet-stream
+  • downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-resources-3.4.1/nsis-resources-3.4.1.7z length=730800 contentType=application/octet-stream
+  • downloading     url=https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-resources-3.4.1/nsis-resources-3.4.1.7z size=731 kB parts=1
+  • map async       taskCount=1
+  • download part   range=bytes=0-730799 index=0
+  • downloaded      url=https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-resources-3.4.1/nsis-resources-3.4.1.7z duration=417ms
+  • execute command  command='D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\7zip-bin\win\x64\7za.exe' x -snld -bd 'C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\883423167.7z' '-oC:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\883423167'
+                     workingDirectory=C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis
+  • command executed  executable=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\7zip-bin\win\x64\7za.exe
+                      out=
+    7-Zip (a) 21.07 (x64) : Copyright (c) 1999-2021 Igor Pavlov : 2021-12-26
+    
+    Scanning the drive for archives:
+    1 file, 730800 bytes (714 KiB)
+    
+    Extracting archive: C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\883423167.7z
+    --
+    Path = C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\883423167.7z
+    Type = 7z
+    Physical Size = 730800
+    Headers Size = 650
+    Method = LZMA2:3m LZMA:20 BCJ2
+    Solid = +
+    Blocks = 2
+    
+    Everything is Ok
+    
+    Folders: 5
+    Files: 22
+    Size:       2998788
+    Compressed: 730800
+    
+  • exited          command=app-builder.exe code=0 pid=6720 out=C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\nsis-resources-3.4.1-nsis-resources-3.4.1
+  • spawning        command=C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\nsis-3.0.4.1-nsis-3.0.4.1\Bin\makensis.exe -WX -INPUTCHARSET UTF8 -DAPP_ID=com.lxveace.claude-code-studio -DAPP_GUID=fd031369-19fb-57b8-ba83-082f0b808ae0 -DUNINSTALL_APP_KEY=fd031369-19fb-57b8-ba83-082f0b808ae0 -DPRODUCT_NAME=Claude Code Studio -DPRODUCT_FILENAME=Claude Code Studio -DAPP_FILENAME=Claude Code Studio -DAPP_DESCRIPTION=Full desktop GUI for Claude Code with resource monitoring, GitHub integration, compact optimization, and cloud sync -DVERSION=3.0.0 -DPROJECT_DIR=D:\a\claude-code-studio-testing\claude-code-studio-testing -DBUILD_RESOURCES_DIR=D:\a\claude-code-studio-testing\claude-code-studio-testing\build -DAPP_PACKAGE_NAME=claude-code-studio -DAPP_64=D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\claude-code-studio-3.0.0-x64.nsis.7z -DAPP_64_NAME=claude-code-studio-3.0.0-x64.nsis.7z -DAPP_64_HASH=F1146ED01370A497AD86A83F4F0E40AD20216E0CDF124A2DABDE67FFB621B7D1F5039A40D6C483F1991131B499A67B2C08E8DAEB42FA1C78819C3843CF685A3F -DAPP_64_UNPACKED_SIZE=413563 -DCOMPANY_NAME=LxveAce -DAPP_INSTALLER_STORE_FILE=claude-code-studio-updater\installer.exe -DCOMPRESSION_METHOD=7z -DMULTIUSER_INSTALLMODE_ALLOW_ELEVATION -DINSTALL_MODE_PER_ALL_USERS_REQUIRED -DallowToChangeInstallationDirectory -DSHORTCUT_NAME=Claude Code Studio -DUNINSTALL_DISPLAY_NAME=Claude Code Studio 3.0.0 -DRECREATE_DESKTOP_SHORTCUT -DMUI_HEADERIMAGE -DMUI_HEADERIMAGE_RIGHT -DMUI_HEADERIMAGE_BITMAP=D:\a\claude-code-studio-testing\claude-code-studio-testing\build\installerHeader.bmp -DMUI_WELCOMEFINISHPAGE_BITMAP=D:\a\claude-code-studio-testing\claude-code-studio-testing\build\installerSidebar.bmp -DMUI_UNWELCOMEFINISHPAGE_BITMAP=D:\a\claude-code-studio-testing\claude-code-studio-testing\build\uninstallerSidebar.bmp -DESTIMATED_SIZE=413563 -DCOMPRESS=auto -DBUILD_UNINSTALLER -DUNINSTALLER_OUT_FILE=D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\Claude-Code-Studio-3.0.0-Windows.__uninstaller.exe -XOutFile "D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\Claude-Code-Studio-3.0.0-Windows.exe" -XVIProductVersion 3.0.0.0 -XVIAddVersionKey /LANG=1033 ProductName "Claude Code Studio" -XVIAddVersionKey /LANG=1033 ProductVersion "3.0.0" -XVIAddVersionKey /LANG=1033 LegalCopyright "Copyright © 2026 LxveAce" -XVIAddVersionKey /LANG=1033 FileDescription "Full desktop GUI for Claude Code with resource monitoring, GitHub integration, compact optimization, and cloud sync" -XVIAddVersionKey /LANG=1033 FileVersion "3.0.0" -XVIAddVersionKey /LANG=1033 CompanyName "LxveAce" -XUnicode true -XSetCompressor zlib - cwd=D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\app-builder-lib\templates\nsis
+Command line defined: "APP_ID=com.lxveace.claude-code-studio"
+Command line defined: "APP_GUID=fd031369-19fb-57b8-ba83-082f0b808ae0"
+Command line defined: "UNINSTALL_APP_KEY=fd031369-19fb-57b8-ba83-082f0b808ae0"
+Command line defined: "PRODUCT_NAME=Claude Code Studio"
+Command line defined: "PRODUCT_FILENAME=Claude Code Studio"
+Command line defined: "APP_FILENAME=Claude Code Studio"
+Command line defined: "APP_DESCRIPTION=Full desktop GUI for Claude Code with resource monitoring, GitHub integration, compact optimization, and cloud sync"
+Command line defined: "VERSION=3.0.0"
+Command line defined: "PROJECT_DIR=D:\a\claude-code-studio-testing\claude-code-studio-testing"
+Command line defined: "BUILD_RESOURCES_DIR=D:\a\claude-code-studio-testing\claude-code-studio-testing\build"
+Command line defined: "APP_PACKAGE_NAME=claude-code-studio"
+Command line defined: "APP_64=D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\claude-code-studio-3.0.0-x64.nsis.7z"
+Command line defined: "APP_64_NAME=claude-code-studio-3.0.0-x64.nsis.7z"
+Command line defined: "APP_64_HASH=F1146ED01370A497AD86A83F4F0E40AD20216E0CDF124A2DABDE67FFB621B7D1F5039A40D6C483F1991131B499A67B2C08E8DAEB42FA1C78819C3843CF685A3F"
+Command line defined: "APP_64_UNPACKED_SIZE=413563"
+Command line defined: "COMPANY_NAME=LxveAce"
+Command line defined: "APP_INSTALLER_STORE_FILE=claude-code-studio-updater\installer.exe"
+Command line defined: "COMPRESSION_METHOD=7z"
+Command line defined: "MULTIUSER_INSTALLMODE_ALLOW_ELEVATION"
+Command line defined: "INSTALL_MODE_PER_ALL_USERS_REQUIRED"
+Command line defined: "allowToChangeInstallationDirectory"
+Command line defined: "SHORTCUT_NAME=Claude Code Studio"
+Command line defined: "UNINSTALL_DISPLAY_NAME=Claude Code Studio 3.0.0"
+Command line defined: "RECREATE_DESKTOP_SHORTCUT"
+Command line defined: "MUI_HEADERIMAGE"
+Command line defined: "MUI_HEADERIMAGE_RIGHT"
+Command line defined: "MUI_HEADERIMAGE_BITMAP=D:\a\claude-code-studio-testing\claude-code-studio-testing\build\installerHeader.bmp"
+Command line defined: "MUI_WELCOMEFINISHPAGE_BITMAP=D:\a\claude-code-studio-testing\claude-code-studio-testing\build\installerSidebar.bmp"
+Command line defined: "MUI_UNWELCOMEFINISHPAGE_BITMAP=D:\a\claude-code-studio-testing\claude-code-studio-testing\build\uninstallerSidebar.bmp"
+Command line defined: "ESTIMATED_SIZE=413563"
+Command line defined: "COMPRESS=auto"
+Command line defined: "BUILD_UNINSTALLER"
+Command line defined: "UNINSTALLER_OUT_FILE=D:\a\claude-code-studio-testing\claude-code-studio-testing\dist\Claude-Code-Studio-3.0.0-Windows.__uninstaller.exe"
+Processing config: C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\nsis-3.0.4.1-nsis-3.0.4.1\nsisconf.nsh
+Processing script file: "<stdin>" (UTF8)
+
+Processed 1 file, 10 command line commands, writing output (x86-unicode):
+warning 6001: Variable "OllamaWantsInstall" not referenced or never set, wasting memory!
+Error: warning treated as error
+
+Note: you may have one or two (large) stale temporary file(s) left in your temporary directory (Generally this only happens on Windows 9x).
+  • exited          command=makensis.exe code=1 pid=9156
+  • async task error  error=C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\nsis-3.0.4.1-nsis-3.0.4.1\Bin\makensis.exe process failed ERR_ELECTRON_BUILDER_CANNOT_EXECUTE
+Exit code:
+1
+  ⨯ C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\nsis-3.0.4.1-nsis-3.0.4.1\Bin\makensis.exe process failed ERR_ELECTRON_BUILDER_CANNOT_EXECUTE
+Exit code:
+1  failedTask=build stackTrace=Error: C:\Users\runneradmin\AppData\Local\electron-builder\Cache\nsis\nsis-3.0.4.1-nsis-3.0.4.1\Bin\makensis.exe process failed ERR_ELECTRON_BUILDER_CANNOT_EXECUTE
+Exit code:
+1
+    at ChildProcess.<anonymous> (D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\builder-util\src\util.ts:272:14)
+    at Object.onceWrapper (node:events:634:26)
+    at ChildProcess.emit (node:events:519:28)
+    at ChildProcess.cp.emit (D:\a\claude-code-studio-testing\claude-code-studio-testing\node_modules\cross-spawn\lib\enoent.js:34:29)
+    at maybeClose (node:internal/child_process:1101:16)
+    at Process.ChildProcess._handle.onexit (node:internal/child_process:304:5)
