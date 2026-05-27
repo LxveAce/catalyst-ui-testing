@@ -145,6 +145,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setSettings: (partial: unknown) => ipcRenderer.invoke(IPC.NOTIF_SET_SETTINGS, partial),
     test: () => ipcRenderer.invoke(IPC.NOTIF_TEST),
   },
+  themes: {
+    list: () => ipcRenderer.invoke(IPC.THEMES_LIST),
+    save: (theme: unknown) => ipcRenderer.invoke(IPC.THEMES_SAVE, theme),
+    delete: (name: string) => ipcRenderer.invoke(IPC.THEMES_DELETE, name),
+  },
   updater: {
     getState: () => ipcRenderer.invoke(IPC.UPDATER_GET_STATE),
     getSettings: () => ipcRenderer.invoke(IPC.UPDATER_GET_SETTINGS),

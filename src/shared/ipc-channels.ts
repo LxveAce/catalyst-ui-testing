@@ -172,4 +172,9 @@ export const IPC = {
    *  paneId — the "pop out a model" flow. paneId must already exist
    *  (created by MODELS_LAUNCH); the new window simply attaches. */
   MODELS_POPOUT: 'models:popout',
+
+  // Themes — custom theme persistence (v3.0.1+, R&D).
+  THEMES_LIST: 'themes:list',
+  THEMES_SAVE: 'themes:save',
+  THEMES_DELETE: 'themes:delete',
 } as const;

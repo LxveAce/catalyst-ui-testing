@@ -22,6 +22,8 @@ import { detectHardware } from './hardware-detection';
 import { detectProject } from './project-language-detect';
 import { probeDisk } from './disk-info';
 import { FirstRunService } from './first-run-service';
+import { ThemeService } from './theme-service';
+import { WindowStateService } from './window-state-service';
 import { readCliFlags, writeCliFlags, type CliFlags } from './cli-flags';
 import {
   listDir as projectListDir,
@@ -67,6 +69,8 @@ let hotkeysService: HotkeysService | null = null;
 let trayService: TrayService | null = null;
 let costService: CostService | null = null;
 let cliService: CliService | null = null;
+let themeService: ThemeService | null = null;
+let windowStateService: WindowStateService | null = null;
 let isQuitting = false;
 /** Pane IDs whose PTY was killed by an explicit user "restart" — suppresses
  * the imminent "Claude exited" notification once per restart. Superseded the
@@ -109,6 +113,16 @@ function getSnippets(): SnippetsService {
 function getNotifications(): NotificationsService {
   if (!notificationsService) notificationsService = new NotificationsService();
   return notificationsService;
+}
+
+function getThemes(): ThemeService {
+  if (!themeService) themeService = new ThemeService();
+  return themeService;
+}
+
+function getWindowState(): WindowStateService {
+  if (!windowStateService) windowStateService = new WindowStateService();
+  return windowStateService;
 }
 
 function isDevMode(): boolean {
@@ -183,11 +197,21 @@ function getCost(): CostService {
 }
 
 const createWindow = () => {
-  mainWindow = new BrowserWindow({
+  const savedState = getWindowState().loadState('main', {
+    x: -1,
+    y: -1,
     width: 1400,
     height: 900,
+    maximized: false,
+  });
+  const usingSavedPosition = savedState.x >= 0 && savedState.y >= 0;
+  mainWindow = new BrowserWindow({
+    ...(usingSavedPosition ? { x: savedState.x, y: savedState.y } : {}),
+    width: savedState.width,
+    height: savedState.height,
     minWidth: 900,
     minHeight: 600,
+    resizable: true,
     frame: false,
     backgroundColor: '#1a1a2e',
     webPreferences: {
@@ -198,6 +222,8 @@ const createWindow = () => {
       webSecurity: true,
     },
   });
+  if (savedState.maximized) mainWindow.maximize();
+  getWindowState().bindWindow('main', mainWindow);
 
   mainWindow.on('close', (event) => {
     // If minimize-to-tray is on and we're not in the middle of a real quit,
@@ -766,10 +792,25 @@ function setupPopout() {
         typeof label === 'string' && label.length > 0 && label.length <= 128
           ? label
           : 'Model';
+      const popoutId = `models-popout:${paneId}`;
+      const savedPopoutState = getWindowState().loadState(popoutId, {
+        x: -1,
+        y: -1,
+        width: 900,
+        height: 600,
+        maximized: false,
+      });
+      const popoutUseSavedPos = savedPopoutState.x >= 0 && savedPopoutState.y >= 0;
       try {
         const win = new BrowserWindow({
-          width: 900,
-          height: 600,
+          ...(popoutUseSavedPos
+            ? { x: savedPopoutState.x, y: savedPopoutState.y }
+            : {}),
+          width: savedPopoutState.width,
+          height: savedPopoutState.height,
+          minWidth: 400,
+          minHeight: 300,
+          resizable: true,
           title: `${safeLabel} — Claude Code Studio`,
           parent: mainWindow ?? undefined,
           backgroundColor: '#0a0a14',
@@ -781,6 +822,8 @@ function setupPopout() {
             webSecurity: true,
           },
         });
+        if (savedPopoutState.maximized) win.maximize();
+        getWindowState().bindWindow(popoutId, win);
         popoutWindows.set(paneId, win);
         win.on('closed', () => {
           popoutWindows.delete(paneId);
@@ -926,6 +969,14 @@ function setupNotifications() {
     getNotifications().setSettings(partial)
   );
   ipcMain.handle(IPC.NOTIF_TEST, () => getNotifications().fireTest());
+}
+
+function setupThemes() {
+  ipcMain.handle(IPC.THEMES_LIST, () => getThemes().list());
+  ipcMain.handle(IPC.THEMES_SAVE, (_event, theme) => getThemes().save(theme));
+  ipcMain.handle(IPC.THEMES_DELETE, (_event, name: string) =>
+    getThemes().delete(name)
+  );
 }
 
 function setupUpdater() {
@@ -1095,6 +1146,7 @@ app.whenReady().then(() => {
   setupCloudSync();
   setupSnippets();
   setupNotifications();
+  setupThemes();
   setupUpdater();
   setupSession();
   setupCost();
@@ -1165,6 +1217,13 @@ app.on('before-quit', () => {
   }
   try {
     costService?.stop();
+  } catch {
+    // ignore
+  }
+  // Flush any pending window-state write so a quick close-after-resize doesn't
+  // lose the user's geometry. WindowStateService debounces writes by 500 ms.
+  try {
+    windowStateService?.flush();
   } catch {
     // ignore
   }
