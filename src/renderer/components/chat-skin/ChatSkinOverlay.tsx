@@ -1,64 +1,82 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 /**
- * Chat-skin overlay — ChatGPT/Claude.ai-style chat UI that sits on top of
- * the terminal pane. The xterm + PTY keep running underneath; the skin
- * subscribes to the same PTY data stream and provides its own input box.
+ * Chat-skin overlay — modern AI-chat presentation over the terminal pane.
  *
- * Toggle is per-pane (see `skin-prefs.ts`). When the user toggles off,
- * the xterm is revealed underneath with full history intact.
+ * Redesign (post-user-feedback "looks horrible"):
+ *   - Full-width message rows, NOT iMessage bubbles. Assistant rows have a
+ *     left-side 28×28 avatar and unstyled prose. User rows have a subtle
+ *     translucent bubble (rounded-2xl with sharper bottom-right corner).
+ *   - System sans-serif (Söhne/Inter fallback chain) at 15px / 1.7
+ *     line-height. Markdown rendered via react-markdown + remark-gfm.
+ *   - Code blocks via Prism (react-syntax-highlighter) with a language
+ *     header bar + copy button. Inline code via subtle background.
+ *   - 768px-max centered column for both messages and the composer.
+ *   - Empty state: "What can I help with?" + 4 suggestion cards.
+ *   - Streaming cursor: blinking ▍ at end of the latest assistant message.
  *
- * Message parsing is intentionally simple:
- *   - User sends input via the textarea → append `{ role: 'user' }` message
- *     + write `text\r` to PTY.
- *   - PTY data arrives → strip ANSI; append to the LAST assistant message
- *     (creating one if the last message was a user turn).
- *   - First few echoed-back bytes after a user send are suppressed to hide
- *     the input echo from the assistant bubble.
- *
- * Limits + caveats: this is NOT a real LLM client; it's a presentation
- * skin over a raw PTY. Some CLIs (Aider, gemini-cli) print prompts and
- * tool-use blocks that won't parse cleanly into "messages." The skin is
- * a UX option; users who want literal terminal output keep it toggled
- * off (the default).
+ * Same PTY underneath: subscribes to `terminal.onData` for output, writes
+ * input via `terminal.sendInput`. Toggle off → xterm with full history.
  */
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
-  /** Accumulated text, ANSI-stripped. */
   text: string;
   timestamp: number;
 }
 
 interface Props {
   paneId: string;
-  /** Visible state — when false, the overlay is hidden (xterm shows). */
   visible: boolean;
-  /** Click handler for the "exit skin" button. */
   onToggleOff: () => void;
 }
 
 const MAX_MESSAGES = 200;
-const MAX_MESSAGE_CHARS = 100_000; // safety cap per message
+const MAX_MESSAGE_CHARS = 100_000;
 const ECHO_SUPPRESS_WINDOW_MS = 1500;
+const STREAMING_TAIL_MS = 800;
+
+const SUGGESTIONS: Array<{ title: string; subtitle: string; prompt: string }> = [
+  {
+    title: 'Explain the codebase',
+    subtitle: 'Get a high-level tour',
+    prompt: 'Give me a tour of this repo. Start with the directory structure.',
+  },
+  {
+    title: 'Fix a bug',
+    subtitle: 'Paste a stack trace',
+    prompt: 'I have a bug:\n\n',
+  },
+  {
+    title: 'Write a function',
+    subtitle: 'Describe what you need',
+    prompt: 'Write a function that ',
+  },
+  {
+    title: 'Run a command',
+    subtitle: 'Ask the CLI to execute',
+    prompt: '',
+  },
+];
+
+const FONT_STACK =
+  '"Söhne", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+const MONO_STACK =
+  '"Cascadia Code", "JetBrains Mono", "Fira Code", Consolas, "Liberation Mono", monospace';
 
 export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
+  const [lastChunkAt, setLastChunkAt] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  /** Last user-sent text + when, used to suppress the immediate echo from
-   *  the assistant bubble. Set when the user sends; cleared when an
-   *  unrelated chunk arrives or after a short window. */
   const lastSentRef = useRef<{ text: string; at: number } | null>(null);
 
-  /**
-   * Subscribe to PTY data. We always subscribe (visible or not) so the
-   * skin's message history stays in sync with the actual session — that
-   * way toggling on doesn't show an empty chat.
-   */
   useEffect(() => {
     const unsub = window.electronAPI.terminal.onData(paneId, (data) => {
       appendAssistantChunk(data);
@@ -73,54 +91,36 @@ export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paneId]);
 
-  /** Append a chunk of PTY output to the latest assistant message, after
-   *  ANSI stripping + echo suppression. */
   const appendAssistantChunk = useCallback((rawData: string) => {
-    let cleaned = stripAnsi(rawData);
-    // Drop a leading carriage-return that's just terminal cursor behavior.
-    cleaned = cleaned.replace(/^\r/, '');
+    let cleaned = stripAnsi(rawData).replace(/^\r/, '');
     if (!cleaned) return;
 
-    // Echo suppression: if the user just sent something, the CLI usually
-    // echoes it right back. Trim a leading-substring match.
     const last = lastSentRef.current;
     if (last && Date.now() - last.at < ECHO_SUPPRESS_WINDOW_MS) {
-      // Match the user's text against the start of the incoming chunk
-      // (ignoring leading whitespace + the CR we already trimmed).
-      const startsWithSent = cleaned.startsWith(last.text);
-      if (startsWithSent) {
+      if (cleaned.startsWith(last.text)) {
         cleaned = cleaned.slice(last.text.length).replace(/^[\r\n]+/, '');
       }
-      // Whether we trimmed or not, drop the suppression window once any
-      // chunk arrives — the echo only happens once per send.
       lastSentRef.current = null;
     }
     if (!cleaned) return;
 
+    setLastChunkAt(Date.now());
     setMessages((prev) => {
       const lastMsg = prev[prev.length - 1];
       if (lastMsg && lastMsg.role === 'assistant') {
-        // Append to the existing assistant message (cap length).
         const nextText = (lastMsg.text + cleaned).slice(0, MAX_MESSAGE_CHARS);
-        const updated: ChatMessage = { ...lastMsg, text: nextText };
-        return [...prev.slice(0, -1), updated];
+        return [...prev.slice(0, -1), { ...lastMsg, text: nextText }];
       }
-      // Otherwise start a new assistant message.
       const next: ChatMessage = {
-        id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        id: makeId(),
         role: 'assistant',
         text: cleaned.slice(0, MAX_MESSAGE_CHARS),
         timestamp: Date.now(),
       };
-      const combined = [...prev, next];
-      return combined.length > MAX_MESSAGES
-        ? combined.slice(combined.length - MAX_MESSAGES)
-        : combined;
+      return cap([...prev, next]);
     });
   }, []);
 
-  /** Scroll to bottom when messages change OR when the overlay becomes
-   *  visible (so the user lands on the latest content). */
   useEffect(() => {
     if (!visible) return;
     const el = scrollRef.current;
@@ -128,56 +128,60 @@ export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
     el.scrollTop = el.scrollHeight;
   }, [messages, visible]);
 
-  const send = useCallback(() => {
-    const text = draft.trim();
-    if (!text) return;
-
-    // Append user message.
-    setMessages((prev) => {
-      const next: ChatMessage = {
-        id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        role: 'user',
-        text,
-        timestamp: Date.now(),
-      };
-      const combined = [...prev, next];
-      return combined.length > MAX_MESSAGES
-        ? combined.slice(combined.length - MAX_MESSAGES)
-        : combined;
-    });
-
-    // Mark for echo suppression on the next chunk.
-    lastSentRef.current = { text, at: Date.now() };
-
-    // Write to the PTY. `\r` is the conventional submit char for Claude
-    // CLI + most interactive REPLs.
-    try {
-      window.electronAPI.terminal.sendInput(paneId, text + '\r');
-    } catch {
-      // PTY missing — show a system-style notice in the chat.
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `err_${Date.now()}`,
-          role: 'assistant',
-          text: '⚠ Could not deliver to the terminal (PTY unavailable).',
-          timestamp: Date.now(),
-        },
-      ]);
-    }
-
-    setDraft('');
-    // Re-focus the textarea so the user can keep typing.
-    requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [draft, paneId]);
+  const send = useCallback(
+    (textOverride?: string) => {
+      const text = (textOverride ?? draft).trim();
+      if (!text) return;
+      setMessages((prev) =>
+        cap([
+          ...prev,
+          {
+            id: makeId(),
+            role: 'user',
+            text,
+            timestamp: Date.now(),
+          },
+        ])
+      );
+      lastSentRef.current = { text, at: Date.now() };
+      try {
+        window.electronAPI.terminal.sendInput(paneId, text + '\r');
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: makeId(),
+            role: 'assistant',
+            text: '⚠ Could not deliver to the terminal (PTY unavailable).',
+            timestamp: Date.now(),
+          },
+        ]);
+      }
+      setDraft('');
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (el) {
+          el.style.height = '24px';
+          el.focus();
+        }
+      });
+    },
+    [draft, paneId]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter sends. Shift+Enter inserts a newline (standard chat UX).
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send();
     }
   };
+
+  const isStreaming = useMemo(() => {
+    if (lastChunkAt === 0) return false;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant') return false;
+    return Date.now() - lastChunkAt < STREAMING_TAIL_MS;
+  }, [messages, lastChunkAt]);
 
   if (!visible) return null;
 
@@ -190,210 +194,511 @@ export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--bg-primary)',
-        // Subtle accent edge so users can tell skin is active.
-        boxShadow: 'inset 0 1px 0 var(--border-active), inset 0 -1px 0 var(--border-active)',
+        fontFamily: FONT_STACK,
+        color: 'var(--text-primary)',
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 12px',
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-secondary)',
-          fontSize: 12,
-          color: 'var(--text-secondary)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: 'var(--accent)',
-              boxShadow: 'var(--shadow-glow)',
-            }}
-          />
-          Chat skin active
-        </div>
-        <button
-          onClick={onToggleOff}
-          title="Show terminal (Ctrl+Shift+T)"
-          style={{
-            background: 'transparent',
-            border: '1px solid var(--border)',
-            color: 'var(--text-secondary)',
-            borderRadius: 'var(--radius-md)',
-            padding: '4px 10px',
-            cursor: 'pointer',
-            fontSize: 11,
-          }}
-        >
-          Terminal view
-        </button>
-      </div>
+      <SkinHeader paneId={paneId} onToggleOff={onToggleOff} />
 
-      {/* Messages */}
       <div
         ref={scrollRef}
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: 16,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-        }}
-      >
-        {messages.length === 0 && (
-          <div
-            style={{
-              margin: 'auto',
-              color: 'var(--text-secondary)',
-              fontSize: 13,
-              textAlign: 'center',
-              maxWidth: 360,
-              lineHeight: 1.6,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 32,
-                marginBottom: 12,
-                background: 'var(--accent-gradient)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                fontWeight: 700,
-              }}
-            >
-              ✦
-            </div>
-            <div>Type a message below to start a conversation with the active CLI.</div>
-            <div style={{ marginTop: 8, fontSize: 11, opacity: 0.7 }}>
-              Same PTY underneath — toggle "Terminal view" to switch.
-            </div>
-          </div>
-        )}
-
-        {messages.map((m) => (
-          <MessageBubble key={m.id} message={m} />
-        ))}
-      </div>
-
-      {/* Input bar */}
-      <div
-        style={{
-          borderTop: '1px solid var(--border)',
-          padding: 12,
-          background: 'var(--bg-secondary)',
+          padding: '24px 0',
         }}
       >
         <div
           style={{
+            maxWidth: 768,
+            margin: '0 auto',
+            padding: '0 24px',
             display: 'flex',
-            alignItems: 'flex-end',
-            gap: 8,
-            background: 'var(--bg-primary)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '8px 10px',
+            flexDirection: 'column',
+            gap: 28,
           }}
         >
-          <textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Message…  (Enter to send, Shift+Enter for newline)"
-            rows={1}
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'var(--text-primary)',
-              fontSize: 13,
-              fontFamily: 'inherit',
-              resize: 'none',
-              minHeight: 22,
-              maxHeight: 180,
-              lineHeight: 1.5,
-            }}
-            // Simple auto-grow: grow with content height up to maxHeight.
-            onInput={(e) => {
-              const el = e.currentTarget;
-              el.style.height = '22px';
-              el.style.height = Math.min(180, el.scrollHeight) + 'px';
-            }}
-          />
-          <button
-            onClick={send}
-            disabled={!draft.trim()}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 'var(--radius-md)',
-              border: 'none',
-              background: draft.trim() ? 'var(--accent)' : 'var(--gauge-grey)',
-              color: 'white',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: draft.trim() ? 'pointer' : 'not-allowed',
-              opacity: draft.trim() ? 1 : 0.5,
-              transition: 'all var(--transition-fast)',
-              flexShrink: 0,
-            }}
-          >
-            Send
-          </button>
+          {messages.length === 0 ? (
+            <EmptyState onPickSuggestion={(p) => { setDraft(p); textareaRef.current?.focus(); }} />
+          ) : (
+            messages.map((m, i) => (
+              <MessageRow
+                key={m.id}
+                message={m}
+                showCursor={isStreaming && i === messages.length - 1}
+              />
+            ))
+          )}
         </div>
       </div>
+
+      <Composer
+        textareaRef={textareaRef}
+        draft={draft}
+        setDraft={setDraft}
+        onSend={() => send()}
+        onKeyDown={handleKeyDown}
+      />
+
+      {/* Blinking caret + streaming cursor keyframes */}
+      <style>{`
+        @keyframes ccs-chat-blink { 0%,100% { opacity: 1 } 50% { opacity: 0 } }
+        .ccs-chat-caret {
+          display: inline-block;
+          width: 6px; height: 0.95em;
+          margin-left: 2px;
+          vertical-align: text-bottom;
+          background: var(--accent);
+          animation: ccs-chat-blink 1s steps(2) infinite;
+        }
+      `}</style>
     </div>
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
-  const isUser = message.role === 'user';
+// ----- Sub-components -----
+
+function SkinHeader({ paneId, onToggleOff }: { paneId: string; onToggleOff: () => void }) {
+  // Pull model/CLI label from paneId. Format: "p_root" (claude), "model:<id>-<ts>"
+  const label = useMemo(() => {
+    if (paneId === 'p_root' || paneId.startsWith('p_')) return 'Claude Code';
+    if (paneId.startsWith('model:')) {
+      const rest = paneId.slice(6);
+      const dash = rest.lastIndexOf('-');
+      return dash > 0 ? rest.slice(0, dash) : rest;
+    }
+    return paneId;
+  }, [paneId]);
   return (
     <div
       style={{
         display: 'flex',
-        justifyContent: isUser ? 'flex-end' : 'flex-start',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 16px',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg-primary)',
       }}
     >
       <div
         style={{
-          maxWidth: '78%',
-          padding: '10px 14px',
-          borderRadius: 'var(--radius-lg)',
-          background: isUser
-            ? 'var(--accent-gradient)'
-            : 'var(--bg-secondary)',
-          color: isUser ? 'white' : 'var(--text-primary)',
-          border: isUser ? 'none' : '1px solid var(--border)',
           fontSize: 13,
-          lineHeight: 1.55,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          fontFamily: isUser
-            ? 'inherit'
-            : '"Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas", monospace',
+          fontWeight: 500,
+          color: 'var(--text-primary)',
+          letterSpacing: '-0.005em',
         }}
       >
-        {message.text}
+        {label}
+      </div>
+      <button
+        onClick={onToggleOff}
+        title="Show terminal view"
+        style={{
+          padding: '4px 10px',
+          borderRadius: 8,
+          border: '1px solid var(--border)',
+          background: 'transparent',
+          color: 'var(--text-secondary)',
+          cursor: 'pointer',
+          fontSize: 11,
+        }}
+      >
+        Terminal view
+      </button>
+    </div>
+  );
+}
+
+function MessageRow({ message, showCursor }: { message: ChatMessage; showCursor: boolean }) {
+  if (message.role === 'user') {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div
+          style={{
+            maxWidth: 'min(80%, 56ch)',
+            padding: '10px 14px',
+            borderRadius: '18px 18px 6px 18px',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-primary)',
+            fontSize: 15,
+            lineHeight: 1.6,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}
+        >
+          {message.text}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+      <AssistantAvatar />
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          fontSize: 15,
+          lineHeight: 1.7,
+          color: 'var(--text-primary)',
+          wordBreak: 'break-word',
+        }}
+      >
+        <AssistantMarkdown text={message.text} />
+        {showCursor && <span className="ccs-chat-caret" />}
       </div>
     </div>
   );
 }
 
-/**
- * Minimal ANSI escape stripper. Removes CSI / OSC / bare-ESC sequences so
- * the chat UI renders clean text. Same regex as pty-key-interceptor;
- * duplicated here so the chat skin works without that module loaded.
- */
+function AssistantAvatar() {
+  return (
+    <div
+      style={{
+        flexShrink: 0,
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        background: 'var(--accent-dim, rgba(124,58,237,0.18))',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--accent-light)',
+        marginTop: 2,
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 2 L14 9 L21 11 L14 13 L12 20 L10 13 L3 11 L10 9 Z" />
+      </svg>
+    </div>
+  );
+}
+
+function AssistantMarkdown({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        code: CodeRenderer,
+        p: ({ children }) => <p style={{ margin: '0 0 12px' }}>{children}</p>,
+        ul: ({ children }) => <ul style={{ margin: '0 0 12px', paddingLeft: 24 }}>{children}</ul>,
+        ol: ({ children }) => <ol style={{ margin: '0 0 12px', paddingLeft: 24 }}>{children}</ol>,
+        li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
+        h1: ({ children }) => <h2 style={mdHeadingStyle(20)}>{children}</h2>,
+        h2: ({ children }) => <h3 style={mdHeadingStyle(18)}>{children}</h3>,
+        h3: ({ children }) => <h4 style={mdHeadingStyle(16)}>{children}</h4>,
+        a: ({ children, href }) => (
+          <a
+            href={href}
+            onClick={(e) => {
+              e.preventDefault();
+              if (typeof href === 'string') {
+                void window.electronAPI.models.openExternal(href).catch(() => undefined);
+              }
+            }}
+            style={{ color: 'var(--accent-light)', textDecoration: 'underline' }}
+          >
+            {children}
+          </a>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote
+            style={{
+              margin: '0 0 12px',
+              padding: '4px 12px',
+              borderLeft: '2px solid var(--border-active)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            {children}
+          </blockquote>
+        ),
+        table: ({ children }) => (
+          <div style={{ overflowX: 'auto', margin: '0 0 12px' }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 13 }}>{children}</table>
+          </div>
+        ),
+        th: ({ children }) => (
+          <th style={{ border: '1px solid var(--border)', padding: '6px 10px', textAlign: 'left' }}>{children}</th>
+        ),
+        td: ({ children }) => (
+          <td style={{ border: '1px solid var(--border)', padding: '6px 10px' }}>{children}</td>
+        ),
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  );
+}
+
+function mdHeadingStyle(size: number): React.CSSProperties {
+  return {
+    margin: '16px 0 8px',
+    fontSize: size,
+    fontWeight: 600,
+    letterSpacing: '-0.01em',
+    color: 'var(--text-primary)',
+  };
+}
+
+// `code` component renderer for react-markdown. ReactMarkdown v9 passes
+// `inline` via the node's position rather than a prop; we detect via
+// the presence of a newline + className regex.
+function CodeRenderer({ className, children, ...rest }: React.HTMLAttributes<HTMLElement> & { className?: string; children?: React.ReactNode }) {
+  const raw = String(children ?? '');
+  const isBlock = raw.includes('\n') || /language-/.test(className ?? '');
+  if (!isBlock) {
+    return (
+      <code
+        style={{
+          background: 'rgba(255,255,255,0.07)',
+          padding: '1px 6px',
+          borderRadius: 4,
+          fontSize: '0.875em',
+          fontFamily: MONO_STACK,
+        }}
+        {...rest}
+      >
+        {children}
+      </code>
+    );
+  }
+  const lang = /language-(\w+)/.exec(className ?? '')?.[1] || 'text';
+  const codeText = raw.replace(/\n$/, '');
+  return (
+    <div
+      style={{
+        background: '#0a0a14',
+        border: '1px solid var(--border)',
+        borderRadius: 8,
+        margin: '12px 0',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '6px 12px',
+          borderBottom: '1px solid var(--border)',
+          fontSize: 11,
+          color: 'var(--text-secondary)',
+        }}
+      >
+        <span style={{ fontFamily: FONT_STACK }}>{lang}</span>
+        <button
+          onClick={() => { void navigator.clipboard.writeText(codeText).catch(() => undefined); }}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            fontSize: 11,
+            padding: 0,
+            fontFamily: FONT_STACK,
+          }}
+        >
+          Copy
+        </button>
+      </div>
+      <SyntaxHighlighter
+        language={lang}
+        style={oneDark}
+        customStyle={{
+          margin: 0,
+          padding: '12px 14px',
+          background: 'transparent',
+          fontSize: 13,
+          lineHeight: 1.5,
+          fontFamily: MONO_STACK,
+        }}
+        PreTag="div"
+      >
+        {codeText}
+      </SyntaxHighlighter>
+    </div>
+  );
+}
+
+function EmptyState({ onPickSuggestion }: { onPickSuggestion: (prompt: string) => void }) {
+  return (
+    <div
+      style={{
+        margin: 'auto',
+        maxWidth: 580,
+        textAlign: 'center',
+        padding: '60px 16px 0',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 32,
+          fontWeight: 600,
+          letterSpacing: '-0.02em',
+          color: 'var(--text-primary)',
+          marginBottom: 8,
+        }}
+      >
+        What can I help with?
+      </div>
+      <div
+        style={{
+          fontSize: 14,
+          color: 'var(--text-secondary)',
+          marginBottom: 32,
+          lineHeight: 1.5,
+        }}
+      >
+        Ask a question, write code, or explore ideas. The terminal stays live underneath.
+      </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 10,
+          textAlign: 'left',
+        }}
+      >
+        {SUGGESTIONS.map((s) => (
+          <button
+            key={s.title}
+            onClick={() => onPickSuggestion(s.prompt)}
+            style={{
+              padding: '12px 14px',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              cursor: 'pointer',
+              transition: 'all 150ms',
+              color: 'var(--text-primary)',
+              fontFamily: 'inherit',
+              textAlign: 'left',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 500 }}>{s.title}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+              {s.subtitle}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Composer({
+  textareaRef,
+  draft,
+  setDraft,
+  onSend,
+  onKeyDown,
+}: {
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  draft: string;
+  setDraft: (v: string) => void;
+  onSend: () => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+}) {
+  const hasContent = draft.trim().length > 0;
+  return (
+    <div style={{ padding: '0 16px 20px', background: 'transparent' }}>
+      <div
+        style={{
+          maxWidth: 768,
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: 8,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border)',
+          borderRadius: 18,
+          padding: '10px 10px 10px 16px',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
+        }}
+      >
+        <textarea
+          ref={textareaRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="Ask anything"
+          rows={1}
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: 'var(--text-primary)',
+            fontSize: 15,
+            lineHeight: 1.5,
+            fontFamily: 'inherit',
+            resize: 'none',
+            minHeight: 24,
+            maxHeight: 200,
+            padding: '4px 0',
+            overflowY: 'auto',
+          }}
+          onInput={(e) => {
+            const el = e.currentTarget;
+            el.style.height = '24px';
+            el.style.height = Math.min(200, el.scrollHeight) + 'px';
+          }}
+        />
+        <button
+          onClick={onSend}
+          disabled={!hasContent}
+          title="Send (Enter)"
+          aria-label="Send"
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            border: 'none',
+            background: hasContent ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+            color: hasContent ? '#fff' : 'var(--text-secondary)',
+            cursor: hasContent ? 'pointer' : 'not-allowed',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'transform 120ms, background 120ms',
+            flexShrink: 0,
+          }}
+          onMouseDown={(e) => {
+            if (hasContent) e.currentTarget.style.transform = 'scale(0.95)';
+          }}
+          onMouseUp={(e) => { e.currentTarget.style.transform = ''; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = ''; }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="12" y1="19" x2="12" y2="5" />
+            <polyline points="5 12 12 5 19 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ----- Helpers -----
+
+function makeId(): string {
+  return `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function cap(arr: ChatMessage[]): ChatMessage[] {
+  return arr.length > MAX_MESSAGES ? arr.slice(arr.length - MAX_MESSAGES) : arr;
+}
+
 function stripAnsi(s: string): string {
   // eslint-disable-next-line no-control-regex
   return s
