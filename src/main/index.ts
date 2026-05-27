@@ -609,6 +609,54 @@ function setupOllama() {
     if (typeof name !== 'string') return { ok: false, error: 'name must be a string' };
     return svc.delete(name);
   });
+
+  // Cat 7: daemon lifecycle. The renderer can query state, force-start (used
+  // by ModelsPanel's "Restart daemon" affordance), and stop. Lifecycle
+  // events stream via OLLAMA_DAEMON_STATE_CHANGED.
+  ipcMain.handle(IPC.OLLAMA_DAEMON_STATE, () => svc.daemonState());
+  ipcMain.handle(IPC.OLLAMA_DAEMON_START, () => svc.daemonStart());
+  ipcMain.handle(IPC.OLLAMA_DAEMON_STOP, () => {
+    svc.daemonStop();
+    return svc.daemonState();
+  });
+  svc.on('daemon-state', (state) => {
+    safeSend(IPC.OLLAMA_DAEMON_STATE_CHANGED, state);
+  });
+}
+
+/**
+ * Cat 7 — autostart the Ollama daemon when local models are registered.
+ *
+ * Conditions:
+ *   - At least one registered model has `provider === 'Ollama'` (display
+ *     name match — the registry preserves catalog provider strings).
+ *   - `ollama` is installed (getVersion().installed === true).
+ *
+ * If both true and the daemon isn't already reachable, spawn it. If the
+ * daemon is already running (externally — tray app on Windows, LaunchAgent
+ * on macOS), `daemonStart` detects that and reports running without
+ * spawning a duplicate.
+ *
+ * Failures are non-fatal — Studio runs without Ollama just fine for Claude
+ * users.
+ */
+async function maybeAutostartOllama(): Promise<void> {
+  try {
+    const reg = ModelRegistry.instance();
+    const hasLocalModel = reg
+      .list()
+      .some((m) => m.provider === 'Ollama' || m.command === 'ollama');
+    if (!hasLocalModel) return;
+    const svc = OllamaService.instance();
+    const v = await svc.getVersion();
+    if (!v.installed) return;
+    // Fire-and-forget — startup shouldn't block on the daemon poll.
+    void svc.daemonStart().catch(() => {
+      // Non-fatal; user can retry from the UI.
+    });
+  } catch {
+    // Never let Ollama autostart take down the app.
+  }
 }
 
 function setupHardware() {
@@ -1259,6 +1307,9 @@ app.whenReady().then(() => {
   setupCli();
   setupModels();
   setupOllama();
+  // Cat 7 — autostart the Ollama daemon if local models are registered.
+  // Fire-and-forget; non-fatal on failure.
+  void maybeAutostartOllama();
   setupHardware();
   setupProject();
   setupDisk();
@@ -1330,6 +1381,14 @@ app.on('before-quit', () => {
   // lose the user's geometry. WindowStateService debounces writes by 500 ms.
   try {
     windowStateService?.flush();
+  } catch {
+    // ignore
+  }
+  // Cat 7 — clean shutdown of the Studio-owned Ollama daemon. Externally-
+  // managed Ollama processes are untouched (daemonStop is a no-op if we
+  // never spawned one).
+  try {
+    OllamaService.instance().daemonStop();
   } catch {
     // ignore
   }

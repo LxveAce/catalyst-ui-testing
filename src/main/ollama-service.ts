@@ -312,6 +312,133 @@ export class OllamaService extends EventEmitter {
     const err = String(r.stderr || r.stdout || '').trim() || `exit ${r.status}`;
     return { ok: false, error: err };
   }
+
+  // ===== Daemon lifecycle (Cat 7: autostart-on-app-launch) =====
+  //
+  // The Ollama installer registers `ollama serve` as a background service
+  // on most platforms (Windows tray app, macOS LaunchAgent). But it can
+  // also be missing — kiosk installs, "Ollama installer ran but service
+  // didn't start", or the user explicitly stopped it. We launch our own
+  // `ollama serve` child process when the registry has local models AND
+  // the daemon isn't already reachable, so the first model launch is
+  // instant rather than triggering a cold start.
+
+  private daemonProcess: ChildProcess | null = null;
+  /** Lifecycle state of the daemon Studio owns. NOT the same as
+   *  "is some daemon reachable" — an externally-managed Ollama can be
+   *  running while our state is 'stopped'. */
+  private _daemonState: 'stopped' | 'starting' | 'running' | 'failed' =
+    'stopped';
+  private daemonError: string | null = null;
+
+  daemonState(): {
+    state: 'stopped' | 'starting' | 'running' | 'failed';
+    ownedByStudio: boolean;
+    lastError: string | null;
+  } {
+    return {
+      state: this._daemonState,
+      ownedByStudio: this.daemonProcess !== null && !this.daemonProcess.killed,
+      lastError: this.daemonError,
+    };
+  }
+
+  /** Start `ollama serve` as a detached child process. No-op if daemon
+   *  is already reachable (whether ours or external). Resolves once the
+   *  daemon answers `ollama list` or rejects on timeout. */
+  async daemonStart(): Promise<{ ok: boolean; error: string | null }> {
+    // Always re-probe so an externally-started daemon (Ollama tray app)
+    // is detected without us spawning a duplicate.
+    const v = await this.getVersion(true);
+    if (!v.installed || !v.cliPath) {
+      this._daemonState = 'failed';
+      this.daemonError = 'Ollama is not installed.';
+      this.emit('daemon-state', this.daemonState());
+      return { ok: false, error: this.daemonError };
+    }
+    if (v.daemonReachable) {
+      this._daemonState = 'running';
+      this.daemonError = null;
+      this.emit('daemon-state', this.daemonState());
+      return { ok: true, error: null };
+    }
+    if (this.daemonProcess && !this.daemonProcess.killed) {
+      // Already in flight from a prior call.
+      return { ok: true, error: null };
+    }
+
+    this._daemonState = 'starting';
+    this.daemonError = null;
+    this.emit('daemon-state', this.daemonState());
+
+    try {
+      this.daemonProcess = spawn(v.cliPath, ['serve'], {
+        detached: false, // share process tree so before-quit can kill cleanly
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+    } catch (e) {
+      this._daemonState = 'failed';
+      this.daemonError = e instanceof Error ? e.message : String(e);
+      this.daemonProcess = null;
+      this.emit('daemon-state', this.daemonState());
+      return { ok: false, error: this.daemonError };
+    }
+
+    this.daemonProcess.on('exit', (code, signal) => {
+      const wasRunning = this._daemonState === 'running';
+      this.daemonProcess = null;
+      if (wasRunning) {
+        this._daemonState = 'stopped';
+        this.daemonError =
+          code === 0 || signal === 'SIGTERM'
+            ? null
+            : `Ollama daemon exited with code ${code}, signal ${signal ?? 'none'}`;
+        this.emit('daemon-state', this.daemonState());
+      }
+    });
+
+    // Poll `ollama list` until it succeeds or we time out. The daemon
+    // typically responds within ~1 second on warm starts, ~3-5 on cold.
+    const startedAt = Date.now();
+    const TIMEOUT_MS = 15000;
+    while (Date.now() - startedAt < TIMEOUT_MS) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      if (!this.daemonProcess || this.daemonProcess.killed) {
+        this._daemonState = 'failed';
+        this.daemonError = 'Daemon process exited before becoming reachable.';
+        this.emit('daemon-state', this.daemonState());
+        return { ok: false, error: this.daemonError };
+      }
+      const probe = await this.getVersion(true);
+      if (probe.daemonReachable) {
+        this._daemonState = 'running';
+        this.daemonError = null;
+        this.emit('daemon-state', this.daemonState());
+        return { ok: true, error: null };
+      }
+    }
+    // Timed out — daemon process is alive but not answering. Kill + report.
+    this.daemonStop();
+    this._daemonState = 'failed';
+    this.daemonError = `Daemon did not become reachable within ${TIMEOUT_MS}ms.`;
+    this.emit('daemon-state', this.daemonState());
+    return { ok: false, error: this.daemonError };
+  }
+
+  /** Stop the Studio-owned daemon. No-op for externally-managed Ollama. */
+  daemonStop(): void {
+    if (!this.daemonProcess) return;
+    try {
+      this.daemonProcess.kill('SIGTERM');
+    } catch {
+      // ignore
+    }
+    this.daemonProcess = null;
+    this._daemonState = 'stopped';
+    this.daemonError = null;
+    this.emit('daemon-state', this.daemonState());
+  }
 }
 
 /** Parse "1.1 GB", "470 MB", "4096" → bytes. Returns 0 on parse failure. */

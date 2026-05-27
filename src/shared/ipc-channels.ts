@@ -138,6 +138,12 @@ export const IPC = {
   OLLAMA_DELETE: 'ollama:delete',
   /** Main → renderer: each parsed line of `ollama pull` progress. */
   OLLAMA_PULL_PROGRESS: 'ollama:pull-progress',
+  /** Daemon lifecycle (Cat 7: autostart-on-app-launch). */
+  OLLAMA_DAEMON_STATE: 'ollama:daemon-state',
+  OLLAMA_DAEMON_START: 'ollama:daemon-start',
+  OLLAMA_DAEMON_STOP: 'ollama:daemon-stop',
+  /** Main → renderer: daemon-state changed event. */
+  OLLAMA_DAEMON_STATE_CHANGED: 'ollama:daemon-state-changed',
 
   // App metadata + lifecycle.
   APP_VERSION: 'app:version',
