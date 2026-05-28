@@ -270,7 +270,11 @@ export function TerminalTabs({
                   onFocus={() => onActiveChange(t.id)}
                 />
               ) : (
-                <EmbeddedTerminal paneId={t.paneId} compact={false} />
+                <EmbeddedTerminal
+                  paneId={t.paneId}
+                  compact={false}
+                  registerSender={registerSender}
+                />
               )}
             </div>
           );
