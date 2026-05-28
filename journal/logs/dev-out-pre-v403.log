@@ -1,0 +1,105 @@
+
+> catalyst-ui@4.0.2 start
+> electron-forge start -- --remote-debugging-port=9222
+
+[33m❯[39m Checking your system
+[33m❯[39m Checking package manager version
+[32m✔[39m Found npm@11.12.1
+[32m✔[39m Checking your system
+[?25h
+[43m[30m WARN [39m[49m [36minlineDynamicImports[39m option is deprecated, please use [36mcodeSplitting: false[39m instead.
+
+4:21:47 PM [@electron-forge/plugin-vite] target built src/preload/preload.ts
+4:21:47 PM [@electron-forge/plugin-vite] target built src/main/index.ts
+
+
+DevTools listening on ws://127.0.0.1:9222/devtools/browser/900292df-6f35-4a47-8407-e5fd6436fc55
+[pty-manager] resolveCommandPath: 'claude' → 'C:\Users\mmrla\.local\bin\claude.exe'
+[pty-manager] resolveCommandPath: 'ollama' → 'C:\Users\mmrla\AppData\Local\Programs\Ollama\ollama.exe'
+[2m4:26:43 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mRemoving a style property during rerender (borderColor) when a conflicting property is set (border) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values.
+[pty-manager] resolveCommandPath: 'ollama' → 'C:\Users\mmrla\AppData\Local\Programs\Ollama\ollama.exe'
+[2m4:27:00 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mRemoving a style property during rerender (borderColor) when a conflicting property is set (border) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values.
+[pty-manager] resolveCommandPath: 'ollama' → 'C:\Users\mmrla\AppData\Local\Programs\Ollama\ollama.exe'
+[2m4:27:05 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mRemoving a style property during rerender (borderColor) when a conflicting property is set (border) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values.
+[pty-manager] resolveCommandPath: 'ollama' → 'C:\Users\mmrla\AppData\Local\Programs\Ollama\ollama.exe'
+[2m4:27:34 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mRemoving a style property during rerender (borderColor) when a conflicting property is set (border) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values.
+C:\Users\mmrla\claude-code-studio\node_modules\node-pty\lib\conpty_console_list_agent.js:13
+var consoleProcessList = getConsoleProcessList(shellPid);
+                         ^
+
+Error: AttachConsole failed
+    at Object.<anonymous> (C:\Users\mmrla\claude-code-studio\node_modules\node-pty\lib\conpty_console_list_agent.js:13:26)
+    at Module._compile (node:internal/modules/cjs/loader:1838:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1971:10)
+    at Module.load (node:internal/modules/cjs/loader:1560:32)
+    at Module._load (node:internal/modules/cjs/loader:1362:12)
+    at c._load (node:electron/js2c/node_init:2:18095)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:262:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:169:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.15.0
+C:\Users\mmrla\claude-code-studio\node_modules\node-pty\lib\conpty_console_list_agent.js:13
+var consoleProcessList = getConsoleProcessList(shellPid);
+                         ^
+
+Error: AttachConsole failed
+    at Object.<anonymous> (C:\Users\mmrla\claude-code-studio\node_modules\node-pty\lib\conpty_console_list_agent.js:13:26)
+    at Module._compile (node:internal/modules/cjs/loader:1838:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1971:10)
+    at Module.load (node:internal/modules/cjs/loader:1560:32)
+    at Module._load (node:internal/modules/cjs/loader:1362:12)
+    at c._load (node:electron/js2c/node_init:2:18095)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:262:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:169:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.15.0
+C:\Users\mmrla\claude-code-studio\node_modules\node-pty\lib\conpty_console_list_agent.js:13
+var consoleProcessList = getConsoleProcessList(shellPid);
+                         ^
+
+Error: AttachConsole failed
+    at Object.<anonymous> (C:\Users\mmrla\claude-code-studio\node_modules\node-pty\lib\conpty_console_list_agent.js:13:26)
+    at Module._compile (node:internal/modules/cjs/loader:1838:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1971:10)
+    at Module.load (node:internal/modules/cjs/loader:1560:32)
+    at Module._load (node:internal/modules/cjs/loader:1362:12)
+    at c._load (node:electron/js2c/node_init:2:18095)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:262:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:169:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.15.0
+C:\Users\mmrla\claude-code-studio\node_modules\node-pty\lib\conpty_console_list_agent.js:13
+var consoleProcessList = getConsoleProcessList(shellPid);
+                         ^
+
+Error: AttachConsole failed
+    at Object.<anonymous> (C:\Users\mmrla\claude-code-studio\node_modules\node-pty\lib\conpty_console_list_agent.js:13:26)
+    at Module._compile (node:internal/modules/cjs/loader:1838:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1971:10)
+    at Module.load (node:internal/modules/cjs/loader:1560:32)
+    at Module._load (node:internal/modules/cjs/loader:1362:12)
+    at c._load (node:electron/js2c/node_init:2:18095)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:262:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:169:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.15.0
+C:\Users\mmrla\claude-code-studio\node_modules\node-pty\lib\conpty_console_list_agent.js:13
+var consoleProcessList = getConsoleProcessList(shellPid);
+                         ^
+
+Error: AttachConsole failed
+    at Object.<anonymous> (C:\Users\mmrla\claude-code-studio\node_modules\node-pty\lib\conpty_console_list_agent.js:13:26)
+    at Module._compile (node:internal/modules/cjs/loader:1838:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1971:10)
+    at Module.load (node:internal/modules/cjs/loader:1560:32)
+    at Module._load (node:internal/modules/cjs/loader:1362:12)
+    at c._load (node:electron/js2c/node_init:2:18095)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:262:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:169:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v24.15.0
