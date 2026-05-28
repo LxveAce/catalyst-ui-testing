@@ -73,9 +73,17 @@ record cycles; those are separate from this on-disk journal.
 - `index.html.lmm.md` — HTML shell + CSP
 - `styles/globals.css.lmm.md` — theme tokens, keyframes/animations
 
-### `src/renderer/components/commands/` (2)
-- `CommandsPanel.tsx.lmm.md`
-- `QuickCommands.tsx.lmm.md`
+### `src/renderer/components/auth/` (2)
+- `ApiKeyModal.tsx.lmm.md` — universal pre-launch / interceptor API-key dialog
+- `ProviderKeysList.tsx.lmm.md` — Settings view of stored provider keys + AuthSource tags
+
+### `src/renderer/components/chat-skin/` (1)
+- `ChatSkinOverlay.tsx.lmm.md` — markdown-over-sanitized-bytes chat overlay on top of xterm
+
+### `src/renderer/components/commands/` (3)
+- `CommandsPanel.tsx.lmm.md` — 3-tab sidebar; family-driven post-refactor
+- `QuickCommands.tsx.lmm.md` — Quick Actions sub-panel; now data-driven
+- `command-families.ts.lmm.md` — per-CLI command tables + `deriveCommandFamily` helper
 
 ### `src/renderer/components/compact/` (1)
 - `CompactPanel.tsx.lmm.md` — Phase 3 UI
@@ -95,12 +103,17 @@ record cycles; those are separate from this on-disk journal.
 - `Sidebar.tsx.lmm.md` — panel switcher
 - `StatusBar.tsx.lmm.md` — PID / status footer
 
+### `src/renderer/components/models/` (2)
+- `EmbeddedTerminal.tsx.lmm.md` — attaches to model PTYs; registerSender wires text-injection (H-1 fix)
+- `ProviderSetupModal.tsx.lmm.md` — instructions modal for missing provider CLIs
+
 ### `src/renderer/components/resources/` — Phase 2 UI (2)
 - `ResourcePanel.tsx.lmm.md`
 - `GaugeBar.tsx.lmm.md` — dual-fill gauge
 
-### `src/renderer/components/settings/` (1)
+### `src/renderer/components/settings/` (2)
 - `SettingsPanel.tsx.lmm.md`
+- `ThemeEditor.tsx.lmm.md` — custom-theme creator
 
 ### `src/renderer/components/terminal/` (2)
 - `TerminalPanel.tsx.lmm.md` — xterm host + fit/resize handling
@@ -108,5 +121,5 @@ record cycles; those are separate from this on-disk journal.
 
 ---
 
-*Total: 41 LMM analyses. Keep this catalog in sync when entries are
+*Total: 47 LMM analyses. Keep this catalog in sync when entries are
 added, moved, or removed.*

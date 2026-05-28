@@ -1,9 +1,9 @@
 # Claude Code Studio — Testing Repo STATUS
 
 > **Version:** v3.1.0
-> **Last updated:** 2026-05-27 (post-handoff continuation — TerminalTabs wired into App.tsx; session schema v1→v2)
-> **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`); feature `feature/terminal-tabs-wiring` open
-> **Latest session log:** [`SESSION_LOG_2026-05-27_night-terminaltabs.md`](./SESSION_LOG_2026-05-27_night-terminaltabs.md)
+> **Last updated:** 2026-05-27 (post-handoff continuation — TerminalTabs + Commands-tab-mirror + H-1 fix all shipped)
+> **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`); open feature branches: `feature/terminal-tabs-wiring` (PR #18), `feature/commands-tab-mirror` stacked on it
+> **Latest session log:** [`SESSION_LOG_2026-05-27_night-terminaltabs.md`](./SESSION_LOG_2026-05-27_night-terminaltabs.md) (extended with the Commands-tab-mirror addendum)
 > **Latest verification report:** [`VERIFICATION_2026-05-27.md`](./VERIFICATION_2026-05-27.md)
 
 This is the always-current pickup doc. A fresh `git clone` + reading this file should
@@ -69,6 +69,37 @@ here first.
 ---
 
 ## What's live (deep dive)
+
+### Commands sidebar mirrors active tab + EmbeddedTerminal sender (this session, second commit)
+
+The Commands sidebar (Quick Actions / All Commands / Shortcuts) now
+follows the active terminal tab's CLI. Six families today:
+**Claude / Ollama / Aider / Gemini / BitNet / Terminal (unknown).**
+
+- Data lives in `src/renderer/components/commands/command-families.ts` —
+  one `CommandFamilyConfig` per CLI with label, grouped slash commands,
+  categorized quick commands, and REPL shortcuts. Curated, not
+  exhaustive; add to a family by editing the literal in that file.
+- `CommandsPanel` accepts a `family` prop; renders the matching config.
+  A small uppercase chip in the header announces which CLI's commands
+  are showing ("CLAUDE", "OLLAMA", etc.) so the user knows why the
+  list changed when they switched tabs.
+- `QuickCommands` is now data-driven; self-heals when its `categories`
+  change so a stale active-category pill doesn't survive a family swap.
+- Empty families (BitNet, Unknown) surface a friendly message rather
+  than an empty pane.
+- `deriveCommandFamily(profile, catalog)` in
+  `command-families.ts` is the sole derivation point — App.tsx calls it
+  once and threads the result through `RightPanel`.
+
+**H-1 fix (was: model PTYs silently dropped palette/snippet text):**
+`EmbeddedTerminal` now accepts and calls `registerSender`, matching
+TerminalPanel's pattern. App's `sendToActive` reaches model PTYs as
+well as Claude tabs. The new Commands sidebar's Quick Action buttons
+literally would not have worked on a model tab before this fix.
+
+Verification: `npx tsc --noEmit` clean, `npx vite build` clean. Manual
+smoke list in `docs/security-reviews/SECURITY_REVIEW_COMMANDS_TAB.md`.
 
 ### TerminalTabs wiring + session schema v2 (this session)
 
@@ -204,8 +235,9 @@ To run again: `node scripts/runtime-verify.mjs` (will spawn Electron, ~3 min tot
 
 ## Deferred — pick up here next session
 
-Two of the three items from the previous handoff remain. Item #1
-(TerminalTabs wiring) shipped this session — see "What's live" below.
+The original three deferred items: #1 (TerminalTabs wiring) and #2
+(Commands-tab-mirror, plus the H-1 fix for `EmbeddedTerminal`) both
+shipped this session. One item remains.
 
 ### 1. Claude "chat-mode" profile
 
@@ -230,27 +262,6 @@ This is a substantial refactor. Now that TerminalTabs is the live tab model,
 this work fits naturally on top of it: add a `claude-chat` profile, route
 its PTY's stdio through a JSON parser, and have the chat-skin overlay
 detect the profile and render structured messages directly.
-
-### 2. Commands tab mirrors active model
-
-**Status**: scoped only — no code yet.
-
-User request: the Commands sidebar panel currently shows static / Claude-only
-commands. Make it derive from the currently active terminal tab's profile.
-
-Implementation sketch:
-- CommandsPanel reads `activePaneId` / activeTab + the tab's profile.
-- For Claude: existing slash-command list (already wired).
-- For other CLIs: a per-CLI commands map (claude / gemini / aider / aider+openrouter /
-  ollama generic). Manually curated.
-- Optionally: parse `<cli> --help` once per session and surface common flags.
-
-Now that TerminalTabs owns the active-tab concept (via `activeTabId` in
-App.tsx, mirrored to `activePaneId`), `CommandsPanel` can read the
-profile of the active tab and render the matching command list. As a
-prerequisite, model panes need `registerSender` plumbing in
-`EmbeddedTerminal` so any commands the user picks actually reach the PTY
-(see H-1 in `docs/security-reviews/SECURITY_REVIEW_TERMINAL_TABS.md`).
 
 ---
 
@@ -279,10 +290,16 @@ prerequisite, model panes need `registerSender` plumbing in
 - **Claude TUI in chat skin**: even with the v2 sanitizer, some selection prompts
   won't render perfectly — the proper fix is the chat-mode profile (item #1
   in Deferred above).
-- **Model tab snippet injection**: `EmbeddedTerminal` doesn't register a
-  sender, so palette/snippet text aimed at a model tab is silently dropped.
-  Tracked as H-1 in the TerminalTabs security review; fix bundled with the
-  Commands-tab-mirroring work.
+- **Model tab StatusBar PID**: shows 0 for model tabs because
+  `EmbeddedTerminal` doesn't subscribe to a `ready` event for
+  already-spawned PTYs. Cosmetic only — Resource panel still tracks
+  the model PTY bucket. Tracked as M-2 in
+  `SECURITY_REVIEW_COMMANDS_TAB.md`.
+- **Aider quick-action "starter" auto-submit**: clicking "Add file"
+  sends `/add \r` (trailing space submits empty). Aider prints a
+  usage error; user has to retype. Tracked as M-1 in
+  `SECURITY_REVIEW_COMMANDS_TAB.md`. Per-command `submit` flag is
+  the fix.
 
 ---
 
@@ -350,9 +367,12 @@ to ship a public update.
 - **Night session log (post-handoff pickup):**
   `docs/SESSION_LOG_2026-05-27_night-terminaltabs.md` — TerminalTabs
   wired into App.tsx, session schema v1→v2 migration, SplitLayout
-  deleted, palette retargeted to tab actions.
+  deleted, palette retargeted to tab actions; addendum at the bottom
+  covers Commands-tab-mirror + H-1 fix.
 - **TerminalTabs security review:**
   `docs/security-reviews/SECURITY_REVIEW_TERMINAL_TABS.md`.
+- **Commands-tab-mirror security review:**
+  `docs/security-reviews/SECURITY_REVIEW_COMMANDS_TAB.md`.
 - **Per-file LMM journals:** `journal/` mirrors `src/` paths.
 - **Multi-provider design notes:** `docs/MULTI_PROVIDER_BRAINSTORM.md`.
 - **Backlog:** `docs/BACKLOG.md`.

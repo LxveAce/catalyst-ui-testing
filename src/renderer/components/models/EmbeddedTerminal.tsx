@@ -25,9 +25,16 @@ interface Props {
   paneId: string;
   /** Compact mode reduces font size + padding (default true for in-panel). */
   compact?: boolean;
+  /** When provided, the embed registers a `sendInput`-backed sender under
+   *  the given paneId so the palette / snippets / Commands tab can route
+   *  text into this model's PTY just like they do for Claude tabs. */
+  registerSender?: (
+    paneId: string,
+    send: ((data: string) => void) | null
+  ) => void;
 }
 
-export function EmbeddedTerminal({ paneId, compact = true }: Props) {
+export function EmbeddedTerminal({ paneId, compact = true, registerSender }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   // Per-pane chat-skin toggle, persisted via skin-prefs (localStorage).
@@ -124,6 +131,14 @@ export function EmbeddedTerminal({ paneId, compact = true }: Props) {
       window.electronAPI.terminal.sendInput(paneId, data);
     });
 
+    // Register a sender so external callers (palette, snippets, the
+    // Commands sidebar) can write to this model's PTY just like Claude
+    // tabs. Without this, sendToActive in App.tsx silently no-ops when a
+    // model tab is focused — fixes H-1 from the TerminalTabs red-team.
+    registerSender?.(paneId, (data: string) => {
+      window.electronAPI.terminal.sendInput(paneId, data);
+    });
+
     const ro = new ResizeObserver(() => fitIfChanged());
     ro.observe(host);
 
@@ -132,11 +147,12 @@ export function EmbeddedTerminal({ paneId, compact = true }: Props) {
       offData();
       offExit();
       offUserInput.dispose();
+      registerSender?.(paneId, null);
       term.dispose();
       termRef.current = null;
       fitRef.current = null;
     };
-  }, [paneId, compact, fitIfChanged]);
+  }, [paneId, compact, fitIfChanged, registerSender]);
 
   return (
     <div
