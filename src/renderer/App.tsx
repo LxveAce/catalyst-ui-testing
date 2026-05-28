@@ -387,6 +387,13 @@ export function App() {
           // Tick after the panel renders so the input ref is mounted.
           setTimeout(() => window.dispatchEvent(new Event('models-focus-search')), 0);
           break;
+        case 'terminal.new-profile':
+          // Open the terminal panel and ask TerminalTabs to open its
+          // profile picker via a custom DOM event.  Same decoupling
+          // pattern as models.focus-search above.
+          setActivePanel('terminal');
+          setTimeout(() => window.dispatchEvent(new Event('terminal-open-profile-picker')), 0);
+          break;
         default:
           // unknown action id — ignore
           break;
