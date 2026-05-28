@@ -11,6 +11,67 @@ v2 → v3 = multi-model surface).
 
 ---
 
+## [3.2.0] — 2026-05-27
+
+The tab + structured-chat release. Replaces the split-pane terminal
+with a Windows-Terminal-style tab strip; adds a Claude (Chat) profile
+that runs Claude in non-interactive JSONL mode for a real chat UI;
+the Commands sidebar now mirrors the active tab's CLI.
+
+Full notes: `docs/RELEASE_NOTES_v3.2.0.md`.
+
+### Added
+- **TerminalTabs** — Windows-Terminal-style tab strip with profile
+  picker (Claude / Ollama / Aider / Gemini / BitNet). Replaces the
+  prior split-pane layout. Per-tab popout windows, status dots, +
+  button, profile dropdown.
+- **Claude (Chat) profile** — runs `claude --print
+  --input-format=stream-json --output-format=stream-json --verbose`.
+  Pairs with the chat skin to render structured messages: text
+  bubbles, tool_use cards, tool_result cards, thinking blocks.
+- **Stop button** in chat-mode — replaces Send while a response
+  streams, sends SIGINT to halt generation.
+- **CLI capability probe** — `claude --help` parsed on app startup;
+  Claude (Chat) entry in the picker shows a yellow "CLI flags?"
+  badge when stream-json isn't supported locally.
+- **Commands sidebar profile families** — 6 curated CLI command
+  families surface per active tab.
+- **Renderer-side `MAX_TABS = 32`** cap with dismissable banner.
+- **Extended runtime verifier** — 30 assertions (12 sidebar panels
+  + 18 tab/picker/palette/family-chip gestures).
+
+### Changed
+- **Session schema v1 → v2** — `tabs[] + activeTabId` replaces
+  `layout: SplitNode`. Automatic migration on first launch (first
+  pane of old layout becomes single Claude tab on same paneId).
+- **Aider Quick Actions** — `/add `, `/drop `, `/ask `, `/code `,
+  `/architect `, `/run ` no longer auto-submit empty arguments;
+  they land in the composer for you to finish typing. Active
+  terminal auto-focuses.
+- **EmbeddedTerminal** wired with `registerSender` + `onPidChange`
+  + `active` props so model tabs participate in the snippet /
+  palette / StatusBar PID system equally to Claude tabs.
+- **CLI onboarding modal** routes `/login` to a Claude tab when
+  the active tab is non-Claude.
+
+### Fixed
+- StatusBar PID footer now shows real PID for model tabs (was 0).
+- Chat-mode user-message echo dedup uses whitespace-normalized
+  comparison (no more double-rendered bubbles when Claude
+  normalizes text).
+- Image content in tool_result shows media_type + source kind +
+  size instead of bare `[image]`.
+- Race in TerminalTabs `addClaudeTab` / `addModelTab` / `closeTab`
+  that dropped concurrently-added tabs during a model-launch await.
+
+### Removed
+- `SplitLayout.tsx` (replaced by `TerminalTabs.tsx`).
+- The 5 split-pane CommandPalette actions (split-horizontal,
+  split-vertical, close-pane, focus-next-pane, focus-prev-pane,
+  reset-layout) — repurposed as tab actions.
+
+---
+
 ## [3.0.0] — 2026-05-26
 
 The multi-model release. Local + API model catalog, file directory
