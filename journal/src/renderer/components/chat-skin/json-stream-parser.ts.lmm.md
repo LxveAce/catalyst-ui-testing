@@ -162,3 +162,47 @@ Related entries:
 - [[ChatSkinOverlay.tsx.lmm.md]] — the consumer.
 - [[TerminalTabs.tsx.lmm.md]] — owns the active tab whose profile
   triggers chat-mode in the overlay.
+
+---
+
+## Addendum — tool_use / tool_result / thinking renderer (PR #22)
+
+Closes M-1 from `SECURITY_REVIEW_CHAT_MODE.md`. The interpreter no
+longer drops non-text content blocks — it walks every block in an
+assistant or user message's `content` array and emits one action per
+block in stream order.
+
+**Schema changes:**
+- `ClaudeChatAction` gains three new kinds: `add-tool-use`,
+  `add-tool-result`, `add-thinking`. Each carries the data the renderer
+  needs to mount a card (id + name + input for tool_use; tool_use_id +
+  output for tool_result; raw text for thinking).
+- `interpretClaudeChatEvent` now returns `ClaudeChatAction[]` instead
+  of a single action. A single event can fan out: `assistant` with
+  `[text, tool_use, text]` → 3 actions = 3 visual messages.
+- New helpers `contentBlocksToActions(content, role)` and
+  `extractToolResultText(content)` keep the dispatch logic readable.
+- `extractTextFromMessage` is gone — replaced by the per-block walk.
+
+**Block types recognized:**
+- `text` — `append-assistant-text` (assistant) / `new-user-message` (user)
+- `tool_use` — `add-tool-use` (assistant only in practice)
+- `tool_result` — `add-tool-result` (user only in practice)
+- `thinking` — `add-thinking` (assistant only)
+- Anything else → `ignore` (loggable via the debug path)
+
+**Why "one action per block" rather than a composite action:**
+- The renderer's `applyClaudeAction` reducer stays simple — each
+  action appends or updates a single message.
+- The renderer can interleave text and tool cards in the right order
+  by checking `isPlainTextMessage(last)` before appending a text
+  delta. If the last message is a tool card, the next text starts a
+  fresh bubble — visible as a natural paragraph break around the
+  tool call.
+
+**Tradeoffs accepted:**
+- We don't visually *pair* tool_result cards with their tool_use cards
+  (e.g., expand-together animation). User correlates by tool_use_id
+  via the data attribute if needed.
+- Images in tool_result content flatten to the literal `[image]`
+  string. Rendering real images is a future enhancement.

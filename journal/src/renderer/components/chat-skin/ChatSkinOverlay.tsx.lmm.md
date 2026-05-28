@@ -127,3 +127,52 @@ Persistent caveats this addendum doesn't resolve:
   empty slash list + an explanatory `emptyMessage` so users don't
   click commands that silently fail. See
   [[../commands/command-families.ts.lmm.md]].
+
+---
+
+## Addendum 2 — tool-use renderer (PR #22)
+
+Closes M-1 from `SECURITY_REVIEW_CHAT_MODE.md`. The chat skin now
+renders Claude's `tool_use`, `tool_result`, and `thinking` content
+blocks as distinct in-timeline cards instead of dropping them.
+
+**Message-model extension:**
+`ChatMessage` gains three optional discriminator fields — `toolUse`,
+`toolResult`, `thinking`. When any is set, `MessageBubble` dispatches
+to a dedicated card component instead of rendering text:
+- `<ToolUseCard />` — purple-tinted "🔧 <name>" pill. Click-to-expand
+  shows the full JSON input in a monospace pre.
+  `summarizeToolInput()` pulls the most informative single field
+  (`path`/`command`/`query`/etc.) for the collapsed preview.
+- `<ToolResultCard />` — green-tinted "↩ Tool result" pill with a line
+  count and a one-line preview when collapsed. Expanded view shows
+  the full output (capped at `MAX_MESSAGE_CHARS`).
+- `<ThinkingBlock />` — muted dashed-border italic "💭 Thinking" with
+  line count. Expanded view shows the reasoning text. Doesn't compete
+  with the actual response visually.
+
+A small helper `isPlainTextMessage(m)` predicates message inspection;
+`applyClaudeAction.append-assistant-text` checks it so the run of
+streaming text restarts a new bubble after a tool/thinking interrupt
+— mirroring how the SDK's own emit order actually reads.
+
+**Card design choices:**
+- All three cards are click-to-expand (single button per card, no
+  separate header / body split). Keeps the timeline scannable when
+  collapsed.
+- Tool_use uses purple to match the app's accent gradient; tool_result
+  uses a subdued green for "completed/value"; thinking uses dashed
+  border to feel different ("not part of the final response").
+- All three left-align (justify-content: flex-start) regardless of
+  role — they're "events" rather than "messages", visually distinct
+  from the user/assistant bubble dichotomy.
+- `aria-expanded` on the toggle button for screen reader correctness.
+
+**Dropped from this iteration:**
+- Visual pairing of tool_use ↔ tool_result (e.g., draw a connector
+  line, sync expand state). Considered but punted — most flows have
+  a clear chronological order that already makes pairing obvious.
+- Image rendering for image-typed tool_result content. Falls back to
+  `[image]` placeholder via `extractToolResultText`.
+- Copy button on the expanded JSON / output. The browser's native
+  text-select + Ctrl-C is fine for now.

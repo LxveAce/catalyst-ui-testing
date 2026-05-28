@@ -1,9 +1,9 @@
 # Claude Code Studio — Testing Repo STATUS
 
 > **Version:** v3.1.0
-> **Last updated:** 2026-05-27 (post-handoff continuation — original 3-item deferred list fully drained: TerminalTabs + Commands-tab-mirror + Claude chat-mode profile all shipped)
-> **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`); open feature branches: `feature/terminal-tabs-wiring` (PR #18), `feature/commands-tab-mirror` (PR #19) stacked on it, `feature/claude-chat-mode` stacked on that
-> **Latest session log:** [`SESSION_LOG_2026-05-27_night-terminaltabs.md`](./SESSION_LOG_2026-05-27_night-terminaltabs.md) (extended with Commands-tab-mirror + chat-mode addendums)
+> **Last updated:** 2026-05-27 (post-handoff continuation — 5 stacked PRs from a single session: original 3-item deferred list drained + 2 polish iterations closing 3 of 6 surfaced followups)
+> **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`); 5 open feature branches stacked: #18 (foundation) → #19 (commands) → #20 (chat-mode) → #21 (polish) → #22 (tool-use renderer)
+> **Latest session log:** [`SESSION_LOG_2026-05-27_night-terminaltabs.md`](./SESSION_LOG_2026-05-27_night-terminaltabs.md) (4 addendums)
 > **Latest verification report:** [`VERIFICATION_2026-05-27.md`](./VERIFICATION_2026-05-27.md)
 
 This is the always-current pickup doc. A fresh `git clone` + reading this file should
@@ -291,8 +291,9 @@ original deferred list.
 
 ### Followups surfaced this session (priority order)
 
-Two of the original six shipped in PR #21 (polish pass — Aider submit
-flag + renderer-side tab cap). Four remain:
+Three of the original six shipped this session — PR #21 closed the two
+M-1s; PR #22 closed M-1 from chat-mode (tool-use renderer). Three
+remain:
 
 1. **Verify Claude CLI flag surface for chat-mode** (H-1 in
    `SECURITY_REVIEW_CHAT_MODE.md`). The catalog uses
@@ -300,14 +301,10 @@ flag + renderer-side tab cap). Four remain:
    — pending real-app confirmation that the local `claude` binary
    accepts those flags + emits the assumed event shapes. First manual
    run will surface any mismatch as a parse-error bubble.
-2. **Tool-use / thinking renderer in chat skin** (M-1 in chat-mode
-   review). `extractTextFromMessage` drops non-text content blocks
-   today. Render `tool_use` as a compact card; `tool_result` as
-   collapsible.
-3. **"Stop generation" button in chat skin** (M-2 in chat-mode
+2. **"Stop generation" button in chat skin** (M-2 in chat-mode
    review). Replaces the send button while streaming; sends `\x03`
    or an abort JSON event.
-4. **`EmbeddedTerminal` PID surfacing** (M-2 in TerminalTabs review).
+3. **`EmbeddedTerminal` PID surfacing** (M-2 in TerminalTabs review).
    StatusBar shows PID 0 for model tabs because `EmbeddedTerminal`
    doesn't subscribe to a `ready` event.
 
@@ -426,6 +423,8 @@ to ship a public update.
   `docs/security-reviews/SECURITY_REVIEW_CHAT_MODE.md`.
 - **Polish-pass security review (PR #21):**
   `docs/security-reviews/SECURITY_REVIEW_POLISH.md`.
+- **Tool-use renderer security review (PR #22):**
+  `docs/security-reviews/SECURITY_REVIEW_TOOL_USE.md`.
 - **Per-file LMM journals:** `journal/` mirrors `src/` paths.
 - **Multi-provider design notes:** `docs/MULTI_PROVIDER_BRAINSTORM.md`.
 - **Backlog:** `docs/BACKLOG.md`.
