@@ -1,9 +1,9 @@
 # Claude Code Studio — Testing Repo STATUS
 
 > **Version:** v3.1.0
-> **Last updated:** 2026-05-27 (post-handoff continuation — TerminalTabs + Commands-tab-mirror + H-1 fix all shipped)
-> **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`); open feature branches: `feature/terminal-tabs-wiring` (PR #18), `feature/commands-tab-mirror` stacked on it
-> **Latest session log:** [`SESSION_LOG_2026-05-27_night-terminaltabs.md`](./SESSION_LOG_2026-05-27_night-terminaltabs.md) (extended with the Commands-tab-mirror addendum)
+> **Last updated:** 2026-05-27 (post-handoff continuation — original 3-item deferred list fully drained: TerminalTabs + Commands-tab-mirror + Claude chat-mode profile all shipped)
+> **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`); open feature branches: `feature/terminal-tabs-wiring` (PR #18), `feature/commands-tab-mirror` (PR #19) stacked on it, `feature/claude-chat-mode` stacked on that
+> **Latest session log:** [`SESSION_LOG_2026-05-27_night-terminaltabs.md`](./SESSION_LOG_2026-05-27_night-terminaltabs.md) (extended with Commands-tab-mirror + chat-mode addendums)
 > **Latest verification report:** [`VERIFICATION_2026-05-27.md`](./VERIFICATION_2026-05-27.md)
 
 This is the always-current pickup doc. A fresh `git clone` + reading this file should
@@ -69,6 +69,50 @@ here first.
 ---
 
 ## What's live (deep dive)
+
+### Claude chat-mode profile (this session, third commit)
+
+New catalog entry `api.anthropic.claude-chat` that spawns
+`claude --print --input-format=stream-json --output-format=stream-json --verbose`.
+Paired with a new JSON-stream rendering path in `ChatSkinOverlay` so
+the ✦ Chat skin produces structured messages instead of trying to
+sanitize Claude's TUI repaint sequences (the "garbled chat text"
+problem from the morning handoff).
+
+Architecture:
+- `src/renderer/components/chat-skin/json-stream-parser.ts` — new file.
+  Two pure modules: `JsonStreamParser` (generic JSONL with partial-line
+  buffer) and `interpretClaudeChatEvent` (Claude SDK event shapes →
+  chat-renderer actions). Plus `encodeUserMessageJsonl` for the
+  outbound wrap.
+- `ChatSkinOverlay` gains a `profile` prop. When profile is in the
+  `JSON_STREAM_PROFILES` set, `ingestJsonChunk` runs instead of
+  `appendAssistantChunk` and `send()` wraps user text via
+  `encodeUserMessageJsonl` before `sendInput`.
+- `TerminalTabs` → `EmbeddedTerminal` → `ChatSkinOverlay` plumb
+  `profile` through.
+- New `claude-chat` family in `command-families.ts` with intentionally
+  empty slash list + `emptyMessage` explaining slash commands don't
+  apply in stream-json mode.
+
+Behavior:
+- Pick "Claude (Chat)" from the `▼` profile picker → new tab launches
+  with JSON I/O.
+- Toggle ✦ Chat skin → see a structured chat UI consuming JSON events:
+  `system` init → `"Claude JSON session ready"` system note;
+  `assistant` / `result` → bubbles; `content_block_delta` → live
+  streaming text appended to the active bubble; non-JSON noise →
+  `_(non-JSON line: …)_` italic bubbles so nothing's silently dropped.
+- Type a message → encoded as Anthropic Messages API user-message
+  event with `\n` framing → fed to Claude's stdin.
+- Toggle skin OFF → xterm shows the raw JSONL stream.
+
+Caveats (carry forward):
+- Tool-use / thinking content blocks dropped today (M-1 in
+  `SECURITY_REVIEW_CHAT_MODE.md`).
+- No "stop generation" affordance in chat-mode (M-2).
+- Flag surface unverified against an actual Claude binary (H-1) — first
+  manual run will expose any mismatch as a clear error bubble.
 
 ### Commands sidebar mirrors active tab + EmbeddedTerminal sender (this session, second commit)
 
@@ -235,33 +279,44 @@ To run again: `node scripts/runtime-verify.mjs` (will spawn Electron, ~3 min tot
 
 ## Deferred — pick up here next session
 
-The original three deferred items: #1 (TerminalTabs wiring) and #2
-(Commands-tab-mirror, plus the H-1 fix for `EmbeddedTerminal`) both
-shipped this session. One item remains.
+**The original 3-item deferred list from the morning handoff is fully
+drained.** All three shipped this session:
+- #1 TerminalTabs wiring → PR #18
+- #2 Commands-tab-mirror + H-1 fix → PR #19
+- #3 Claude chat-mode profile → PR #20 (stacked)
 
-### 1. Claude "chat-mode" profile
+Next session starts with a clean blank slate. The items below are
+*new* follow-ups surfaced by the three red-team reviews, not the
+original deferred list.
 
-**Status**: scoped only — no code yet.
+### Followups surfaced this session (priority order)
 
-User insight: when the chat skin is active, Claude CLI's interactive TUI gets
-translated into garbled chat text. The cleanest fix is to run Claude in a
-non-interactive structured-output mode when the chat skin is active.
+1. **Verify Claude CLI flag surface for chat-mode** (H-1 in
+   `SECURITY_REVIEW_CHAT_MODE.md`). The catalog uses
+   `['--print', '--input-format=stream-json', '--output-format=stream-json', '--verbose']`
+   — pending real-app confirmation that the local `claude` binary
+   accepts those flags + emits the assumed event shapes. First manual
+   run will surface any mismatch as a parse-error bubble.
+2. **Tool-use / thinking renderer in chat skin** (M-1 in chat-mode
+   review). `extractTextFromMessage` drops non-text content blocks
+   today. Render `tool_use` as a compact card; `tool_result` as
+   collapsible.
+3. **"Stop generation" button in chat skin** (M-2 in chat-mode
+   review). Replaces the send button while streaming; sends `\x03`
+   or an abort JSON event.
+4. **`EmbeddedTerminal` PID surfacing** (M-2 in TerminalTabs review).
+   StatusBar shows PID 0 for model tabs because `EmbeddedTerminal`
+   doesn't subscribe to a `ready` event.
+5. **Aider Quick-Action `submit` flag** (M-1 in Commands-tab-mirror
+   review). Add `submit: boolean` to `CommandDef`; "starter" commands
+   (`/add `) should land in the composer mid-typing, not auto-submit
+   empty.
+6. **Renderer-side tab count cap** (M-1 in TerminalTabs review).
+   Match SessionService's `MAX_TABS = 32` cap to avoid PtyRegistry
+   rejection surfacing as a dead tab.
 
-Implementation sketch:
-- Claude CLI supports `--output-format=stream-json --input-format=stream-json` — gives
-  structured JSON events instead of TUI. Bidirectional.
-- Add a new profile "Claude (Chat)" to the catalog that uses these flags. Its PTY
-  emits JSON; we parse it and render proper messages in the chat skin.
-- Add a JSON-stream parser in `src/renderer/components/chat-skin/` (or wherever).
-- The chat-skin overlay detects the profile and routes to the JSON renderer
-  instead of the markdown-over-sanitized-bytes path.
-- User picks "Claude" (TUI for terminal) or "Claude (Chat)" (JSON for chat skin)
-  at tab creation. Different tabs can use different modes.
-
-This is a substantial refactor. Now that TerminalTabs is the live tab model,
-this work fits naturally on top of it: add a `claude-chat` profile, route
-its PTY's stdio through a JSON parser, and have the chat-skin overlay
-detect the profile and render structured messages directly.
+None of these block the next session — they're polish on shipping
+work.
 
 ---
 
@@ -373,6 +428,8 @@ to ship a public update.
   `docs/security-reviews/SECURITY_REVIEW_TERMINAL_TABS.md`.
 - **Commands-tab-mirror security review:**
   `docs/security-reviews/SECURITY_REVIEW_COMMANDS_TAB.md`.
+- **Chat-mode security review:**
+  `docs/security-reviews/SECURITY_REVIEW_CHAT_MODE.md`.
 - **Per-file LMM journals:** `journal/` mirrors `src/` paths.
 - **Multi-provider design notes:** `docs/MULTI_PROVIDER_BRAINSTORM.md`.
 - **Backlog:** `docs/BACKLOG.md`.

@@ -77,8 +77,9 @@ record cycles; those are separate from this on-disk journal.
 - `ApiKeyModal.tsx.lmm.md` — universal pre-launch / interceptor API-key dialog
 - `ProviderKeysList.tsx.lmm.md` — Settings view of stored provider keys + AuthSource tags
 
-### `src/renderer/components/chat-skin/` (1)
-- `ChatSkinOverlay.tsx.lmm.md` — markdown-over-sanitized-bytes chat overlay on top of xterm
+### `src/renderer/components/chat-skin/` (2)
+- `ChatSkinOverlay.tsx.lmm.md` — markdown-over-sanitized-bytes chat overlay on top of xterm; chat-mode addendum routes JSON-stream profiles to the parser
+- `json-stream-parser.ts.lmm.md` — JSONL parser + Claude SDK event interpreter + user-message encoder for chat-mode profiles
 
 ### `src/renderer/components/commands/` (3)
 - `CommandsPanel.tsx.lmm.md` — 3-tab sidebar; family-driven post-refactor
@@ -121,5 +122,5 @@ record cycles; those are separate from this on-disk journal.
 
 ---
 
-*Total: 47 LMM analyses. Keep this catalog in sync when entries are
+*Total: 48 LMM analyses. Keep this catalog in sync when entries are
 added, moved, or removed.*
