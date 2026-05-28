@@ -218,6 +218,24 @@ export function TerminalPanel({
     return () => clearTimeout(t);
   }, [active, paneId, fitIfChanged]);
 
+  // App dispatches `ccs-focus-active-terminal` after a `submit:false`
+  // command (Aider /add, Ollama /set system, etc.) so the user can
+  // finish typing the argument without an extra click. Only the
+  // currently-active pane should claim focus. Closes M-1 from
+  // SECURITY_REVIEW_POLISH.md.
+  useEffect(() => {
+    if (!active) return;
+    const onFocusReq = () => {
+      try {
+        termRef.current?.focus();
+      } catch {
+        // term may not be mounted yet — first frame is the worst case.
+      }
+    };
+    window.addEventListener('ccs-focus-active-terminal', onFocusReq);
+    return () => window.removeEventListener('ccs-focus-active-terminal', onFocusReq);
+  }, [active]);
+
   // Press-any-key restart after an exit message.
   useEffect(() => {
     if (!exited || !termRef.current) return;

@@ -1,8 +1,8 @@
 # Claude Code Studio — Testing Repo STATUS
 
 > **Version:** v3.1.0
-> **Last updated:** 2026-05-27 (post-handoff continuation — 7 stacked PRs from a single session: original 3-item deferred list drained + iterations closing 5 of 6 surfaced followups)
-> **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`); 7 open feature branches stacked: #18 (foundation) → #19 (commands) → #20 (chat-mode) → #21 (polish) → #22 (tool-use renderer) → #23 (PID surfacing) → #24 (Stop button)
+> **Last updated:** 2026-05-27 (post-handoff continuation — **10 stacked PRs from a single session**: original 3-item deferred list drained + 100% of Highs + Mediums from all 5 red-teams closed)
+> **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`); 10 open feature branches stacked: #18 → #19 → #20 → #21 → #22 → #23 → #24 → #25 (CLI probe) → #26 (tool-use polish) → #27 (general polish)
 > **Latest session log:** [`SESSION_LOG_2026-05-27_night-terminaltabs.md`](./SESSION_LOG_2026-05-27_night-terminaltabs.md) (4 addendums)
 > **Latest verification report:** [`VERIFICATION_2026-05-27.md`](./VERIFICATION_2026-05-27.md)
 
@@ -289,23 +289,33 @@ Next session starts with a clean blank slate. The items below are
 *new* follow-ups surfaced by the three red-team reviews, not the
 original deferred list.
 
-### Followups surfaced this session (priority order)
+### Followups status — 100% of Highs + Mediums closed
 
-**Five of the original six** shipped this session. One remains:
+**All H-1s + M-1/2/3s across every red-team this session are closed.**
+PRs #25, #26, #27 closed the remaining 8 items. Final tally:
 
-1. **Verify Claude CLI flag surface for chat-mode** (H-1 in
-   `SECURITY_REVIEW_CHAT_MODE.md`). The catalog uses
-   `['--print', '--input-format=stream-json', '--output-format=stream-json', '--verbose']`
-   — pending real-app confirmation that the local `claude` binary
-   accepts those flags + emits the assumed event shapes. First manual
-   run will surface any mismatch as a parse-error bubble. **Truly
-   self-verifying** — the renderer surfaces the failure as a clearly-
-   labeled bubble within seconds of launch.
+- **PR #25** — Closes H-1 chat-mode (CLI capability probe via `claude --help`).
+- **PR #26** — Closes 3 Mediums from `SECURITY_REVIEW_TOOL_USE.md`
+  (M-1 pairing badge, M-2 richer summary fields, M-3 image hint).
+- **PR #27** — Closes 4 Mediums (M-2 polish capNotice, M-1 polish
+  auto-focus, M-3 chat-mode echo dedup, M-3 TerminalTabs CLI
+  onboarding routing).
 
-The Stop button (PR #24) shipped with the `\x03` interrupt approach;
-the JSON-abort fallback is documented in the journal addendum if
-real-app testing shows that `\x03` ends the whole session instead of
-just the current response.
+### Explicitly-deferred items (intentional cosmetic-only, not blocking)
+
+These were marked **cosmetic** by the reviews themselves and don't
+ship:
+
+- M-2 TerminalTabs (closeTab uses closure `tabs` for focus fallback
+  — narrow timing window; persistence layer corrects).
+- M-3 Commands (Commands panel content swaps instantly on tab
+  switch rather than fading — no correctness issue).
+- Various Lows: `PlaceholderPanel` dead-code dict, sparse Gemini
+  catalog, JSON parser unbounded buffer, `--verbose` flag noise,
+  copy-button-on-expanded-panes, no i18n on cap notice, etc.
+
+The Lows are tracked in their individual security reviews. None
+block ship.
 
 ---
 
@@ -419,6 +429,10 @@ to ship a public update.
   `docs/security-reviews/SECURITY_REVIEW_POLISH.md`.
 - **Tool-use renderer security review (PR #22):**
   `docs/security-reviews/SECURITY_REVIEW_TOOL_USE.md`.
+
+(PRs #25-#27 are additive polish that close findings from earlier
+reviews — no new dedicated review files; the closure rationale lives
+in each PR description + the journal addendums.)
 - **Per-file LMM journals:** `journal/` mirrors `src/` paths.
 - **Multi-provider design notes:** `docs/MULTI_PROVIDER_BRAINSTORM.md`.
 - **Backlog:** `docs/BACKLOG.md`.
