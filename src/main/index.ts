@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { PtyRegistry } from './pty-registry';
 import { ResourceMonitor } from './resource-monitor';
@@ -708,6 +708,22 @@ function setupAppMeta() {
   // resources). Prevents the title=v1.0.0 / status=v2.0.0 / installer=v3.0.0
   // tri-version drift observed in beta.1.
   ipcMain.handle(IPC.APP_VERSION, () => app.getVersion());
+
+  // Reliable clipboard write via Electron's main-process clipboard.
+  // navigator.clipboard.writeText in the renderer can silently no-op when
+  // the window isn't focused; the main-process path always works.
+  ipcMain.handle(IPC.APP_CLIPBOARD_WRITE, (_event, text: unknown) => {
+    if (typeof text !== 'string') return false;
+    // Cap length to avoid OOM if a caller goes wild; 1 MB is plenty for
+    // command lines, snippets, model commands, etc.
+    if (text.length > 1_000_000) return false;
+    try {
+      clipboard.writeText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  });
 
   // Danger-zone: wipe everything in <userData> EXCEPT Electron's own
   // Cache / Local Storage / etc. dirs (those rebuild themselves). We
