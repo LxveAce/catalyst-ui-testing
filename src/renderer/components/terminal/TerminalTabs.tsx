@@ -1,7 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TerminalPanel } from './TerminalPanel';
 import { EmbeddedTerminal } from '../models/EmbeddedTerminal';
-import type { ModelDefinition } from '../../../shared/types';
+import type { CliCapabilities, ModelDefinition } from '../../../shared/types';
+
+/** Catalog ids that require CliCapabilities.streamJson. The picker
+ *  warns the user before launching one of these on a CLI that doesn't
+ *  support the necessary flags. Keep in sync with model-catalog-seed. */
+const STREAM_JSON_REQUIRED_PROFILES = new Set<string>([
+  'api.anthropic.claude-chat',
+]);
 
 /**
  * TerminalTabs — Windows-Terminal-style tab bar for the main terminal area.
@@ -77,8 +84,28 @@ export function TerminalTabs({
   const [pickerQuery, setPickerQuery] = useState('');
   const [closingId, setClosingId] = useState<string | null>(null);
   const [capNotice, setCapNotice] = useState<string | null>(null);
+  /** `claude --help` capability flags. null = not yet fetched (treated
+   *  as "no warning" until we know — false positives on a slow probe
+   *  would be more annoying than a missing badge for a few hundred ms). */
+  const [cliCaps, setCliCaps] = useState<CliCapabilities | null>(null);
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
+
+  // Fetch CLI capabilities once on mount. Cached main-side, so the
+  // second call is free. Used by ProfilePicker to badge entries that
+  // need flag support the local Claude binary may not have.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const caps = await window.electronAPI.cli.capabilities();
+        if (!cancelled) setCliCaps(caps);
+      } catch {
+        // IPC missing (dev build) — leave null; picker shows no warnings.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Drop the "you hit the cap" toast after 4s so it doesn't linger.
   useEffect(() => {
@@ -243,6 +270,7 @@ export function TerminalTabs({
           pickerQuery={pickerQuery}
           setPickerQuery={setPickerQuery}
           catalog={catalog}
+          cliCaps={cliCaps}
           onAddClaude={addClaudeTab}
           onAddModel={(m) => { setPickerOpen(false); void addModelTab(m); }}
         />
@@ -432,6 +460,7 @@ function NewTabButtons({
   pickerQuery,
   setPickerQuery,
   catalog,
+  cliCaps,
   onAddClaude,
   onAddModel,
 }: {
@@ -440,6 +469,7 @@ function NewTabButtons({
   pickerQuery: string;
   setPickerQuery: (q: string) => void;
   catalog: ModelDefinition[];
+  cliCaps: CliCapabilities | null;
   onAddClaude: () => void;
   onAddModel: (m: ModelDefinition) => void;
 }) {
@@ -486,6 +516,7 @@ function NewTabButtons({
           query={pickerQuery}
           setQuery={setPickerQuery}
           catalog={catalog}
+          cliCaps={cliCaps}
           onPickClaude={() => { setPickerOpen(false); onAddClaude(); }}
           onPickModel={onAddModel}
           onClose={() => setPickerOpen(false)}
@@ -499,6 +530,7 @@ function ProfilePicker({
   query,
   setQuery,
   catalog,
+  cliCaps,
   onPickClaude,
   onPickModel,
   onClose,
@@ -506,6 +538,7 @@ function ProfilePicker({
   query: string;
   setQuery: (q: string) => void;
   catalog: ModelDefinition[];
+  cliCaps: CliCapabilities | null;
   onPickClaude: () => void;
   onPickModel: (m: ModelDefinition) => void;
   onClose: () => void;
@@ -637,10 +670,10 @@ function ProfilePicker({
           </div>
         )}
         {filtered.api.length > 0 && (
-          <PickerGroup label="API" models={filtered.api} onPick={onPickModel} />
+          <PickerGroup label="API" models={filtered.api} cliCaps={cliCaps} onPick={onPickModel} />
         )}
         {filtered.local.length > 0 && (
-          <PickerGroup label="Local" models={filtered.local} onPick={onPickModel} />
+          <PickerGroup label="Local" models={filtered.local} cliCaps={cliCaps} onPick={onPickModel} />
         )}
       </div>
     </div>
@@ -650,10 +683,12 @@ function ProfilePicker({
 function PickerGroup({
   label,
   models,
+  cliCaps,
   onPick,
 }: {
   label: string;
   models: ModelDefinition[];
+  cliCaps: CliCapabilities | null;
   onPick: (m: ModelDefinition) => void;
 }) {
   return (
@@ -671,59 +706,97 @@ function PickerGroup({
       >
         {label} · {models.length}
       </div>
-      {models.map((m) => (
-        <button
-          key={m.id}
-          onClick={() => onPick(m)}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 8,
-            padding: '8px 12px',
-            border: 'none',
-            background: 'transparent',
-            color: 'var(--text-primary)',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            textAlign: 'left',
-            borderBottom: '1px solid rgba(255,255,255,0.03)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 500,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {m.name}
+      {models.map((m) => {
+        // Badge entries that need stream-json when the local Claude
+        // binary doesn't appear to support it. Only flag when we've
+        // successfully probed (cliCaps.probed); a probe failure is a
+        // separate problem the user will see in the chat-skin bubble
+        // anyway.
+        const needsStreamJson = STREAM_JSON_REQUIRED_PROFILES.has(m.id);
+        const incompatible =
+          needsStreamJson &&
+          !!cliCaps &&
+          cliCaps.probed &&
+          !cliCaps.streamJson;
+        return (
+          <button
+            key={m.id}
+            onClick={() => onPick(m)}
+            title={
+              incompatible
+                ? `Your Claude CLI (${cliCaps?.version ?? 'unknown version'}) may not support --output-format=stream-json. Launching may error out; you can still try.`
+                : undefined
+            }
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 8,
+              padding: '8px 12px',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              textAlign: 'left',
+              borderBottom: '1px solid rgba(255,255,255,0.03)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {m.name}
+                </span>
+                {incompatible && (
+                  <span
+                    style={{
+                      fontSize: 9,
+                      padding: '1px 6px',
+                      borderRadius: 999,
+                      background: 'rgba(251,191,36,0.18)',
+                      color: '#fcd34d',
+                      border: '1px solid rgba(251,191,36,0.35)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    CLI flags?
+                  </span>
+                )}
+              </div>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text-secondary)',
+                  marginTop: 1,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {m.provider}
+                {m.description ? ` · ${m.description}` : ''}
+              </div>
             </div>
-            <div
-              style={{
-                fontSize: 10,
-                color: 'var(--text-secondary)',
-                marginTop: 1,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {m.provider}
-              {m.description ? ` · ${m.description}` : ''}
-            </div>
-          </div>
-        </button>
-      ))}
+          </button>
+        );
+      })}
     </div>
   );
 }
