@@ -185,6 +185,10 @@ export const IPC = {
   HF_LIST_CACHED: 'hf:list-cached',
   HF_REMOVE_CACHED: 'hf:remove-cached',
   HF_GET_CACHE_PATH: 'hf:get-cache-path',
+  /** Synthesize an Ollama model definition for an HF repo+quant, register
+   *  it in the catalog (idempotent on the synthesized id), and launch it
+   *  through the same MODELS_LAUNCH pipeline so a PTY paneId comes back. */
+  HF_IMPORT_AND_LAUNCH: 'hf:import-and-launch',
 
   // File / project explorer (3.0.0-beta.3).
   PROJECT_LIST_DIR: 'project:list-dir',
