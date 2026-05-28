@@ -710,29 +710,26 @@ export interface AuthCredentials {
   allowPlaintextToken?: boolean;
 }
 
-// Session / split-pane layout (Phase 7c) -------------------------------------
+// Session / terminal tabs ----------------------------------------------------
 
 /**
- * A node in the terminal split tree. `pane` is a leaf hosting one PTY. `split`
- * is a 2-child container with a direction and percentage sizes that sum to
- * 100. The tree is kept intentionally simple — n-ary splits can always be
- * built from nested binary splits.
+ * A persisted terminal tab. Only Claude tabs survive a restart — model
+ * tabs (Ollama, BitNet, Gemini, etc.) are ephemeral because their PTYs
+ * are killed on app shutdown and re-launching them silently on hydrate
+ * would risk surprising the user with downloads / GPU spin-up.
+ *
+ * Runtime tabs carry an extra `ready` flag (see TerminalTabs.tsx); the
+ * persisted shape stays minimal so old session files migrate cleanly.
  */
-export type SplitNode = SplitPaneNode | SplitContainerNode;
-
-export interface SplitPaneNode {
-  type: 'pane';
-  /** Opaque stable id; must match `^[A-Za-z0-9_\-:]+$`, ≤ 64 chars. */
+export interface PersistedTab {
+  /** Stable renderer tab id. Same regex constraints as paneId. */
   id: string;
-  /** Best-effort cwd to restore the PTY in; null = home dir. */
-  cwd: string | null;
-}
-
-export interface SplitContainerNode {
-  type: 'split';
-  direction: 'horizontal' | 'vertical';
-  sizes: [number, number];
-  children: [SplitNode, SplitNode];
+  /** Display label shown in the tab strip. */
+  label: string;
+  /** PTY paneId backing this tab. For Claude tabs: `p_<id>`. */
+  paneId: string;
+  /** Profile id: 'claude' for the bundled Claude CLI; model id otherwise. */
+  profile: string;
 }
 
 export type SessionPanelId =
@@ -754,7 +751,10 @@ export interface SessionState {
   activePanel: SessionPanelId;
   /** Theme preset name; null = renderer default. */
   theme: string | null;
-  layout: SplitNode;
+  /** Open terminal tabs. Persisted Claude tabs only — see PersistedTab. */
+  tabs: PersistedTab[];
+  /** Id of the currently focused tab, or null if there are no tabs. */
+  activeTabId: string | null;
 }
 
 // Hotkeys + tray (Phase 7d) ---------------------------------------------------
