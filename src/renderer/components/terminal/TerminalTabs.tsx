@@ -107,10 +107,13 @@ export function TerminalTabs({
     return () => { cancelled = true; };
   }, []);
 
-  // Drop the "you hit the cap" toast after 4s so it doesn't linger.
+  // Drop the "you hit the cap" toast after 10s. The longer window helps
+  // when the user is mid-context-switch (PR #21's M-2 was that a 4s
+  // dismiss could fire while the user was on a sidebar panel and miss
+  // the banner). User can also click-to-dismiss for instant clearing.
   useEffect(() => {
     if (!capNotice) return;
-    const t = setTimeout(() => setCapNotice(null), 4000);
+    const t = setTimeout(() => setCapNotice(null), 10000);
     return () => clearTimeout(t);
   }, [capNotice]);
 
@@ -285,9 +288,28 @@ export function TerminalTabs({
             color: '#fcd34d',
             background: 'rgba(251,191,36,0.08)',
             borderBottom: '1px solid rgba(251,191,36,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
           }}
         >
-          {capNotice}
+          <span style={{ flex: 1 }}>{capNotice}</span>
+          <button
+            onClick={() => setCapNotice(null)}
+            aria-label="Dismiss"
+            title="Dismiss"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#fcd34d',
+              cursor: 'pointer',
+              padding: '0 4px',
+              fontSize: 14,
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
         </div>
       )}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
@@ -339,6 +361,7 @@ export function TerminalTabs({
                   compact={false}
                   registerSender={registerSender}
                   onPidChange={onPidChange}
+                  active={isActive}
                   profile={t.profile}
                 />
               )}

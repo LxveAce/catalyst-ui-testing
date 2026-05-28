@@ -36,6 +36,10 @@ interface Props {
    *  Same signature as TerminalPanel's onPidChange so the StatusBar PID
    *  footer works for model tabs the same way it does for Claude tabs. */
   onPidChange?: (paneId: string, pid: number) => void;
+  /** True when this is the currently-visible tab. Used to scope the
+   *  focus-active-terminal window event (PR #27 M-1 polish fix) so
+   *  only the visible pane claims focus when a starter command fires. */
+  active?: boolean;
   /** Catalog profile id of the tab. Threaded through to ChatSkinOverlay
    *  so it can pick the JSON-stream renderer for chat-mode profiles. */
   profile?: string;
@@ -46,6 +50,7 @@ export function EmbeddedTerminal({
   compact = true,
   registerSender,
   onPidChange,
+  active,
   profile,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -175,6 +180,23 @@ export function EmbeddedTerminal({
       fitRef.current = null;
     };
   }, [paneId, compact, fitIfChanged, registerSender, onPidChange]);
+
+  // Mirror TerminalPanel's auto-focus-on-starter-command behavior so
+  // model tabs (Ollama's `/set system `, etc.) get keyboard focus
+  // when the user clicks a Quick Action with submit:false. Only the
+  // active tab claims focus. PR #27, M-1 polish fix.
+  useEffect(() => {
+    if (!active) return;
+    const onFocusReq = () => {
+      try {
+        termRef.current?.focus();
+      } catch {
+        // term may not be mounted yet — first frame is the worst case.
+      }
+    };
+    window.addEventListener('ccs-focus-active-terminal', onFocusReq);
+    return () => window.removeEventListener('ccs-focus-active-terminal', onFocusReq);
+  }, [active]);
 
   return (
     <div
