@@ -481,12 +481,40 @@ export function ModelsPanel() {
     setRunning((prev) => prev.filter((r) => r.paneId !== paneId));
   };
 
+  // Per-model "Copied!" toast state. We keep the id of the most-recently
+  // copied model + a timestamp; the card renders "Copied!" while the id
+  // matches and the timer hasn't elapsed.
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (copyToastTimer.current) clearTimeout(copyToastTimer.current);
+  }, []);
+
   const handleCopyCommand = async (m: ModelDefinition) => {
     const cmdLine = [m.command, ...(m.args ?? [])].join(' ');
+    // Prefer Electron's clipboard via IPC — reliable regardless of focus
+    // state. Fall back to navigator.clipboard for dev-mode where the
+    // bridge may not be wired.
+    let ok = false;
     try {
-      await navigator.clipboard.writeText(cmdLine);
+      ok = await window.electronAPI.app.clipboardWrite(cmdLine);
     } catch {
-      // ignore
+      ok = false;
+    }
+    if (!ok) {
+      try {
+        await navigator.clipboard.writeText(cmdLine);
+        ok = true;
+      } catch {
+        ok = false;
+      }
+    }
+    if (ok) {
+      setCopiedId(m.id);
+      if (copyToastTimer.current) clearTimeout(copyToastTimer.current);
+      copyToastTimer.current = setTimeout(() => setCopiedId(null), 2000);
+    } else {
+      alert(`Could not copy to clipboard. Command:\n\n${cmdLine}`);
     }
   };
 
@@ -799,6 +827,7 @@ export function ModelsPanel() {
             onDelete={() => handleDelete(m)}
             onLaunch={() => handleLaunch(m)}
             onCopy={() => handleCopyCommand(m)}
+            recentlyCopied={copiedId === m.id}
             onOpenLicense={() => handleOpenLicense(m)}
           />
         ))}
@@ -1072,6 +1101,7 @@ function ModelCard({
   onDelete,
   onLaunch,
   onCopy,
+  recentlyCopied,
   onOpenLicense,
 }: {
   model: ModelDefinition;
@@ -1084,6 +1114,7 @@ function ModelCard({
   onDelete: () => void;
   onLaunch: () => void;
   onCopy: () => void;
+  recentlyCopied?: boolean;
   onOpenLicense: () => void;
 }) {
   const pulling = !!pull && !pull.done && !pull.error;
@@ -1216,8 +1247,13 @@ function ModelCard({
             Launch in app
           </button>
         )}
-        <button type="button" onClick={onCopy} style={btnStyle}>
-          Copy command
+        <button
+          type="button"
+          onClick={onCopy}
+          style={recentlyCopied ? { ...btnStyle, color: '#22c55e', borderColor: '#22c55e' } : btnStyle}
+          aria-live="polite"
+        >
+          {recentlyCopied ? '✓ Copied!' : 'Copy command'}
         </button>
         {model.licenseFlag && model.licenseUrl && (
           <button type="button" onClick={onOpenLicense} style={{ ...btnStyle, color: '#fbbf24' }}>

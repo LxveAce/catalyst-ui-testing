@@ -330,6 +330,7 @@ interface Window {
       version: () => Promise<string>;
       resetUserData: () => Promise<import('./shared/types').AppResetResult>;
       openUninstaller: () => Promise<{ ok: boolean; error: string | null; notice: string | null }>;
+      clipboardWrite: (text: string) => Promise<boolean>;
     };
     projectExplorer: {
       listDir: (
