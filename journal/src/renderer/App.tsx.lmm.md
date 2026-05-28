@@ -1,83 +1,184 @@
-# LMM: src/renderer/App.tsx
+# LMM — src/renderer/App.tsx
 
-> File: `src/renderer/App.tsx` · LOC: 195 · Role: Root React component; owns sidebar panel routing, terminal-send ref bridge, and the placeholder/coming-soon scaffolding.
+> File: `src/renderer/App.tsx` · LOC: ~680 ·
+> Role: Root component. Owns the sidebar panel routing, the **tab list**
+> for the terminal area (replaces the old SplitLayout pane tree), the
+> sender-registry that lets palette/snippet text reach the active PTY,
+> hotkey dispatch, popout-window short-circuit, CLI-onboarding gate,
+> and the PTY-interceptor key-prompt surface.
 
-## Phase 1: RAW
+## RAW
 
-This is the structural spine of the renderer. It declares the `SidebarPanel` union (8 ids, line 12-20) which is the single source of truth for *what panels exist in this app* — Sidebar.tsx imports it as a type and CommandsPanel/GitHubPanel are looked up by the same string. The component owns three pieces of state: `activePanel`, `claudePid`, and a `terminalSendRef` that is *passed by mutable ref into TerminalPanel*. That ref pattern is unusual: instead of lifting `sendInput` into context, App keeps the function pointer alive via a `useRef<((data:string)=>void)|null>` (line 25), and any panel that needs to inject text (currently only `CommandsPanel` via `handleSendCommand` on line 27-32) calls a stable `useCallback` that dereferences it. The `\r` appended on line 29 is a deliberate ENTER — the command is *executed*, not just typed. After sending, control flips back to the terminal panel via `setActivePanel('terminal')`.
+Previously a sub-200-LOC router. Today it's the renderer's integration
+hub: it threads session state through TerminalTabs, hosts six top-level
+modals (CommandPalette, ApiKeyModal, CliAuthOnboarding), short-circuits
+into PopoutView when the renderer was loaded by `models:popout`, and
+mediates between the main process's session/themes/auth/cli/hotkeys
+services and the React tree.
 
-Layout is entirely inline-styled (no CSS modules, no styled-components): TitleBar / Sidebar+main / StatusBar in a flex column, with the main area itself a flex row containing the always-mounted `TerminalPanel` and a conditionally-rendered 320px right panel. The right panel is keyed by `showRightPanel = activePanel !== 'terminal'` (line 34) — meaning Terminal is the "panel zero" baseline, never as a slide-in.
+Most-recent change (this session): replaced the SplitLayout-driven
+`layout: SplitNode` state with a `tabs: TerminalTab[]` + `activeTabId`
+pair. `activePaneId` — referenced by snippets, palette text injection,
+the StatusBar PID readout, and the hotkey-restart action — is now
+**derived** from `tabs.find(t => t.id === activeTabId)?.paneId`,
+collapsing two sources of truth into one. The session schema bumped
+v1 → v2 with a migration in `main/session-service.ts`.
 
-`RightPanel` (line 90) is a `switch` over the union; `case 'github'` (line 106-107) is the recently wired Phase 4 addition. `sync`, `auth`, `settings` fall through to `PlaceholderPanel`, which is interesting because `settings` *also* has a real component imported on line 9 — but the switch routes it to SettingsPanel, so the `settings` entry in the placeholder `info` dict (line 125-129) is dead code (or a stale safety net). The PlaceholderPanel renders a small "Coming in Phase N" badge with the accent gradient — a nice UX signal that the app is being built in phases.
+The biggest non-obvious move in the file is the popout short-circuit
+(lines 59-68). When the renderer is loaded by a `models:popout`
+BrowserWindow, the URL has `?popout=<paneId>`. We return early before
+*any* other hook fires, so popout windows don't waste cycles on session
+load, theme apply, CLI onboarding, hotkey wiring, or interceptor
+subscription. The popout window is just a thin frame around a single
+TerminalPanel for the popped paneId — it doesn't know or care about the
+tab strip.
 
-### Open Questions
-- Why a mutable `useRef` instead of context for `terminalSendRef`? Is it because TerminalPanel writes to the ref imperatively from its own `useEffect`, and a context provider would force re-renders?
-- The `settings` PlaceholderPanel entry is unreachable. Was Settings recently promoted from placeholder to real component, leaving stale data?
-- `'terminal'` and `'commands'` are the only panels that interact with the terminal — should `handleSendCommand` be lifted into a `useTerminalSender` hook so future panels (e.g. GitHub "checkout this PR") can reuse it without prop-drilling?
+Open questions:
+- Should `handleNewClaudeTab` also receive a `cwd` arg so split-from-git
+  workflows can open a Claude tab pre-`cd`'d? Currently it just spawns
+  with the home dir. Likely a future enhancement.
+- The `PlaceholderPanel` `info` dict is empty (line 617). It was a
+  phase-tracking UI back in the 195-LOC era; today every panel is real,
+  so the placeholder is dead code that survives only because the
+  `default:` case in `RightPanel` returns it. Could be deleted; left
+  in as a fallback for unknown panel ids.
 
-## Phase 2: NODES
+## NODES
 
-### Node 1: SidebarPanel union as routing schema
-Lines 12-20 declare an 8-member string union that drives the Sidebar buttons, the RightPanel switch, and (via re-import) the Sidebar component. Adding a new panel requires three coordinated edits.
+1. **Session state v2** (lines 70-83): four state hooks
+   (`hydrated`, `activePanel`, `tabs`, `activeTabId`) plus three transient
+   ones (`catalog`, `pidByPane`, `paletteOpen`, `bindings`). `activePaneId`
+   is *derived*, not stored.
 
-### Node 2: useRef-based imperative terminal bridge
-`terminalSendRef` (line 25) is mutated by TerminalPanel (`sendRef` prop on line 62) and read by `handleSendCommand` (line 27-32). This sidesteps React's data flow for a stable function pointer.
+2. **DEFAULT_TABS bootstrap** (lines 49-51): one Claude tab on `p_root` so
+   the renderer can show a terminal during the ~10ms between mount and
+   `session.get()` resolving. The main-side `defaults()` returns the
+   identical shape so post-hydrate the tab id is stable.
 
-### Node 3: Terminal-always-mounted invariant
-The `TerminalPanel` is rendered unconditionally (line 60-63); only the *right* panel toggles. This preserves the pty session, xterm scrollback, and the `terminalSendRef` connection across panel switches.
+3. **Session save filters non-Claude tabs** (lines 162-184): model tabs
+   carry an Ollama-spawned paneId that won't exist after app restart;
+   persisting them would mislead the next hydrate into reattaching to
+   dead PTYs. Filter at write; sanitize again at read. Defense in depth.
 
-### Node 4: Phase 4 GitHub wiring
-Lines 10 (import) and 106-107 (route) are the surgical additions for Phase 4. Notably, `GitHubPanel` is the only right-panel component that takes *no props* — it pulls auth/repo state via `window.electronAPI.github` directly.
+4. **CLI-onboarding gate** (lines 196-217): runs once post-hydrate; opens
+   the `<CliAuthOnboarding>` modal when `claude doctor` reports the CLI
+   missing or unauthenticated AND the user hasn't already dismissed it.
+   The modal pipes `/login` to `sendToActive`, which routes via
+   `sendersRef.current[activePaneId]` to the active TerminalPanel's PTY.
 
-### Node 5: Auto-return to terminal after command
-`handleSendCommand` ends with `setActivePanel('terminal')` (line 31). UX choice: after picking a command from the palette, the user wants to see the terminal scroll, not stay on the picker.
+5. **PTY interceptor key-prompt subscription** (lines 425-449): listens
+   for `provider-auth:key-prompt` IPC. When a spawned CLI prints an
+   "Enter your API key" prompt the main-side recognizer caught, surface
+   `<ApiKeyModal>` app-wide regardless of which sidebar panel is open.
+   Only one modal at a time (lines 437-438).
 
-### Node 6: 320px fixed right panel width
-Lines 68-69 hardcode `width: 320, minWidth: 320`. Not resizable. Reasonable for an MVP; eventually a drag-handle and persistence in settings.
+6. **Hardcoded fallback hotkey** (lines 401-411): `Ctrl/Cmd+Shift+P` for
+   the palette always works, even before the async `hotkeys.get()` has
+   resolved. Otherwise users would be locked out of the palette during
+   the first ~50ms post-mount.
 
-### Node 7: PlaceholderPanel as phase-tracking UI
-Lines 113-195 produce a unified "coming soon" card per unbuilt panel. The `phase` field doubles as roadmap documentation rendered to the user — phases 5, 6, 7 visible to anyone running the build.
+7. **Tab actions** (lines 263-332):
+   - `handleNewClaudeTab` — append a fresh tab with a new paneId, focus it.
+   - `handleCloseActiveTab` — refuses to close the last tab; explicitly
+     kills the PTY (TerminalPanel unmount doesn't auto-kill).
+   - `handleFocusTab(delta)` — cyclic next/prev tab focus.
+   - `handleResetTabs` — calls `session.reset()` in main, then kills any
+     paneIds removed by the reset before restoring the new tabs list.
 
-### Node 8: Inline-style monoculture
-Every style is an inline object. Pros: zero CSS cascade conflicts, theme tokens via CSS vars still work. Cons: no `:hover`/`:focus` pseudo-classes (Sidebar simulates them with state), no media queries.
+8. **Send-to-active gates on activePaneId** (lines 236-261): every text
+   injection / restart path checks `if (!activePaneId) return` — if the
+   user closes the last tab the sender map is empty and these are no-ops
+   instead of crashes.
 
-### Node 9: Animation hooks via globals.css keyframes
-`animation: 'slideIn 0.2s ease'` (line 74) and `'fadeIn 0.3s ease'` (line 135) reference keyframes defined in globals.css. The renderer relies on a small named-animation vocabulary.
+9. **Auto-fetch catalog on hydrate** (lines 120-126): the `+` profile
+   picker in TerminalTabs needs `ModelDefinition[]`. We fetch via
+   `models.list()` alongside session-restore; failure falls back to an
+   empty catalog (picker just shows Claude).
 
 ### Tensions
-- **T1 (Imperative ref vs declarative React):** The `terminalSendRef` pattern works but is the one place that breaks React's data-flow rules; it will surprise contributors expecting context.
-- **T2 (Inline styles vs design system):** The app *has* design tokens (globals.css) but no component library — every consumer rebuilds the same chrome (cards, badges, gradients) inline.
-- **T3 (Routed-by-string union vs typed components):** The `switch` on line 97-110 hides the fact that two panels (`auth`, `sync`) have no real implementation; TypeScript can't catch a missing case because `default:` swallows it.
 
-## Phase 3: REFLECT
+- **T1: Stored vs derived `activePaneId`.** Storing it as separate state
+  (the old pattern) made the focus-restart and StatusBar paths shorter
+  but introduced a sync hazard every time tabs mutated. Resolved by
+  deriving — every consumer reads from the same `tabs + activeTabId`
+  truth source.
 
-### Core Insight
-App.tsx is a *router masquerading as a component*: its real job is to map the 8-string `SidebarPanel` union to a right-side React tree while keeping the terminal mounted as a persistent zero-state, and the `terminalSendRef` is the one imperative escape hatch that lets the palette inject commands into that persistent pty.
+- **T2: Where to filter non-Claude tabs on persist.** Doing it only on
+  read (sanitizer) leaves stale data on disk; doing it only on write
+  trusts the on-disk shape. Resolved: both. Renderer write filters out
+  model tabs; main sanitize-on-read drops anything that snuck through.
 
-### Resolved Tensions
-- **T1:** The ref pattern is correct here, *because* re-rendering TerminalPanel would tear down xterm and the pty connection — the imperative bridge is the price of keeping that session alive. Context would have the same property *only* if exposed as a ref-like object; a plain context value would still trigger consumer re-renders.
-- **T3:** The lack of exhaustiveness check in `RightPanel` is hidden by `PlaceholderPanel`'s graceful fallback — but this is also why a stale `settings` entry sat undetected in the placeholder dict. A `satisfies Record<SidebarPanel, ReactNode>` table would be safer.
+- **T3: Empty-tabs UX.** Should we ever permit `tabs.length === 0`?
+  TerminalTabs has an empty-state CTA, but `handleCloseActiveTab` refuses
+  the last close and `handleResetTabs` always lands with one Claude tab.
+  Decision: never reach empty by user gesture; only via corrupted disk
+  state (which sanitizer also patches). The CTA exists purely as a
+  defense-in-depth landing pad.
 
-### Hidden Assumptions
-- That the user always wants the terminal *behind* the right panel (no full-screen mode for, say, the GitHub PR list).
-- That 320px is the right width for every right-panel kind (Resources gauges, Commands search, GitHub repos all share it).
-- That string-keyed routing is "good enough" — no deep links, no back/forward history, no URL.
-- That only one extra panel is ever needed beside the terminal (no split-view).
+## REFLECT
 
-## Phase 4: SYNTHESIZE
+**Core insight:** App.tsx is the *renderer's integration ledger* — every
+main-process service shows up here, every modal lives here, every cross-
+component callback originates here. Its size is the inverse of how much
+state lives in deeper components. The tab refactor *reduced* coupling
+because `activePaneId` is now one derivation instead of two pieces of
+state to keep coherent.
 
-### What this file should become
-A minimal `<AppShell>` that delegates routing to a typed registry, with the terminal-sender exposed via a small `TerminalContext` whose value is a stable ref object. The placeholder system should be data-driven from a single roadmap module rather than an inline dict.
+**Resolved tensions:**
+- **T1:** Derive-don't-store wins when the source state is already in
+  React and the consumer count is finite. The cost of a `Array.find`
+  per render is negligible at 32 tabs max.
+- **T2:** Defense-in-depth filtering is cheap insurance against future
+  bugs that don't even exist yet — costs ~5 lines, prevents an entire
+  class of "model tab silently respawning" reports.
+- **T3:** The empty-tabs CTA is the right shape: don't crash, don't
+  force a tab on the user, but make recovery a single click.
 
-### Actionable items
-- [ ] Extract a `panelRegistry: Record<SidebarPanel, { component, label, icon, phase? }>` shared by Sidebar and RightPanel — eliminates the three-place edit when adding a panel.
-- [ ] Add a `satisfies` constraint on the registry so TypeScript fails the build if a `SidebarPanel` id is unrouted.
-- [ ] Remove the dead `settings` entry from `PlaceholderPanel.info` (line 125-129) — SettingsPanel is already wired on line 104-105.
-- [ ] Wrap `terminalSendRef` in a `TerminalSenderContext` exposing `{ send: (cmd) => void }` so future panels (GitHub "checkout PR", Resources "kill pid") don't need prop-drilling. Keep the underlying ref; just hide the imperative-ness behind a hook.
-- [ ] Promote the inline right-panel chrome (`width 320 / borderLeft / padding 16`) into a `<RightPanelFrame>` component so each panel doesn't re-implement padding.
-- [ ] Consider a roadmap.ts module that owns the `phase` metadata, imported by both PlaceholderPanel and any future "What's coming" splash.
+**Hidden assumptions:**
+- `terminal.spawn(paneId, cwd)` is idempotent — calling it for an alive
+  paneId re-attaches instead of duplicating the PTY. Documented in the
+  PtyRegistry comment and exercised by hot-reload.
+- `window.electronAPI.models.list()` returns the full catalog
+  (`ModelDefinition[]`) synchronously enough that the `+` picker is
+  populated by the time the user clicks it. The first paint flash is
+  acceptable; the picker is hidden behind a click anyway.
+- Theme application via `applyTheme()` sets CSS custom properties on
+  `document.documentElement`. The renderer's inline styles use those
+  vars, so theme changes propagate without component re-renders.
 
-### Risks
-- Refactoring to context will work *only* if the context value is a stable ref-bearing object — a fresh `{ send }` per render would cause downstream consumers to re-render and could thrash TerminalPanel if it ever consumes its own context.
-- A typed registry that requires `component`, `label`, and `icon` would force `auth` / `sync` to have real (even stub) components, removing the convenient PlaceholderPanel fallback unless the registry value allows `{ kind: 'placeholder', phase }`.
-- Inline-styled monoculture is *self-consistent* today; partial migration to a component library would create a confusing mixed style.
+## SYNTHESIZE
+
+**What this file does right:**
+- One owner per cross-component invariant: tabs, sidebar panel, hotkey
+  dispatch, session persistence, intercept-prompt routing.
+- Defensive gates everywhere (`activePaneId &&`, sanitizer at every IPC
+  boundary, try/catch around every renderer→main call).
+- Derivation over duplication for `activePaneId`.
+
+**Actionable follow-ups:**
+1. **Wire EmbeddedTerminal sender registration** so palette / snippet
+   text reaches model tabs (deferred — see STATUS.md item #3).
+2. **Hotkey for new Claude tab** (`Ctrl+Shift+T`): would require
+   extending `HotkeyAction` and routing through `dispatchAction`.
+3. **Optional cwd for handleNewClaudeTab**: today every new Claude tab
+   spawns in the home dir; opening one already-`cd`'d to the active git
+   repo would match WorkingDirCard's selection.
+4. **Delete the empty `PlaceholderPanel.info` dict** (line 617) once
+   confirmed no other code path expects it — every `SidebarPanel` id is
+   now wired to a real component.
+
+**Risks:**
+- Any new top-level modal needs to be mounted *after* the popout
+  short-circuit return — modals mounted before line 68 would render in
+  popout windows too, which we never want.
+- The derived `activePaneId` recomputes on every `tabs` change. If
+  `tabs` updates faster than React can batch (unlikely with our 250ms
+  session-save debounce) this could thrash. Memoization would be
+  premature; revisit if profiling shows it.
+
+Related entries:
+- [[TerminalTabs.tsx.lmm.md]] — the tab strip + content host this file
+  drives.
+- [[session-service.ts.lmm.md]] — the main-side counterpart that
+  validates and migrates `SessionState` between v1 layout-tree and
+  v2 tabs+activeTabId shapes.
