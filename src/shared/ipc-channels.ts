@@ -175,6 +175,17 @@ export const IPC = {
   ACCESSIBILITY_GET: 'accessibility:get',
   ACCESSIBILITY_SET: 'accessibility:set',
 
+  // Hugging Face integration (Catalyst UI v4.0.0).  Main wraps
+  // @huggingface/hub; raw API tokens (none yet) never cross to the
+  // renderer.  Research-mode gating lives in HF settings.
+  HF_GET_SETTINGS: 'hf:get-settings',
+  HF_SET_SETTINGS: 'hf:set-settings',
+  HF_SEARCH: 'hf:search',
+  HF_MODEL_INFO: 'hf:model-info',
+  HF_LIST_CACHED: 'hf:list-cached',
+  HF_REMOVE_CACHED: 'hf:remove-cached',
+  HF_GET_CACHE_PATH: 'hf:get-cache-path',
+
   // File / project explorer (3.0.0-beta.3).
   PROJECT_LIST_DIR: 'project:list-dir',
   PROJECT_RECENT_LIST: 'project:recent-list',

@@ -806,6 +806,73 @@ export interface TraySettings {
   minimizeToTrayOnClose: boolean;
 }
 
+// Hugging Face integration (v4.0.0 Catalyst UI).  Settings persisted
+// under <userData>/huggingface-settings.json.  The research-mode flag
+// gates the experimental / uncensored sub-tab; everything else is just
+// Browse / Cached and is always available.
+
+export interface HFSettings {
+  /** When true, the renderer exposes the Research catalogs sub-tab
+   *  with uncensored / experimental community collections.  Off by
+   *  default — explicit opt-in via Settings -> Advanced. */
+  researchModeEnabled: boolean;
+  /** ISO timestamp of the first time the user accepted the disclaimer.
+   *  Persists so the disclaimer doesn't re-prompt every launch. */
+  researchModeAcknowledgedAt: string | null;
+  /** Optional override cache directory.  Null means: try ~/.cache/huggingface/hub,
+   *  fall back to <userData>/hf-cache. */
+  cachePath: string | null;
+}
+
+export interface HFSearchOptions {
+  query?: string;
+  task?: string;
+  library?: string;
+  limit?: number;
+  ggufOnly?: boolean;
+}
+
+export interface HFSearchHit {
+  id: string;
+  author: string;
+  downloads: number;
+  likes: number;
+  tags: string[];
+  pipelineTag: string | null;
+  gated: boolean;
+  updatedAt: string | null;
+}
+
+export interface HFGgufVariant {
+  fileName: string;
+  /** Q4_K_M / Q8_0 / F16 / etc. Null if the filename doesn't include a
+   *  recognizable quantization tag. */
+  quant: string | null;
+  sizeBytes: number | null;
+}
+
+export interface HFModelCard {
+  id: string;
+  description: string | null;
+  downloads: number;
+  likes: number;
+  tags: string[];
+  pipelineTag: string | null;
+  license: string | null;
+  gated: boolean;
+  files: { path: string; size: number | null }[];
+  gguf: HFGgufVariant[];
+  updatedAt: string | null;
+}
+
+export interface HFCachedEntry {
+  /** "<org>/<name>" repo id reconstructed from the cache directory name. */
+  id: string;
+  /** Raw cache directory name (`models--<org>--<name>`). */
+  dirName: string;
+  sizeBytes: number;
+}
+
 // Accessibility — Item 10 of the v3.2.1 polish pass.  Persisted per
 // user under <userData>/accessibility.json.  Renderer applies these to
 // document.documentElement on hydration + on every change so the

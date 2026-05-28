@@ -15,6 +15,7 @@ import { SessionService } from './session-service';
 import { HotkeysService } from './hotkeys-service';
 import { TrayService } from './tray-service';
 import { AccessibilityService } from './accessibility-service';
+import { HuggingFaceService } from './huggingface-service';
 import { CostService } from './cost-service';
 import { CliService } from './cli-service';
 import { ModelRegistry } from './model-registry';
@@ -77,6 +78,7 @@ let sessionService: SessionService | null = null;
 let hotkeysService: HotkeysService | null = null;
 let trayService: TrayService | null = null;
 let accessibilityService: AccessibilityService | null = null;
+let huggingfaceService: HuggingFaceService | null = null;
 let costService: CostService | null = null;
 let cliService: CliService | null = null;
 let themeService: ThemeService | null = null;
@@ -192,6 +194,11 @@ function getTray(): TrayService {
 function getAccessibility(): AccessibilityService {
   if (!accessibilityService) accessibilityService = new AccessibilityService();
   return accessibilityService;
+}
+
+function getHuggingFace(): HuggingFaceService {
+  if (!huggingfaceService) huggingfaceService = new HuggingFaceService();
+  return huggingfaceService;
 }
 
 function getCli(): CliService {
@@ -1288,6 +1295,36 @@ function setupAccessibility() {
   });
 }
 
+function setupHuggingFace() {
+  ipcMain.handle(IPC.HF_GET_SETTINGS, () => getHuggingFace().getSettings());
+  ipcMain.handle(IPC.HF_SET_SETTINGS, (_event, partial: unknown) => {
+    if (partial === null || typeof partial !== 'object') {
+      throw new Error('hf set settings: partial must be an object');
+    }
+    return getHuggingFace().setSettings(partial as Record<string, unknown>);
+  });
+  ipcMain.handle(IPC.HF_SEARCH, (_event, opts: unknown) => {
+    if (opts === null || typeof opts !== 'object') {
+      throw new Error('hf search: opts must be an object');
+    }
+    return getHuggingFace().search(opts as Record<string, unknown>);
+  });
+  ipcMain.handle(IPC.HF_MODEL_INFO, (_event, repoId: unknown) => {
+    if (typeof repoId !== 'string') {
+      throw new Error('hf modelInfo: repoId must be a string');
+    }
+    return getHuggingFace().modelInfo(repoId);
+  });
+  ipcMain.handle(IPC.HF_LIST_CACHED, () => getHuggingFace().listCached());
+  ipcMain.handle(IPC.HF_REMOVE_CACHED, (_event, repoId: unknown) => {
+    if (typeof repoId !== 'string') {
+      throw new Error('hf removeCached: repoId must be a string');
+    }
+    return getHuggingFace().removeCached(repoId);
+  });
+  ipcMain.handle(IPC.HF_GET_CACHE_PATH, () => getHuggingFace().getCachePath());
+}
+
 function setupTray() {
   const tray = getTray();
   tray.attach({
@@ -1386,6 +1423,7 @@ app.whenReady().then(() => {
   setupWindowControls();
   setupHotkeys();
   setupAccessibility();
+  setupHuggingFace();
   setupTray();
 
   // Kick off the auto-updater after a short grace period so the window
