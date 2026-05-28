@@ -46,6 +46,21 @@ that v4.0.1's cli-resolver fix uncovered deserved a real diagnostic.
   Includes the failspy abliterated Llama 3 8B / 70B, Dolphin 2.9
   Llama 3 8B, Dolphin 2.5 Mixtral 8x7B, Wizard-Vicuna uncensored
   7B / 13B, Hermes 3 Llama 3.1 8B, and Dolphin 2.9.4 Llama 3.1 8B.
+- **In-UI details by default + explicit "Web ↗" button.**  Clicking
+  the model name (or "Details") on any HF Browse / Research result
+  now toggles the in-app details panel — the click no longer leaves
+  the app.  A new "Web ↗" button on each card is the explicit opt-in
+  for opening huggingface.co in the OS browser.
+
+### Fixed (amended)
+- **modelInfo "expand[7] must be one of" error.**  Clicking Details
+  on a result triggered a follow-on API rejection because
+  `description` isn't a valid expand field per the Hub API (only the
+  values listed in the API's own error message are accepted).
+  Dropped `description` from `additionalFields`; details panel now
+  loads without the description block (the README body isn't
+  surfaced through that endpoint — "Web ↗" remains the path to the
+  full model card).
 
 ---
 

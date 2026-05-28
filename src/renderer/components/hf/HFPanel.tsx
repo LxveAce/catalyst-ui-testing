@@ -307,17 +307,25 @@ function ResultCard({
     <div style={cardStyle}>
       <div style={cardHeaderStyle}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={cardTitleStyle}>
-            <a
-              href={`https://huggingface.co/${hit.id}`}
-              onClick={(e) => {
+          {/* v4.0.2: clicking the title TOGGLES the in-app details panel
+              instead of opening the web — the user wanted the details
+              flow to stay inside the app.  The separate "Web ↗" button
+              on the right is the explicit opt-in for "show me on
+              huggingface.co". */}
+          <div
+            style={{ ...cardTitleStyle, cursor: 'pointer' }}
+            onClick={onToggleExpand}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                void window.electronAPI.models.openExternal(`https://huggingface.co/${hit.id}`).catch(() => undefined);
-              }}
-              style={{ color: 'inherit', textDecoration: 'none' }}
-            >
-              {hit.id}
-            </a>
+                onToggleExpand();
+              }
+            }}
+            title={expanded ? 'Hide details' : 'Show details'}
+          >
+            {hit.id}
             {hit.gated && <span style={badgeWarnStyle}>gated</span>}
           </div>
           <div style={cardMetaStyle}>
@@ -334,9 +342,20 @@ function ResultCard({
             </div>
           )}
         </div>
-        <button onClick={onToggleExpand} style={btnStyle}>
-          {expanded ? 'Hide details' : 'Details'}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={onToggleExpand} style={btnStyle}>
+            {expanded ? 'Hide details' : 'Details'}
+          </button>
+          <button
+            onClick={() => {
+              void window.electronAPI.models.openExternal(`https://huggingface.co/${hit.id}`).catch(() => undefined);
+            }}
+            style={btnStyle}
+            title="Open this model's page on huggingface.co"
+          >
+            Web ↗
+          </button>
+        </div>
       </div>
 
       {expanded && (

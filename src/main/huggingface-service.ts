@@ -184,13 +184,17 @@ export class HuggingFaceService {
     if (!isRepoId(repoId)) throw new Error('invalid repoId');
     const mod = await this.loadHubModule();
     try {
-      // v4.0.1 hotfix: same `expand[N] duplicate` cause as listModels.
-      // The SDK's modelInfo() already requests license and pipeline_tag;
-      // we drop those from additionalFields to avoid the collision.
-      // `tags` and `description` aren't in the defaults — those are safe.
+      // v4.0.2 (amended): the HF API rejects `description` as an expand
+      // field — only the values listed in its error message are valid
+      // (author, baseModels, cardData, config, ..., tags, gguf, etc.).
+      // `description` isn't one of them; the README body isn't surfaced
+      // through this endpoint at all.  Keep `tags` (valid + needed for
+      // the chip row) and drop `description`.  The renderer falls back
+      // to "no description shown" — the full model card is one click
+      // away via the "Web ↗" button.
       const infoRaw = await mod.modelInfo({
         name: repoId,
-        additionalFields: ['tags', 'description'],
+        additionalFields: ['tags'],
       } as Parameters<typeof mod.modelInfo>[0]);
       const info = infoRaw as ModelInfoLoose;
       const files: { path: string; size: number | null }[] = [];
