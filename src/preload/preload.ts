@@ -276,6 +276,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     version: () => ipcRenderer.invoke(IPC.APP_VERSION),
     resetUserData: () => ipcRenderer.invoke(IPC.APP_RESET_USER_DATA),
     openUninstaller: () => ipcRenderer.invoke(IPC.APP_OPEN_UNINSTALLER),
+    clipboardWrite: (text: string) => ipcRenderer.invoke(IPC.APP_CLIPBOARD_WRITE, text),
   },
   projectExplorer: {
     listDir: (root: string, target: string) =>
