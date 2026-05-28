@@ -430,6 +430,9 @@ function setupCompact() {
 function setupCli() {
   // Phase 6 onboarding — recovers from Phase 4 NSIS bootstrap soft-fail.
   ipcMain.handle(IPC.CLI_STATUS, () => getCli().getStatus());
+  // PR #25 — `claude --help` capability probe used by the picker to gate
+  // the Claude (Chat) catalog entry.
+  ipcMain.handle(IPC.CLI_CAPABILITIES, () => getCli().getCapabilities());
   ipcMain.handle(IPC.CLI_INSTALL, () =>
     getCli().install((line) => {
       // Stream each line to the renderer for live progress in the

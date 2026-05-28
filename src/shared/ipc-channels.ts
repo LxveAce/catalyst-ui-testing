@@ -112,6 +112,10 @@ export const IPC = {
   CLI_ONBOARDING_RESET: 'cli:onboarding-reset',
   /** Main → renderer: each line of npm install output during cli:install. */
   CLI_INSTALL_PROGRESS: 'cli:install-progress',
+  /** Parse `claude --help` once per app launch + cache; returns
+   *  CliCapabilities. Renderer uses this to gate the Claude (Chat)
+   *  catalog entry when stream-json support is missing. */
+  CLI_CAPABILITIES: 'cli:capabilities',
 
   // v3.0 multi-model — catalog + Ollama lifecycle + hardware/project detection.
   MODELS_LIST: 'models:list',
