@@ -276,3 +276,54 @@ Followups list down to 4 items, all bounded:
 2. Tool-use / thinking renderer in chat skin
 3. "Stop generation" button in chat skin
 4. EmbeddedTerminal PID surfacing
+
+---
+
+## Addendum 4 — tool-use / tool-result / thinking renderer (PR #22, fifth commit)
+
+User said "CONTINUE" (emphatic). Picked off the biggest remaining
+followup — M-1 from `SECURITY_REVIEW_CHAT_MODE.md`. The chat-mode
+JSON renderer was silently dropping `tool_use`, `tool_result`, and
+`thinking` content blocks; now they each render as a distinct
+in-timeline card.
+
+Branch: `feature/tool-use-renderer` stacked on `feature/polish-m1s`.
+
+### What got built
+
+| File | Change |
+|---|---|
+| `json-stream-parser.ts` | `interpretClaudeChatEvent` now returns `ClaudeChatAction[]` (was single action). New action kinds: `add-tool-use`, `add-tool-result`, `add-thinking`. New helpers: `contentBlocksToActions`, `extractToolResultText`. `extractTextFromMessage` removed. |
+| `ChatSkinOverlay.tsx` | `ChatMessage` gets optional `toolUse` / `toolResult` / `thinking` discriminators. New `isPlainTextMessage` predicate. `applyClaudeAction` extended with three new branches. `ingestJsonChunk` consumes the action-array shape. `MessageBubble` dispatches to new card components before falling through to text. |
+| `ChatSkinOverlay.tsx` (new components) | `ToolUseCard` — purple "🔧 <name>" with click-to-expand JSON input. `ToolResultCard` — green "↩ Tool result" with line count + collapsible output. `ThinkingBlock` — muted dashed-border italic "💭 Thinking" with collapsible reasoning. All three use `aria-expanded` for screen readers. |
+| `summarizeToolInput` helper | Pulls the most informative single field (`file_path`/`path`/`command`/`query`/etc.) for the collapsed preview. |
+| `safeStringify` helper | JSON.stringify with try/catch. |
+| `json-stream-parser.ts.lmm.md` | Addendum covering the action-array refactor + tool kinds. |
+| `ChatSkinOverlay.tsx.lmm.md` | Addendum 2 covering tool card components + dispatch. |
+| `SECURITY_REVIEW_TOOL_USE.md` | **New** red-team. 0 Critical/High. 3 Mediums deferred (pairing UI, summary field list, image rendering). 2 Lows (expanded pane size, no copy button). |
+| `STATUS.md` | Followups list 4 → 3 (closed: tool-use renderer). |
+
+### Verification
+
+- ✅ `npx tsc --noEmit` clean.
+- ✅ `npx vite build` clean.
+- ✅ `node scripts/runtime-verify.mjs` — 30/30 still pass.
+- ⚠ **Visual tool cards not exercised by harness** — requires a Claude
+  session that actually emits tool_use blocks (`--allowedTools` set or
+  MCP profile). The renderer code is pure-function + React state.
+
+### Final state (revised)
+
+5 PRs in flight on the testing repo:
+- #18 — TerminalTabs wiring + session v2 (foundation)
+- #19 — Commands tab mirror + H-1 fix + verifier extension
+- #20 — Claude chat-mode profile + JSONL parser
+- #21 — Polish (submit flag + tab cap)
+- #22 — Tool-use / tool-result / thinking renderer (this commit)
+
+Followups list 4 → 3:
+1. Verify chat-mode flag surface against a real Claude binary
+2. "Stop generation" button in chat skin
+3. EmbeddedTerminal PID surfacing
+
+All three are bounded; the next session has room to maneuver.
