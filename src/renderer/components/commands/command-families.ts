@@ -14,6 +14,7 @@
 
 export type CommandFamily =
   | 'claude'
+  | 'claude-chat'
   | 'ollama'
   | 'aider'
   | 'gemini'
@@ -277,6 +278,22 @@ const GEMINI_SHORTCUTS: CommandEntry[] = [
   { name: 'Ctrl+D', description: 'Exit REPL' },
 ];
 
+// --- Claude (Chat) — non-interactive stream-json mode ----------------------
+
+// In stream-json mode the CLI doesn't process slash commands the way the
+// interactive TUI does — there's no `/clear`, `/compact`, etc. The flow
+// is: user submits text → CLI wraps it as a JSON event → response comes
+// back as JSON events. Slash commands surfaced here would mislead. We
+// keep one terminal-level entry so the Quick Actions tab isn't empty.
+
+const CLAUDE_CHAT_SLASH: Record<string, CommandEntry[]> = {};
+const CLAUDE_CHAT_QUICK: CommandDef[] = [];
+const CLAUDE_CHAT_SHORTCUTS: CommandEntry[] = [
+  { name: 'Enter', description: 'Send message' },
+  { name: 'Shift+Enter', description: 'Newline in composer' },
+  { name: 'Ctrl+C', description: 'Interrupt Claude (exits the JSON session)' },
+];
+
 // --- BitNet (bitnet.cpp llama-style runner) ---------------------------------
 
 const BITNET_SLASH: Record<string, CommandEntry[]> = {
@@ -301,6 +318,16 @@ export const COMMAND_FAMILIES: Record<CommandFamily, CommandFamilyConfig> = {
     quickCommands: CLAUDE_QUICK,
     quickCategories: ['Model', 'Effort', 'Session', 'Workflow', 'Info', 'Config'],
     shortcuts: CLAUDE_SHORTCUTS,
+  },
+  'claude-chat': {
+    family: 'claude-chat',
+    label: 'Claude (Chat)',
+    slashCommands: CLAUDE_CHAT_SLASH,
+    quickCommands: CLAUDE_CHAT_QUICK,
+    quickCategories: [],
+    shortcuts: CLAUDE_CHAT_SHORTCUTS,
+    emptyMessage:
+      'Stream-JSON mode — type your message in the composer; slash commands are not processed in this mode.',
   },
   ollama: {
     family: 'ollama',
@@ -364,6 +391,9 @@ export function deriveCommandFamily(
 ): CommandFamily {
   if (!profile) return 'unknown';
   if (profile === 'claude') return 'claude';
+  // The chat-mode profile is keyed by exact id so a future renaming
+  // breaks loudly here instead of silently falling through to 'claude'.
+  if (profile === 'api.anthropic.claude-chat') return 'claude-chat';
   if (profile === 'bitnet' || profile.startsWith('bitnet')) return 'bitnet';
   const entry = catalog.find((m) => m.id === profile);
   const cmd = (entry?.command ?? '').toLowerCase();
