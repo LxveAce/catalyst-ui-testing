@@ -15,6 +15,7 @@ import { CommandPalette } from './components/palette/CommandPalette';
 import { CliAuthOnboarding } from './components/auth/CliAuthOnboarding';
 import { ModelsPanel } from './components/models/ModelsPanel';
 import { HFPanel } from './components/hf/HFPanel';
+import { PanelResizeHandle } from './components/layout/PanelResizeHandle';
 import { PopoutView } from './components/models/PopoutView';
 import { FileTreePanel } from './components/project/FileTreePanel';
 import { ApiKeyModal } from './components/auth/ApiKeyModal';
@@ -82,6 +83,35 @@ export function App() {
   const [tabs, setTabs] = useState<TerminalTab[]>(DEFAULT_TABS);
   const [activeTabId, setActiveTabId] = useState<string | null>(DEFAULT_TABS[0]?.id ?? null);
   const [catalog, setCatalog] = useState<ModelDefinition[]>([]);
+
+  // Right-panel width.  v4.0.0 — defaults to 420 (up from a fixed 320) and
+  // is now user-resizable via the drag handle on its left edge.  Persisted
+  // in localStorage so the choice survives restarts.  Min 280 / max 800
+  // covers the useful range (any narrower hides controls; wider crowds
+  // the terminal).
+  const PANEL_WIDTH_KEY = 'ccs-panel-width';
+  const PANEL_WIDTH_MIN = 280;
+  const PANEL_WIDTH_MAX = 800;
+  const PANEL_WIDTH_DEFAULT = 420;
+  const readStoredPanelWidth = (): number => {
+    try {
+      const raw = localStorage.getItem(PANEL_WIDTH_KEY);
+      if (!raw) return PANEL_WIDTH_DEFAULT;
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return PANEL_WIDTH_DEFAULT;
+      return Math.max(PANEL_WIDTH_MIN, Math.min(PANEL_WIDTH_MAX, Math.round(n)));
+    } catch {
+      return PANEL_WIDTH_DEFAULT;
+    }
+  };
+  const [panelWidth, setPanelWidth] = useState<number>(readStoredPanelWidth);
+  useEffect(() => {
+    try {
+      localStorage.setItem(PANEL_WIDTH_KEY, String(panelWidth));
+    } catch {
+      // ignore — quota or private mode
+    }
+  }, [panelWidth]);
   const [pidByPane, setPidByPane] = useState<Record<string, number>>({});
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [bindings, setBindings] = useState<HotkeyBinding[]>([]);
@@ -557,17 +587,28 @@ export function App() {
           </div>
 
           {showRightPanel && (
-            // Outer wrapper animates its WIDTH (0→320) and clips; this is what
-            // makes the terminal smoothly resize into the opening space. The
-            // inner panel stays a fixed 320 so its content doesn't reflow while
-            // the width grows — it's just revealed, then faded in.
+            // Outer wrapper animates its width on first mount so the panel
+            // slides in.  The inner panel uses the user-controlled
+            // panelWidth; a 5px drag handle on the LEFT edge lets the user
+            // resize between PANEL_WIDTH_MIN and PANEL_WIDTH_MAX.
             <div style={{
               flexShrink: 0,
               overflow: 'hidden',
               animation: 'panelEnter 320ms ease both',
+              display: 'flex',
+              flexDirection: 'row',
             }}>
+              <PanelResizeHandle
+                onResize={(deltaPx) => {
+                  setPanelWidth((cur) => {
+                    const next = cur - deltaPx; // dragging LEFT widens the panel
+                    return Math.max(PANEL_WIDTH_MIN, Math.min(PANEL_WIDTH_MAX, Math.round(next)));
+                  });
+                }}
+                onDoubleClick={() => setPanelWidth(PANEL_WIDTH_DEFAULT)}
+              />
               <div style={{
-                width: 320,
+                width: panelWidth,
                 height: '100%',
                 boxSizing: 'border-box',
                 borderLeft: '1px solid var(--border)',
