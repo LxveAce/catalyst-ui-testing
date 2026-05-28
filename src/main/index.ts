@@ -795,6 +795,11 @@ function setupAppMeta() {
       // Per electron-builder's NSIS layout, the uninstaller lives in $INSTDIR.
       // Name varies by productName: try both spellings before giving up.
       const candidates = [
+        // v4.0.0+ (Catalyst UI productName)
+        path.join(exeDir, 'Uninstall Catalyst UI.exe'),
+        path.join(exeDir, 'Uninstall catalyst-ui.exe'),
+        // v3.x and earlier (Claude Code Studio productName) — kept so
+        // in-place upgrades from those builds still find the old exe.
         path.join(exeDir, 'Uninstall Claude Code Studio.exe'),
         path.join(exeDir, 'Uninstall claude-code-studio.exe'),
       ];
@@ -829,7 +834,7 @@ function setupAppMeta() {
         error: null,
         notice:
           'macOS doesn\'t have a built-in uninstaller. Finder is now open at /Applications — ' +
-          'drag "Claude Code Studio" to the Trash. If you also want to wipe settings + history, ' +
+          'drag "Catalyst UI" to the Trash. If you also want to wipe settings + history, ' +
           'click "Reset user data" first.',
       };
     }
@@ -962,7 +967,7 @@ function setupPopout() {
           minWidth: 400,
           minHeight: 300,
           resizable: true,
-          title: `${safeLabel} — Claude Code Studio`,
+          title: `${safeLabel} — Catalyst UI`,
           parent: mainWindow ?? undefined,
           backgroundColor: '#0a0a14',
           webPreferences: {
@@ -1484,6 +1489,23 @@ app.on('web-contents-created', (_event, contents) => {
 });
 
 app.whenReady().then(() => {
+  // v4.0.0 (Catalyst UI rename) — preserve the existing user-data
+  // directory so settings, snippets, sessions, GitHub PAT, etc. survive
+  // the rename.  Electron derives userData from productName by default;
+  // since productName changed from "Claude Code Studio" to "Catalyst UI",
+  // the default would point at an empty new directory.  Anchor it to the
+  // historical "Claude Code Studio" folder explicitly so v3.2.1 -> v4
+  // upgrades feel like an upgrade, not a fresh install.  Fresh installs
+  // also use this folder so v4.0.0 onward has a single canonical state
+  // location.
+  try {
+    const appData = app.getPath('appData');
+    app.setPath('userData', path.join(appData, 'Claude Code Studio'));
+  } catch {
+    // If setPath ever fails, the default productName-derived path is the
+    // fallback (fresh dir, but no crash).
+  }
+
   // Windows toast notifications require an AppUserModelID that matches
   // the installer's registered AUMID. Squirrel sets one based on the
   // executable's metadata, but explicitly calling setAppUserModelId
