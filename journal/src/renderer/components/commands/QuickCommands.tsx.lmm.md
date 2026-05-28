@@ -67,3 +67,32 @@ Risks:
 - Sharing a catalog requires resolving the category-name divergence ("Model" vs "Model & Effort"); pick one and update both.
 - Adding confirmation dialogs in an Electron app may interrupt flow; make it opt-in.
 - `localStorage` persistence assumes the user has a single-window mental model; if they open two windows with different categories, both will overwrite each other's preference on switch.
+
+---
+
+## Addendum — post-refactor (Commands tab mirror active model)
+
+The hardcoded `QUICK_COMMANDS` and `CATEGORIES` literals are gone — the
+component is now data-driven, accepting `commands: CommandDef[]`,
+`categories: string[]`, and optional `emptyMessage`. The data comes
+from `COMMAND_FAMILIES[family]` in
+[[command-families.ts.lmm.md]] via the parent `CommandsPanel`.
+
+Material changes:
+- **State now self-heals when categories change**: a `useEffect`
+  detects that `activeCategory` is no longer in `categories` and
+  resets to the first category. Prevents the "user switches from a
+  Claude tab to an Ollama tab and the active pill points at a Claude
+  category that doesn't exist for Ollama" footgun.
+- **Empty state**: when `commands.length === 0` (e.g., BitNet), the
+  component renders the `emptyMessage` instead of a blank category
+  picker + empty list. Honest UX.
+- **Persistent N1 (lossy first-token extraction)** issue is gone here
+  — QuickCommands always sent the full command including args. That
+  property is preserved.
+
+Behavior that stayed the same:
+- Card layout, hover lift, monospace command rendering on the right.
+- "Send on click" routes through `onSendCommand` (now app-wide
+  `sendToActive` reaches model tabs too via the H-1 fix in
+  [[EmbeddedTerminal.tsx.lmm.md]]).
