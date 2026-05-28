@@ -788,7 +788,8 @@ export type HotkeyAction =
   | 'terminal.restart'
   | 'compact.toggle'
   | 'panel.lmm'
-  | 'panel.github';
+  | 'panel.github'
+  | 'models.focus-search';
 
 export interface HotkeyBinding {
   action: HotkeyAction;

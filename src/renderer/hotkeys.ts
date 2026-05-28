@@ -103,4 +103,5 @@ export const ACTION_LABELS: Record<HotkeyAction, string> = {
   'compact.toggle': 'Toggle compact controller',
   'panel.lmm': 'Open LMM panel',
   'panel.github': 'Open GitHub panel',
+  'models.focus-search': 'Focus Models search',
 };
