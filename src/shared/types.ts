@@ -27,6 +27,30 @@ export interface CliOnboardingState {
 }
 
 /**
+ * Capability flags parsed from `claude --help`. Used to gate features that
+ * depend on specific CLI flag support (e.g., `Claude (Chat)` requires
+ * `--input-format=stream-json` / `--output-format=stream-json`). Cached in
+ * main per app launch — `claude --help` is fast but not free, and the
+ * binary doesn't change underneath a running session.
+ */
+export interface CliCapabilities {
+  /** True if the binary's help output mentions stream-json support. */
+  streamJson: boolean;
+  /** True if `--print` flag is supported (non-interactive mode). */
+  printMode: boolean;
+  /** Parsed version string if discoverable (e.g., '1.2.3'); null otherwise. */
+  version: string | null;
+  /** True iff the probe actually ran successfully. False = couldn't even
+   *  invoke claude --help (CLI missing / hang / spawn error); the other
+   *  fields should be ignored in that case. */
+  probed: boolean;
+  /** ISO timestamp of the probe. */
+  probedAt: string | null;
+  /** First few lines of help output for debug surfacing — capped at ~2 KB. */
+  helpExcerpt: string;
+}
+
+/**
  * v3.0 multi-model scaffold types.
  *
  * Two categories of model the app can run side-by-side:

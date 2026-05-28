@@ -206,6 +206,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cli: {
     /** Run `claude doctor` + return parsed CliStatus. */
     status: () => ipcRenderer.invoke(IPC.CLI_STATUS),
+    /** Returns cached `claude --help` capability flags. Used by the
+     *  picker to badge the Claude (Chat) entry. Probed once per app
+     *  launch — fast on subsequent calls. */
+    capabilities: () => ipcRenderer.invoke(IPC.CLI_CAPABILITIES),
     /** Re-run the Phase 4 npm install using the bundled runtime. */
     install: () => ipcRenderer.invoke(IPC.CLI_INSTALL),
     /** Subscribe to live npm install output (one event per line). */
