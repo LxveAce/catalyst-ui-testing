@@ -20,6 +20,7 @@ const ALLOWED_ACTIONS = new Set<HotkeyAction>([
   'panel.lmm',
   'panel.github',
   'models.focus-search',
+  'terminal.new-profile',
 ]);
 
 const DEFAULT_BINDINGS: HotkeyBinding[] = [
@@ -29,6 +30,7 @@ const DEFAULT_BINDINGS: HotkeyBinding[] = [
   { action: 'panel.lmm', chord: 'Ctrl+Shift+L' },
   { action: 'panel.github', chord: 'Ctrl+Shift+G' },
   { action: 'models.focus-search', chord: 'Ctrl+F' },
+  { action: 'terminal.new-profile', chord: 'Ctrl+Shift+T' },
 ];
 
 const DEFAULTS: HotkeySettings = {
