@@ -11,6 +11,77 @@ v2 → v3 = multi-model surface).
 
 ---
 
+## [3.2.1] — 2026-05-28
+
+Polish pass driven by user-reported issues in the live v3.2.0 build,
+plus a brand-new Accessibility section under Settings.  No new
+headline features; this release fixes things that didn't work,
+makes things easier to use, and surfaces hidden workflows.
+
+Full notes: `docs/RELEASE_NOTES_v3.2.1.md`.
+
+### Added
+- **Accessibility section under Settings** — ten persisted toggles:
+  high-contrast palette, 90/100/115/130 % font scale, reduce motion,
+  large focus ring, 44 px click targets, dyslexia-friendly font,
+  screen-reader mode hook, keyboard-hints overlay, color-blind palette
+  (protanopia / deuteranopia / tritanopia SVG filters), and an audio
+  captions placeholder for v4.0.0.  Persisted at
+  `<userData>/accessibility.json`; applied via `data-*` attributes on
+  `<html>` so the entire app reacts without prop-plumbing.  Defaults
+  every accommodation OFF.
+- **`Ctrl+F` to focus Models search** + **`Ctrl+Shift+T` to open the
+  profile picker** — two new hotkey actions (`models.focus-search`,
+  `terminal.new-profile`).
+- **OpenAI GPT-4o-mini (via Aider)** catalog entry for cost-sensitive
+  iterative runs.
+- **`+` tab button now opens the profile picker** (previously
+  hard-coded to a new Claude tab).
+- **In-app "New LMM cycle" modal** replaces `window.prompt()`.
+
+### Changed
+- **Models search bar** bumped from 140 / 11 / 4-8 to 280 / 13 / 8-12
+  with radius 6.  Visible on both Local and API tabs.
+- **`api.aider.multi`** display name renamed to **OpenAI GPT-4o (via Aider)**
+  so the OpenAI use case is obvious.  Existing installs pick up the
+  rename via new `FORCE_REFRESH_DISPLAY_IDS` migration tied to
+  `SEED_VERSION` 2 → 3 (also pulls in any missing seed API entries on
+  registries stuck on the older set).
+- **`MODELS_POPOUT`** IPC takes a 3rd `profile` arg; popouts now
+  render chat-mode profiles with the stream-json renderer instead of
+  falling back to the TUI sanitizer.
+- **LMM + Compact panels** are focus-aware — they accept an
+  `activeFamily` prop and show a "switch to a Claude tab" hint when
+  the focused tab is non-Claude.
+
+### Fixed
+- **"Get a key →"** link inside `ApiKeyModal` now opens for OpenAI /
+  Gemini / OpenRouter / Anthropic (host allowlist extended).  Blocked
+  URLs log a console warning.
+- **Auto-updater 404 stack trace** demoted to a one-line console warn
+  when `latest*.yml` is missing from the latest release.  CI release
+  workflow now uploads `dist/latest*.yml` alongside installers — those
+  were excluded in v2.0 and never re-added, so every v3.x release
+  shipped without the auto-updater manifest.
+- **Copy command** in Models tab now uses Electron's main-process
+  clipboard via IPC (reliable regardless of window focus), falls back
+  to `navigator.clipboard`, then `alert()` with the command line if
+  both fail.  Successful copy flashes the button green "✓ Copied!".
+- **`[paneId not found]` cold flash** on popouts replaced with a
+  re-attaching spinner + 2.5 s retry; only declares the PTY dead
+  after a second negative probe.
+- **Chat-skin toggle** now syncs across windows via the localStorage
+  `storage` event — toggling in main or popout updates the other.
+
+### CI
+- `.github/workflows/release.yml` upload globs include
+  `dist/latest.yml`, `dist/latest-mac.yml`, `dist/latest-linux.yml`.
+  Users on v3.2.0 will receive the v3.2.1 update via auto-updater
+  once this release is published (electron-updater pulls `latest.yml`
+  from the LATEST release, not the running version's).
+
+---
+
 ## [3.2.0] — 2026-05-27
 
 The tab + structured-chat release. Replaces the split-pane terminal
