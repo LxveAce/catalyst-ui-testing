@@ -42,7 +42,12 @@ export interface TerminalTab {
 export interface TerminalTabsProps {
   tabs: TerminalTab[];
   activeTabId: string | null;
-  onTabsChange: (next: TerminalTab[]) => void;
+  /** Accepts both `next: TerminalTab[]` and an updater function. The
+   *  updater form is required by the internal add/replace/close paths
+   *  so concurrent gestures (e.g., user clicks `+` while a model PTY
+   *  is still launching) don't drop or duplicate tabs by reading a
+   *  stale closure. App.tsx passes `setTabs` directly. */
+  onTabsChange: React.Dispatch<React.SetStateAction<TerminalTab[]>>;
   onActiveChange: (id: string | null) => void;
   onPidChange: (paneId: string, pid: number) => void;
   registerSender: (paneId: string, send: ((data: string) => void) | null) => void;
@@ -78,9 +83,10 @@ export function TerminalTabs({
       profile: 'claude',
       ready: true,
     };
-    onTabsChange([...tabs, next]);
+    // Updater form: rapid `+` clicks must not drop tabs added between renders.
+    onTabsChange((prev) => [...prev, next]);
     onActiveChange(id);
-  }, [tabs, onTabsChange, onActiveChange]);
+  }, [onTabsChange, onActiveChange]);
 
   const addModelTab = useCallback(
     async (m: ModelDefinition) => {
@@ -93,7 +99,7 @@ export function TerminalTabs({
         profile: m.id,
         ready: false,
       };
-      onTabsChange([...tabs, placeholder]);
+      onTabsChange((prev) => [...prev, placeholder]);
       onActiveChange(id);
 
       let r: { ok: boolean; paneId: string | null; error: string | null };
@@ -104,20 +110,29 @@ export function TerminalTabs({
       }
       if (!r.ok || !r.paneId) {
         alert(`Couldn't launch ${m.name}: ${r.error ?? 'unknown error'}`);
-        onTabsChange(tabs.filter((t) => t.id !== id));
-        onActiveChange(tabs[tabs.length - 1]?.id ?? null);
+        // Remove only the failing placeholder; tabs the user opened in parallel
+        // during the async window stay alive.
+        onTabsChange((prev) => prev.filter((t) => t.id !== id));
         return;
       }
-      onTabsChange([
-        ...tabs,
-        { ...placeholder, paneId: r.paneId, ready: true },
-      ]);
+      const confirmedPaneId = r.paneId;
+      // Replace the placeholder in-place so tabs added in parallel during the
+      // launch survive — the previous implementation overwrote the whole list
+      // with a stale closure of `tabs`, silently dropping any concurrent
+      // additions.
+      onTabsChange((prev) =>
+        prev.map((t) =>
+          t.id === id ? { ...t, paneId: confirmedPaneId, ready: true } : t
+        )
+      );
     },
-    [tabs, onTabsChange, onActiveChange, cwd]
+    [onTabsChange, onActiveChange, cwd]
   );
 
   const closeTab = useCallback(
     async (id: string) => {
+      // Capture the tab before any state mutation — we need its paneId to kill
+      // the PTY even if `tabs` changes during the await.
       const tab = tabs.find((t) => t.id === id);
       if (!tab) return;
       setClosingId(id);
@@ -128,9 +143,13 @@ export function TerminalTabs({
           // PTY may already be dead — proceed with removal.
         }
       }
-      const remaining = tabs.filter((t) => t.id !== id);
-      onTabsChange(remaining);
+      onTabsChange((prev) => prev.filter((t) => t.id !== id));
       if (activeTabId === id) {
+        // Compute fallback focus from the post-close `tabs` snapshot we just
+        // observed. If a tab was added concurrently in the await window, it
+        // will still be in the list after our filter and become the natural
+        // last-tab fallback in App.tsx's session save path.
+        const remaining = tabs.filter((t) => t.id !== id);
         onActiveChange(remaining[remaining.length - 1]?.id ?? null);
       }
       setClosingId(null);
