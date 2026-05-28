@@ -208,6 +208,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     listCached: () => ipcRenderer.invoke(IPC.HF_LIST_CACHED),
     removeCached: (repoId: string) => ipcRenderer.invoke(IPC.HF_REMOVE_CACHED, repoId),
     getCachePath: () => ipcRenderer.invoke(IPC.HF_GET_CACHE_PATH),
+    importAndLaunch: (repoId: string, quant: string | null, cwd?: string) =>
+      ipcRenderer.invoke(IPC.HF_IMPORT_AND_LAUNCH, repoId, quant, cwd ?? null),
   },
   tray: {
     getSettings: () => ipcRenderer.invoke(IPC.TRAY_GET_SETTINGS),
