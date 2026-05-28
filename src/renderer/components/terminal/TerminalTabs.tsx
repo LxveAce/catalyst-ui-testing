@@ -274,6 +274,7 @@ export function TerminalTabs({
                   paneId={t.paneId}
                   compact={false}
                   registerSender={registerSender}
+                  profile={t.profile}
                 />
               )}
             </div>
