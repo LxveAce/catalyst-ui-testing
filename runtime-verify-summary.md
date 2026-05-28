@@ -1,4 +1,4 @@
-# Runtime verification — 2026-05-28T01:45:40.638Z
+# Runtime verification — 2026-05-28T01:56:38.151Z
 
 **Buttons found:** 12
 **Buttons clicked:** 12
@@ -7,7 +7,7 @@
 
 ### (boot) — ✅ pass
 
-**Other events (2):** info, info
+**Other events (3):** page.load, info, info
 
 ### Terminal — ✅ pass
 
