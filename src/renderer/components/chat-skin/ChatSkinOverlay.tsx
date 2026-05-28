@@ -3,6 +3,21 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import {
+  JsonStreamParser,
+  interpretClaudeChatEvent,
+  encodeUserMessageJsonl,
+} from './json-stream-parser';
+
+/** Profiles that should be rendered via the JSONL stream path instead
+ *  of the default "sanitize the TUI bytes" path. Single-element set
+ *  today; future profiles (gemini-chat, gpt-chat, ...) can be added
+ *  here without touching the rendering branches. */
+const JSON_STREAM_PROFILES = new Set<string>(['api.anthropic.claude-chat']);
+
+function isJsonStreamProfile(profile: string | undefined): boolean {
+  return !!profile && JSON_STREAM_PROFILES.has(profile);
+}
 
 /**
  * Chat-skin overlay v2 — clean modern chat UI over the terminal pane.
@@ -43,6 +58,12 @@ interface Props {
   paneId: string;
   visible: boolean;
   onToggleOff: () => void;
+  /** Catalog profile id of the tab this overlay sits on. When the profile
+   *  is in `JSON_STREAM_PROFILES`, the overlay parses incoming bytes as
+   *  newline-delimited JSON events (Claude's `stream-json` mode) and
+   *  wraps outgoing user input as JSON events on send. Undefined defaults
+   *  to the text-mode path used by the regular Claude CLI / model REPLs. */
+  profile?: string;
 }
 
 const MAX_MESSAGES = 200;
@@ -78,17 +99,30 @@ const FONT_STACK =
 const MONO_STACK =
   '"Cascadia Code", "JetBrains Mono", "Fira Code", Consolas, "Liberation Mono", monospace';
 
-export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
+export function ChatSkinOverlay({ paneId, visible, onToggleOff, profile }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [lastChunkAt, setLastChunkAt] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSentRef = useRef<{ text: string; at: number } | null>(null);
+  // JSON-stream parser instance per paneId. Re-created when paneId
+  // changes; persists across PTY chunks within the same pane.
+  const parserRef = useRef<JsonStreamParser | null>(null);
+  const jsonMode = isJsonStreamProfile(profile);
 
   useEffect(() => {
+    if (jsonMode) {
+      parserRef.current = new JsonStreamParser();
+    } else {
+      parserRef.current = null;
+    }
     const unsub = window.electronAPI.terminal.onData(paneId, (data) => {
-      appendAssistantChunk(data);
+      if (jsonMode) {
+        ingestJsonChunk(data);
+      } else {
+        appendAssistantChunk(data);
+      }
     });
     return () => {
       try {
@@ -96,9 +130,10 @@ export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
       } catch {
         // ignore
       }
+      parserRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paneId]);
+  }, [paneId, jsonMode]);
 
   const appendAssistantChunk = useCallback((rawData: string) => {
     // Decide BEFORE sanitizing whether this chunk contains a screen-clear
@@ -151,6 +186,44 @@ export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
     });
   }, []);
 
+  /**
+   * Stream-JSON ingest path. Feeds each chunk into the line-buffered
+   * parser, then maps each emitted event to a chat-message update via
+   * `interpretClaudeChatEvent`. Mirrors `appendAssistantChunk` for the
+   * text-mode path but skips echo-suppression entirely (the CLI in
+   * non-interactive mode doesn't echo the user's stdin back as text).
+   */
+  const ingestJsonChunk = useCallback((rawData: string) => {
+    const parser = parserRef.current;
+    if (!parser) return;
+    const events = parser.feed(rawData);
+    if (events.length === 0) return;
+    setLastChunkAt(Date.now());
+    setMessages((prev) => {
+      let next = prev;
+      for (const ev of events) {
+        if (ev.kind === 'parse-error') {
+          // Surface non-JSON noise (banners, stderr leaks) as a small
+          // system note rather than dropping silently. Keeps the user
+          // informed if Claude's CLI starts emitting unexpected output.
+          next = cap([
+            ...next,
+            {
+              id: makeId(),
+              role: 'assistant',
+              text: `_(non-JSON line: ${ev.raw.slice(0, 200)}${ev.raw.length > 200 ? '…' : ''})_`,
+              timestamp: Date.now(),
+            },
+          ]);
+          continue;
+        }
+        const action = interpretClaudeChatEvent(ev.value);
+        next = applyClaudeAction(next, action);
+      }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!visible) return;
     const el = scrollRef.current;
@@ -168,9 +241,15 @@ export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
           { id: makeId(), role: 'user', text, timestamp: Date.now() },
         ])
       );
-      lastSentRef.current = { text, at: Date.now() };
+      // Echo-suppression is text-mode only; the JSON path never sees a
+      // stdin echo back through stdout (the CLI is non-interactive).
+      lastSentRef.current = jsonMode ? null : { text, at: Date.now() };
       try {
-        window.electronAPI.terminal.sendInput(paneId, text + '\r');
+        // In JSON-stream mode, wrap as a Claude SDK user-message event
+        // with a trailing newline (JSONL framing). In text mode, send
+        // raw text + CR like an interactive TTY would.
+        const payload = jsonMode ? encodeUserMessageJsonl(text) : text + '\r';
+        window.electronAPI.terminal.sendInput(paneId, payload);
       } catch {
         setMessages((prev) => [
           ...prev,
@@ -191,7 +270,7 @@ export function ChatSkinOverlay({ paneId, visible, onToggleOff }: Props) {
         }
       });
     },
-    [draft, paneId]
+    [draft, paneId, jsonMode]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -856,6 +935,88 @@ function cap(arr: ChatMessage[]): ChatMessage[] {
   return arr.length > MAX_MESSAGES
     ? arr.slice(arr.length - MAX_MESSAGES)
     : arr;
+}
+
+/**
+ * Apply one chat-renderer action (from interpretClaudeChatEvent) to
+ * the message list. Pure: returns the new array, never mutates `prev`.
+ * Lives at module scope so React's `setMessages` updater can call it
+ * deterministically without depending on component closures.
+ */
+function applyClaudeAction(
+  prev: ChatMessage[],
+  action: import('./json-stream-parser').ClaudeChatAction
+): ChatMessage[] {
+  switch (action.kind) {
+    case 'append-assistant-text': {
+      const last = prev[prev.length - 1];
+      if (last && last.role === 'assistant') {
+        const nextText = (last.text + action.text).slice(0, MAX_MESSAGE_CHARS);
+        return [...prev.slice(0, -1), { ...last, text: nextText }];
+      }
+      return cap([
+        ...prev,
+        {
+          id: makeId(),
+          role: 'assistant',
+          text: action.text.slice(0, MAX_MESSAGE_CHARS),
+          timestamp: Date.now(),
+        },
+      ]);
+    }
+    case 'replace-last-assistant': {
+      const last = prev[prev.length - 1];
+      const text = action.text.slice(0, MAX_MESSAGE_CHARS);
+      if (last && last.role === 'assistant') {
+        return [...prev.slice(0, -1), { ...last, text }];
+      }
+      return cap([
+        ...prev,
+        { id: makeId(), role: 'assistant', text, timestamp: Date.now() },
+      ]);
+    }
+    case 'new-user-message': {
+      // Don't double-add: if the most recent user bubble already matches,
+      // it's the optimistic render we added on send(). Skip the echo.
+      const recentUser = [...prev].reverse().find((m) => m.role === 'user');
+      if (recentUser && recentUser.text.trim() === action.text.trim()) {
+        return prev;
+      }
+      return cap([
+        ...prev,
+        {
+          id: makeId(),
+          role: 'user',
+          text: action.text.slice(0, MAX_MESSAGE_CHARS),
+          timestamp: Date.now(),
+        },
+      ]);
+    }
+    case 'system': {
+      return cap([
+        ...prev,
+        {
+          id: makeId(),
+          role: 'assistant',
+          text: `_${action.text}_`,
+          timestamp: Date.now(),
+        },
+      ]);
+    }
+    case 'error': {
+      return cap([
+        ...prev,
+        {
+          id: makeId(),
+          role: 'assistant',
+          text: `⚠ ${action.text}`,
+          timestamp: Date.now(),
+        },
+      ]);
+    }
+    case 'ignore':
+      return prev;
+  }
 }
 
 /**
