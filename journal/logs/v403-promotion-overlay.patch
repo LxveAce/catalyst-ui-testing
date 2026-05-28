@@ -1,0 +1,272 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index d1a41eb..f47b4be 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -11,6 +11,49 @@ v2 → v3 = multi-model surface).
+ 
+ ---
+ 
++## [4.0.3] — 2026-05-28
++
++Bug-fix release.  v4.0.2 shipped with four issues users surfaced in
++the dev build — one was an unhandled main-process exception that
++popped a modal error dialog.  Strictly fixes only, no new features.
++
++### Fixed
++- **`Cannot resize a pty that has already exited` crash.**  When a
++  PTY exited (Claude (Chat) fast-exit, Ollama tab close, etc.) and
++  the renderer's ResizeObserver / panel re-flow fired a delayed
++  resize, `PtyManager.resize` called into node-pty on the dead
++  handle — which throws a synchronous exception that surfaced as
++  a JavaScript-error modal dialog at the user.  `PtyManager` now
++  clears `ptyProcess` / `childProcess` in the `onExit` handler so
++  subsequent resize/write calls short-circuit; defensive try/catch
++  in `PtyManager.resize` and `PtyRegistry.resize` for the (rare)
++  case the handle is torn down mid-call.
++- **Claude (Chat) yellow stream-json diagnostic was invisible.**
++  v4.0.2 added a fast-exit detector in `EmbeddedTerminal` that
++  surfaces a yellow `claude --version` / npm-upgrade hint when the
++  CLI rejects the stream-json flags — but the diagnostic was gated
++  on `profile === 'api.anthropic.claude-chat'`, and `ModelsPanel`
++  wasn't passing `profile` to its `EmbeddedTerminal`.  Now passed
++  via `running.find(...).modelId`, so the diagnostic fires both
++  in the in-panel embed and the popout window.  Side effect: the
++  generic "fast exit suggests the CLI rejected something" hint
++  (any non-claude profile, ms < 3000) now fires too — useful for
++  the curated-research Import path when Ollama isn't running.
++- **Commands panel "Stream-JSON mode" empty-state had no way out.**
++  When the active tab is Claude (Chat), the Commands panel just
++  showed the empty-state message with no actionable affordance.
++  Added a CTA banner at the top: "+ Switch to a plain Claude tab"
++  which spawns a new Claude tab and switches the panel to
++  Terminal — the same flow as the `+` button in TerminalTabs.
++
++### Internal
++- All five audit harnesses re-run green at 132/132 after the fixes.
++- Inline-style longhand triplet (`borderWidth` / `borderStyle` /
++  `borderColor`) on the new CTA banner avoids React's
++  "shorthand-mixed-with-longhand" reconciler warning.
++
++---
++
+ ## [4.0.2] — 2026-05-28
+ 
+ Second hotfix.  v4.0.1's HF fix went too aggressive in dropping
+diff --git a/package.json b/package.json
+index 6a036c6..84ad80a 100644
+--- a/package.json
++++ b/package.json
+@@ -1,7 +1,7 @@
+ {
+   "name": "catalyst-ui",
+   "productName": "Catalyst UI",
+-  "version": "4.0.2",
++  "version": "4.0.3",
+   "description": "Catalyst UI (formerly Claude Code Studio) — multi-vendor AI workbench: Claude, Hugging Face, Ollama, Aider, Gemini all in one desktop app.",
+   "main": ".vite/build/index.js",
+   "private": true,
+diff --git a/src/main/pty-manager.ts b/src/main/pty-manager.ts
+index efbeecd..26f2f53 100644
+--- a/src/main/pty-manager.ts
++++ b/src/main/pty-manager.ts
+@@ -133,6 +133,12 @@ export class PtyManager extends EventEmitter {
+     this.ptyProcess.onExit(({ exitCode }) => {
+       this.emit('exit', exitCode);
+       this._pid = 0;
++      // Clear the handle so subsequent write/resize calls (which can be
++      // triggered by lagging ResizeObserver / panel re-flow events from the
++      // renderer) short-circuit instead of calling into node-pty and
++      // throwing "Cannot resize a pty that has already exited", which
++      // surfaces as a JavaScript-error modal in the main process.
++      this.ptyProcess = null;
+     });
+   }
+ 
+@@ -164,6 +170,9 @@ export class PtyManager extends EventEmitter {
+     this.childProcess.on('exit', (code) => {
+       this.emit('exit', code ?? 1);
+       this._pid = 0;
++      // Symmetric to spawnWithPty: drop the handle so post-exit writes/
++      // resizes short-circuit.
++      this.childProcess = null;
+     });
+   }
+ 
+@@ -176,8 +185,19 @@ export class PtyManager extends EventEmitter {
+   }
+ 
+   resize(cols: number, rows: number): void {
++    // Defensive try/catch: even with the ptyProcess=null clear on exit,
++    // node-pty can still throw inside resize() if the underlying conpty
++    // handle was torn down between the null-check and the call (rare,
++    // but observed during fast Claude (Chat) exits — see v4.0.3 fix).
+     if (this.ptyProcess) {
+-      this.ptyProcess.resize(cols, rows);
++      try {
++        this.ptyProcess.resize(cols, rows);
++      } catch {
++        // PTY exited concurrent with this resize — drop the handle and
++        // move on.  The user already sees the exit message; a modal
++        // error dialog here would just be noise.
++        this.ptyProcess = null;
++      }
+     }
+   }
+ 
+diff --git a/src/main/pty-registry.ts b/src/main/pty-registry.ts
+index 10be8ad..a02d6d4 100644
+--- a/src/main/pty-registry.ts
++++ b/src/main/pty-registry.ts
+@@ -176,7 +176,14 @@ export class PtyRegistry extends EventEmitter {
+   resize(paneId: string, cols: number, rows: number): void {
+     const mgr = this.panes.get(paneId);
+     if (!mgr) return;
+-    mgr.resize(cols, rows);
++    // Defense-in-depth: PtyManager.resize already swallows node-pty's
++    // post-exit throw, but a wrapper here means a future regression in
++    // that swallow can't leak out as a main-process modal error dialog.
++    try {
++      mgr.resize(cols, rows);
++    } catch {
++      // ignore — resize on a dead PTY is benign
++    }
+   }
+ 
+   kill(paneId: string): void {
+diff --git a/src/renderer/App.tsx b/src/renderer/App.tsx
+index 5b692ea..59f013d 100644
+--- a/src/renderer/App.tsx
++++ b/src/renderer/App.tsx
+@@ -620,6 +620,7 @@ export function App() {
+                   panel={activePanel}
+                   onSendCommand={handleSendCommand}
+                   commandFamily={activeCommandFamily}
++                  onSpawnPlainClaudeTab={handleNewClaudeTab}
+                 />
+               </div>
+             </div>
+@@ -689,10 +690,12 @@ function RightPanel({
+   panel,
+   onSendCommand,
+   commandFamily,
++  onSpawnPlainClaudeTab,
+ }: {
+   panel: SidebarPanel;
+   onSendCommand: (command: string, submit?: boolean) => void;
+   commandFamily: CommandFamily;
++  onSpawnPlainClaudeTab: () => void;
+ }) {
+   switch (panel) {
+     case 'resources':
+@@ -702,7 +705,13 @@ function RightPanel({
+     case 'cost':
+       return <CostPanel />;
+     case 'commands':
+-      return <CommandsPanel onSendCommand={onSendCommand} family={commandFamily} />;
++      return (
++        <CommandsPanel
++          onSendCommand={onSendCommand}
++          family={commandFamily}
++          onSpawnPlainClaudeTab={onSpawnPlainClaudeTab}
++        />
++      );
+     case 'settings':
+       return <SettingsPanel />;
+     case 'github':
+diff --git a/src/renderer/components/commands/CommandsPanel.tsx b/src/renderer/components/commands/CommandsPanel.tsx
+index 5ce375a..12edd73 100644
+--- a/src/renderer/components/commands/CommandsPanel.tsx
++++ b/src/renderer/components/commands/CommandsPanel.tsx
+@@ -11,11 +11,19 @@ interface CommandsPanelProps {
+    *  list, quick actions, and shortcuts to surface. Defaults to 'claude'
+    *  if not provided so the panel renders sensibly in isolation. */
+   family?: CommandFamily;
++  /** v4.0.3: Claude (Chat) empty-state CTA — spawn a plain Claude tab so
++   *  the user can use slash commands. Wired by App.tsx to its existing
++   *  handleNewClaudeTab. Optional so the panel still renders in isolation. */
++  onSpawnPlainClaudeTab?: () => void;
+ }
+ 
+ type TabId = 'quick' | 'all' | 'keys';
+ 
+-export function CommandsPanel({ onSendCommand, family = 'claude' }: CommandsPanelProps) {
++export function CommandsPanel({
++  onSendCommand,
++  family = 'claude',
++  onSpawnPlainClaudeTab,
++}: CommandsPanelProps) {
+   const config = COMMAND_FAMILIES[family] ?? COMMAND_FAMILIES.unknown;
+   const [tab, setTab] = useState<TabId>('quick');
+   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+@@ -101,6 +109,52 @@ export function CommandsPanel({ onSendCommand, family = 'claude' }: CommandsPane
+         ))}
+       </div>
+ 
++      {/* v4.0.3: Claude (Chat) doesn't accept slash commands — surface
++       *  a direct way out to a plain Claude tab.  Sits above QuickCommands
++       *  so it's the first thing visible alongside the empty-state copy. */}
++      {family === 'claude-chat' && onSpawnPlainClaudeTab && (
++        <button
++          onClick={onSpawnPlainClaudeTab}
++          data-cta="spawn-plain-claude"
++          title="Open a new Claude tab that supports slash commands and Quick Actions."
++          style={{
++            display: 'flex',
++            alignItems: 'center',
++            justifyContent: 'space-between',
++            width: '100%',
++            padding: '10px 12px',
++            marginBottom: 10,
++            borderRadius: 'var(--radius-md)',
++            borderWidth: 1,
++            borderStyle: 'solid',
++            borderColor: 'var(--accent-dim, rgba(167,139,250,0.35))',
++            background: 'var(--accent-gradient-soft, rgba(167,139,250,0.08))',
++            color: 'var(--text-primary)',
++            cursor: 'pointer',
++            fontSize: 12,
++            fontWeight: 500,
++            transition: 'all var(--transition-fast)',
++          }}
++          onMouseEnter={(e) => {
++            e.currentTarget.style.transform = 'translateX(2px)';
++            e.currentTarget.style.borderColor = 'var(--border-active, rgba(167,139,250,0.55))';
++          }}
++          onMouseLeave={(e) => {
++            e.currentTarget.style.transform = 'none';
++            e.currentTarget.style.borderColor = 'var(--accent-dim, rgba(167,139,250,0.35))';
++          }}
++        >
++          <span>+ Switch to a plain Claude tab</span>
++          <span style={{
++            fontSize: 10,
++            color: 'var(--text-muted)',
++            fontWeight: 400,
++          }}>
++            slash commands & quick actions
++          </span>
++        </button>
++      )}
++
+       {tab === 'quick' && (
+         <QuickCommands
+           onSendCommand={onSendCommand}
+diff --git a/src/renderer/components/models/ModelsPanel.tsx b/src/renderer/components/models/ModelsPanel.tsx
+index 2dcb7d9..907efee 100644
+--- a/src/renderer/components/models/ModelsPanel.tsx
++++ b/src/renderer/components/models/ModelsPanel.tsx
+@@ -828,7 +828,13 @@ export function ModelsPanel() {
+               background: 'var(--bg-primary)',
+             }}
+           >
+-            <EmbeddedTerminal paneId={selectedRunningPaneId} compact />
++            <EmbeddedTerminal
++              paneId={selectedRunningPaneId}
++              compact
++              profile={
++                running.find((r) => r.paneId === selectedRunningPaneId)?.modelId
++              }
++            />
+           </div>
+         )}
+       </div>
