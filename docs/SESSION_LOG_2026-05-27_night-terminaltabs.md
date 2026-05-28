@@ -109,3 +109,66 @@ Specific file changes:
 4. If you pick up item #2 (Commands tab mirrors active model), it's a
    good moment to also fix H-1 (give `EmbeddedTerminal` a
    `registerSender` so snippet injection works on model tabs).
+
+---
+
+## Addendum — Commands-tab-mirror + H-1 fix (same session, second commit)
+
+After PR #18 went out, the user said to continue. Picked up the
+combined item: Commands sidebar mirrors active tab's profile + the
+deferred H-1 fix from PR #18's red-team. Bundled because they're
+tightly coupled — without H-1, the profile-aware Commands buttons
+would no-op on model tabs.
+
+Stacked branch: `feature/commands-tab-mirror` off
+`feature/terminal-tabs-wiring`.
+
+### What got built
+
+| File | Change |
+|---|---|
+| `src/renderer/components/models/EmbeddedTerminal.tsx` | New `registerSender?` prop; register on PTY-attach effect; clear on unmount. Matches `TerminalPanel`'s pattern. Closes H-1. |
+| `src/renderer/components/terminal/TerminalTabs.tsx` | Passes `registerSender` through to `EmbeddedTerminal`. |
+| `src/renderer/components/commands/command-families.ts` | **New file.** `CommandFamily` discriminator (claude / ollama / aider / gemini / bitnet / unknown). `CommandFamilyConfig` per family with label + slash commands + quick commands + categories + shortcuts + optional `emptyMessage`. `deriveCommandFamily()` helper maps `profile + catalog → CommandFamily`. |
+| `src/renderer/components/commands/CommandsPanel.tsx` | Accepts `family` prop; reads `COMMAND_FAMILIES[family]`. Header chip shows family label ("CLAUDE", "OLLAMA", …). `useEffect` collapses the expanded section on family change. Empty-state for families with no slash/shortcuts. |
+| `src/renderer/components/commands/QuickCommands.tsx` | Accepts `commands` + `categories` + `emptyMessage` props instead of owning the data. `useEffect` self-heals `activeCategory` on family change. |
+| `src/renderer/App.tsx` | Imports `deriveCommandFamily`; computes `activeCommandFamily` from active tab profile + catalog; threads through `RightPanel → CommandsPanel`. |
+| `journal/src/renderer/components/commands/command-families.ts.lmm.md` | **New** LMM journal. |
+| `journal/src/renderer/components/models/EmbeddedTerminal.tsx.lmm.md` | **New** LMM journal. |
+| `journal/src/renderer/components/commands/CommandsPanel.tsx.lmm.md` | Addendum at the bottom covering the family-driven refactor. |
+| `journal/src/renderer/components/commands/QuickCommands.tsx.lmm.md` | Addendum at the bottom covering data-driven props + self-healing category. |
+| `journal/INDEX.md` | Added `auth/`, `chat-skin/`, `models/`, `settings/ThemeEditor` sections that prior sessions had created but not catalogued. Counter updated 41 → 47. |
+| `docs/security-reviews/SECURITY_REVIEW_COMMANDS_TAB.md` | **New** red-team review. C-0 / H-1 fixed in-commit; M-1 (Aider starter auto-submit) + M-2 (model PTY StatusBar PID) + M-3 (instant tab swap) + 2 Lows deferred. |
+| `docs/STATUS.md` | Item #2 moved from Deferred → What's live. H-1 carry-forward note replaced with M-1 + M-2. |
+
+### Verification
+
+- `npx tsc --noEmit` — clean.
+- `npx vite build --config vite.renderer.config.ts` — clean (901
+  modules, ~575 ms). Same pre-existing chunk-size warning.
+
+### Red-team summary (full detail in SECURITY_REVIEW_COMMANDS_TAB.md)
+
+- **Critical: none.**
+- **H-1 (parent PR carry-over)** — `EmbeddedTerminal` lacked sender.
+  **Fixed in-commit.**
+- **Medium 1** — Aider Quick-Action "starter" commands (trailing
+  space) auto-submit empty. Deferred — per-command `submit` flag.
+- **Medium 2** — StatusBar PID is 0 for model tabs. Deferred —
+  needs `EmbeddedTerminal` PID surfacing.
+- **Medium 3** — Tab-switch instantly swaps the Commands panel
+  content. Cosmetic; deferred fade animation.
+- **Low 1** — `deriveCommandFamily` falls back to `'unknown'` for
+  catalog entries with non-canonical `command`. Add per-entry
+  `commandFamily` override only when a real case shows up.
+- **Low 2** — Gemini slash-command list is sparse. Flesh out as
+  Gemini gets used more.
+
+### Handoff (revised)
+
+The only remaining deferred item is the Claude "chat-mode" profile —
+running `claude --output-format=stream-json --input-format=stream-json`
+and routing the JSON events through a parser into the chat-skin
+overlay. Now naturally a follow-up to the live tab model. ~90 min
+estimated. After that, the original deferred list is fully drained
+and the next session is a clean blank slate.
