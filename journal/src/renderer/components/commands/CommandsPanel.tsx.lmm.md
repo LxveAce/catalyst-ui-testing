@@ -70,4 +70,53 @@ Actionable items:
 Risks:
 - Adding inline inputs for argumented commands is a significant UX expansion — design first, then build.
 - Moving catalog to shared may surface that QuickCommands and CommandsPanel duplicate concepts under different names ("Opus" vs "/model opus"); reconcile carefully.
+
+---
+
+## Addendum — post-refactor (Commands tab mirror active model)
+
+The file no longer ships hardcoded slash + quick command catalogs.
+Refactored to accept a `family: CommandFamily` prop and look up the
+matching `CommandFamilyConfig` from
+[[command-families.ts.lmm.md]]. Rendering structure (3 tabs: Quick
+Actions / All Commands / Shortcuts) is unchanged; data is now
+family-driven.
+
+Material changes from the original analysis:
+- **T1 (catalog-as-code vs data) partially resolved**: catalogs moved
+  to a typed registry in `command-families.ts`. Still hardcoded (not
+  JSON-config), but isolated from the rendering component.
+- **New profile chip in the header**: a small `UPPERCASE` pill on the
+  right shows which family the panel is mirroring ("Claude", "Ollama",
+  "Aider", "Gemini", "BitNet", "Terminal" for unknown). Title is the
+  long-form ("Mirroring the active tab's profile: Aider"). Resolves
+  the previous "user has no idea why these commands changed" footgun.
+- **Empty-state handling**: families with empty `slashCommands` or
+  `shortcuts` render a friendly empty block instead of a blank area.
+  BitNet uses this to honestly say "no slash commands here." Unknown
+  uses a generic "type directly in the terminal."
+- **`useEffect` collapses the expanded section on family change** —
+  prevents the prior open section name surviving into a family that
+  doesn't have it.
+- **Quick Actions tab delegates fully**: `QuickCommands` now takes
+  `commands` + `categories` + `emptyMessage` props instead of owning
+  data. See [[QuickCommands.tsx.lmm.md]] addendum.
+
+Persistent issues NOT addressed in this refactor (carry forward):
+- **N2: Lossy command extraction** (line was 190; now in the
+  family-driven mapping). `cmd.name.split(' ')[0]` still drops args
+  on the "All Commands" tab. Resolution requires an argument-prompt
+  UI; designed-but-deferred.
+- **N3: Imperative hover style** in the All Commands rows is still
+  present. React-state hover is used in QuickCommands. Cosmetic
+  inconsistency.
+- **N4: Shortcut list is documentation only** — same as before. The
+  app still doesn't bind any of these chords.
+
+New tension introduced by the refactor:
+- **T4: Family scope is CLI-wide, not model-specific.** Two Ollama
+  models share the same slash-command list. If a model adds custom
+  commands (Llama Guard, DeepSeek-R1's `/think`), they won't surface
+  without a per-model overlay. Acceptable today; flagged in
+  [[command-families.ts.lmm.md]] as a future enhancement.
 - Multi-open accordion changes the perceived "calm" of the panel; consider a "collapse all" button.

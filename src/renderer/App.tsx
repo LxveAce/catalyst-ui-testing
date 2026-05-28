@@ -18,6 +18,10 @@ import { PopoutView } from './components/models/PopoutView';
 import { FileTreePanel } from './components/project/FileTreePanel';
 import { ApiKeyModal } from './components/auth/ApiKeyModal';
 import { TerminalTabs, type TerminalTab } from './components/terminal/TerminalTabs';
+import {
+  deriveCommandFamily,
+  type CommandFamily,
+} from './components/commands/command-families';
 import { buildChordMap, chordFromEvent } from './hotkeys';
 import type {
   HotkeyAction,
@@ -79,8 +83,13 @@ export function App() {
   // The PTY currently driven by snippet inserts, palette text-injection, and
   // the StatusBar PID readout. Derived rather than stored: keeping it in sync
   // with the active tab is one source of truth.
-  const activePaneId =
-    tabs.find((t) => t.id === activeTabId)?.paneId ?? null;
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
+  const activePaneId = activeTab?.paneId ?? null;
+  // Drives the Commands sidebar — `unknown` shows the generic empty-state.
+  const activeCommandFamily: CommandFamily = deriveCommandFamily(
+    activeTab?.profile ?? null,
+    catalog
+  );
   // Phase 6 — first-launch CLI onboarding. Shown when persisted
   // onboarding-complete is false AND `claude doctor` reports the CLI is
   // missing or unauthenticated. Recovers from Phase 4's NSIS bootstrap
@@ -523,6 +532,7 @@ export function App() {
                 <RightPanel
                   panel={activePanel}
                   onSendCommand={handleSendCommand}
+                  commandFamily={activeCommandFamily}
                 />
               </div>
             </div>
@@ -581,9 +591,11 @@ export function App() {
 function RightPanel({
   panel,
   onSendCommand,
+  commandFamily,
 }: {
   panel: SidebarPanel;
   onSendCommand: (command: string) => void;
+  commandFamily: CommandFamily;
 }) {
   switch (panel) {
     case 'resources':
@@ -593,7 +605,7 @@ function RightPanel({
     case 'cost':
       return <CostPanel />;
     case 'commands':
-      return <CommandsPanel onSendCommand={onSendCommand} />;
+      return <CommandsPanel onSendCommand={onSendCommand} family={commandFamily} />;
     case 'settings':
       return <SettingsPanel />;
     case 'github':
