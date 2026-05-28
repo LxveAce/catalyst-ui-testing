@@ -172,3 +172,61 @@ and routing the JSON events through a parser into the chat-skin
 overlay. Now naturally a follow-up to the live tab model. ~90 min
 estimated. After that, the original deferred list is fully drained
 and the next session is a clean blank slate.
+
+---
+
+## Addendum 2 — Claude chat-mode profile (same session, third commit)
+
+User said "continue" → picked up the last deferred item. Stacked
+branch: `feature/claude-chat-mode` off `feature/commands-tab-mirror`.
+
+### What got built
+
+| File | Change |
+|---|---|
+| `src/renderer/components/chat-skin/json-stream-parser.ts` | **New file.** `JsonStreamParser` (line-delimited JSONL with partial-line buffer), `interpretClaudeChatEvent` (Claude SDK event shapes → `ClaudeChatAction` discriminated union), `encodeUserMessageJsonl` (outbound user-message wrap). Pure modules; forgiving on parse errors. |
+| `src/main/model-catalog-seed.ts` | New `api.anthropic.claude-chat` entry — name "Claude (Chat)", command `claude`, args `['--print', '--input-format=stream-json', '--output-format=stream-json', '--verbose']`. Badge "Chat". |
+| `src/renderer/components/commands/command-families.ts` | New `'claude-chat'` family with intentionally empty slash list + explanatory `emptyMessage`. `deriveCommandFamily` keys off exact profile id `'api.anthropic.claude-chat'`. |
+| `src/renderer/components/chat-skin/ChatSkinOverlay.tsx` | Accepts `profile` prop. `JSON_STREAM_PROFILES` set + `isJsonStreamProfile` check route between text-mode (existing) and JSON-mode (new `ingestJsonChunk` + JSON-wrapped `send`). New `applyClaudeAction` module-scope helper applies parsed event actions to the message list. Echo-suppression bypassed in JSON mode. |
+| `src/renderer/components/models/EmbeddedTerminal.tsx` | Accepts + passes `profile` to ChatSkinOverlay. |
+| `src/renderer/components/terminal/TerminalTabs.tsx` | Passes `t.profile` through to EmbeddedTerminal. |
+| `journal/src/renderer/components/chat-skin/json-stream-parser.ts.lmm.md` | **New** LMM journal. |
+| `journal/src/renderer/components/chat-skin/ChatSkinOverlay.tsx.lmm.md` | Addendum covering the chat-mode JSON path. |
+| `journal/INDEX.md` | Added json-stream-parser entry; counter 47 → 48. |
+| `docs/security-reviews/SECURITY_REVIEW_CHAT_MODE.md` | **New** red-team review. 0 Critical, 1 High (flag-surface assumption — self-verifying on first run), 3 Medium + 2 Low deferred. |
+| `docs/STATUS.md` | All 3 original deferred items now shipped — "Deferred" section now lists new followups from this session's red-teams. |
+
+### Verification
+
+- `npx tsc --noEmit` — clean.
+- `npx vite build --config vite.renderer.config.ts` — clean (1.587 MB
+  JS, +3 KB vs PR #19 — parser + interpreter + family entry).
+- `node scripts/runtime-verify.mjs` — 12 panels + 18 extended
+  assertions pass (no regression). Chat-mode itself isn't exercised
+  by the verifier because launching it would require Claude CLI on
+  the verifier host.
+
+### What's NOT verified yet (carry forward)
+
+- **End-to-end JSON I/O contract** with a real `claude` binary on the
+  user's machine. The parser, interpreter, and renderer are unit-clean
+  but the assumption that Claude accepts these flags + emits the
+  assumed event shapes is empirical. First manual run will surface
+  any mismatch as a parse-error bubble within seconds.
+- **Tool-use / thinking blocks** — silently dropped by the
+  `extractTextFromMessage` helper. M-1 in the chat-mode red-team.
+
+### Handoff (final)
+
+The original 3-item morning-handoff deferred list is **fully drained**.
+The next session starts clean — see STATUS.md "Followups surfaced this
+session" for the new (smaller) backlog from the three red-teams.
+
+Three PRs sitting in the testing repo:
+- PR #18 — TerminalTabs wiring + session schema v2 (foundation)
+- PR #19 — Commands tab mirror + H-1 fix + verifier extension (stacked)
+- PR #20 — Claude chat-mode profile (stacked)
+
+Merge in order. Each subsequent base will auto-rebase to master after
+the prior merges. No conflicts expected — each PR's file overlap with
+the parent is additive in a different direction.

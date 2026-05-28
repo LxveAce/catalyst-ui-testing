@@ -38,6 +38,28 @@ export const MODEL_CATALOG_SEED: ModelDefinition[] = [
   },
 
   {
+    // Claude in non-interactive JSON-streaming mode. Pairs with the ✦ Chat
+    // skin overlay — the overlay detects this profile and switches its
+    // renderer from "sanitize the TUI bytes" to "consume one JSON event
+    // per line and render structured messages." Fixes the regular Claude
+    // entry's "TUI gets garbled in the chat skin" UX problem.
+    id: 'api.anthropic.claude-chat',
+    name: 'Claude (Chat)',
+    description: "Claude CLI in stream-json mode — pairs with the chat-skin overlay for clean, structured messages instead of a garbled TUI repaint.",
+    category: 'api',
+    provider: 'Anthropic',
+    command: 'claude',
+    // --print keeps the session non-interactive; --input/--output-format
+    // make it bidirectional JSONL; --verbose ensures we see all event
+    // types, not just the final result. Adjust here if Claude's CLI
+    // surface changes.
+    args: ['--print', '--input-format=stream-json', '--output-format=stream-json', '--verbose'],
+    roles: ['general-chat', 'frontend', 'backend', 'polyglot-code', 'reasoning'],
+    badge: 'Chat',
+    recommendedFor: 'Launch when you want the ✦ Chat skin UI to actually work — JSON in/out bypasses the TUI repaint sequences the regular Claude entry emits.',
+  },
+
+  {
     id: 'api.google.gemini-cli',
     name: 'Gemini (Google)',
     description: "Google's gemini-cli — interactive Gemini Pro / Flash from the terminal.",

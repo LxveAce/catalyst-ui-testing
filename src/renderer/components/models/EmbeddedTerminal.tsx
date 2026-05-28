@@ -32,9 +32,12 @@ interface Props {
     paneId: string,
     send: ((data: string) => void) | null
   ) => void;
+  /** Catalog profile id of the tab. Threaded through to ChatSkinOverlay
+   *  so it can pick the JSON-stream renderer for chat-mode profiles. */
+  profile?: string;
 }
 
-export function EmbeddedTerminal({ paneId, compact = true, registerSender }: Props) {
+export function EmbeddedTerminal({ paneId, compact = true, registerSender, profile }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   // Per-pane chat-skin toggle, persisted via skin-prefs (localStorage).
@@ -205,7 +208,12 @@ export function EmbeddedTerminal({ paneId, compact = true, registerSender }: Pro
         </button>
       )}
 
-      <ChatSkinOverlay paneId={paneId} visible={skinOn} onToggleOff={toggleSkin} />
+      <ChatSkinOverlay
+        paneId={paneId}
+        visible={skinOn}
+        onToggleOff={toggleSkin}
+        profile={profile}
+      />
     </div>
   );
 }

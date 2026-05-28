@@ -84,3 +84,46 @@ A stable presentation layer. The interesting follow-ups are all opt-in features 
 - Users may believe the skin gives them features that don't exist (tool-use UI, message editing, regenerate). Need clear empty-state messaging.
 - Echo suppression is fragile — a CLI version change can break it. Worst case: extra echo text in the assistant bubble. Recoverable by the user toggling to terminal view.
 - The `\r` submit may not work for every CLI. If users report "my CLI doesn't see the input," consider making the submit char configurable per provider.
+
+---
+
+## Addendum — chat-mode (stream-json) profile
+
+Adds an alternate ingest/send path for the new `api.anthropic.claude-chat`
+profile (`claude --print --input-format=stream-json --output-format=stream-json --verbose`).
+Selected when `profile` (new prop) matches the `JSON_STREAM_PROFILES` set.
+
+Behavior split:
+- **Text mode (default, undefined profile or anything not in the set):**
+  unchanged — sanitize bytes, echo-suppress, append to current
+  assistant bubble. Echo suppression remains for real TTYs.
+- **JSON mode:**
+  - `ingestJsonChunk` feeds raw bytes into a per-pane
+    `JsonStreamParser` (see [[json-stream-parser.ts.lmm.md]]) and
+    dispatches `interpretClaudeChatEvent` results through
+    `applyClaudeAction` (module-scope helper in this file).
+  - `send` wraps user text via `encodeUserMessageJsonl` (JSONL framed
+    user-message event) and pushes through `terminal.sendInput`.
+  - Echo-suppression is bypassed (`lastSentRef` is never set in JSON
+    mode) — the non-interactive CLI doesn't echo stdin back.
+  - Parse-error lines surface as `_(non-JSON line: …)_` italic bubbles
+    so the user can see when Claude's CLI emits stray output.
+
+Why this addendum and not a rewrite: the text-mode path is still load-
+bearing for every Claude TUI + every other model REPL. The JSON path
+is purely additive — same component, same JSX, same composer, just a
+different ingest function chosen by an `if` at PTY-subscription time.
+
+Persistent caveats this addendum doesn't resolve:
+- **Tool-use blocks ignored** — `extractTextFromMessage` drops
+  non-text content. If Claude's response includes tool calls, the
+  chat skin shows the text parts but silently drops everything else.
+  Documented in [[json-stream-parser.ts.lmm.md]] SYNTHESIZE risks.
+- **No "stop generation" affordance** — Ctrl+C from the chat skin
+  composer doesn't currently signal SIGINT to the PTY. User has to
+  toggle to terminal view to interrupt.
+- **Slash commands inert** — the JSON-mode CLI doesn't process
+  `/clear` etc. The Commands sidebar's `claude-chat` family has an
+  empty slash list + an explanatory `emptyMessage` so users don't
+  click commands that silently fail. See
+  [[../commands/command-families.ts.lmm.md]].
