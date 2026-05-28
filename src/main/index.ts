@@ -479,7 +479,8 @@ function setupModels() {
     }
     if (parsed.protocol !== 'https:') return false;
     const host = parsed.hostname.toLowerCase();
-    // Model-related allowlist: official license sources + model registries.
+    // Allowlist: official license sources, model registries, and the
+    // PROVIDER_KEY_URL targets in ApiKeyModal so "Get a key →" works.
     const allowed =
       host === 'ollama.com' ||
       host.endsWith('.ollama.com') ||
@@ -490,8 +491,17 @@ function setupModels() {
       host.endsWith('.llama.com') ||
       host === 'www.bigcode-project.org' ||
       host === 'bigcode-project.org' ||
-      host === 'github.com';
-    if (!allowed) return false;
+      host === 'github.com' ||
+      // Provider key portals — must match ApiKeyModal PROVIDER_KEY_URL.
+      host === 'console.anthropic.com' ||
+      host === 'platform.openai.com' ||
+      host === 'aistudio.google.com' ||
+      host === 'openrouter.ai' ||
+      host.endsWith('.openrouter.ai');
+    if (!allowed) {
+      console.warn(`[openExternal] blocked URL outside allowlist: ${parsed.toString()}`);
+      return false;
+    }
     void shell.openExternal(parsed.toString());
     return true;
   });
