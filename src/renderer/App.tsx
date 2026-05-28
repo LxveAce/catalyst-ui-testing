@@ -375,6 +375,14 @@ export function App() {
         case 'panel.github':
           setActivePanel('github');
           break;
+        case 'models.focus-search':
+          // Open the Models panel (if not already) and ask it to focus
+          // its search input via a custom DOM event. Decoupled from the
+          // panel implementation so we don't have to lift the input ref.
+          setActivePanel('models');
+          // Tick after the panel renders so the input ref is mounted.
+          setTimeout(() => window.dispatchEvent(new Event('models-focus-search')), 0);
+          break;
         default:
           // unknown action id — ignore
           break;
