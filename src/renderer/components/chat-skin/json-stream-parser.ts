@@ -86,79 +86,89 @@ export class JsonStreamParser {
 /**
  * Action a parsed event maps to inside the chat-skin renderer.
  *
- * We deliberately keep this narrow:
- *   - `append-assistant-text` — add text to the *current* assistant
- *     message bubble (deltas), creating a new one if the previous bubble
- *     was a user message.
- *   - `replace-last-assistant` — overwrite the current assistant bubble
- *     (used when a complete message arrives that includes everything).
- *   - `new-user-message` — Claude echoes our user message back; surface
- *     it as a user bubble (but don't double-add if we already optimistically
- *     showed it on send).
- *   - `system` — informational; surface as a small system note or skip.
- *   - `error` — render as an error bubble.
- *   - `ignore` — known-uninteresting event (e.g., tool_use we don't yet
- *     have UI for); the raw event is still recorded in the debug log.
+ * Block-aware design (PR #22): one event can produce multiple actions —
+ * an assistant message with `[text, tool_use, text]` content blocks
+ * emits three actions in order. The renderer's reducer applies each
+ * action sequentially. Each non-text block becomes its own ChatMessage,
+ * so the chat reads top-to-bottom as the user/assistant/tool exchange
+ * actually happened.
  */
 export type ClaudeChatAction =
+  /** Append a chunk of text to the most recent assistant-text bubble.
+   *  If the last bubble is NOT a plain assistant-text bubble (e.g.
+   *  it's a tool_use card or a user bubble), start a new text bubble. */
   | { kind: 'append-assistant-text'; text: string }
+  /** Replace the last assistant-text bubble outright. Used by `result`
+   *  events that carry the consolidated final text. */
   | { kind: 'replace-last-assistant'; text: string }
+  /** Add a tool_use card (compact "🔧 <name>" pill with expandable input). */
+  | { kind: 'add-tool-use'; toolUseId: string; name: string; input: unknown }
+  /** Add a tool_result card (collapsible output, matched by tool_use_id). */
+  | { kind: 'add-tool-result'; toolUseId: string; output: string }
+  /** Add a thinking block (Claude extended reasoning, italic + muted). */
+  | { kind: 'add-thinking'; text: string }
+  /** User message echoed back from the CLI; dedup against optimistic render. */
   | { kind: 'new-user-message'; text: string }
   | { kind: 'system'; text: string }
   | { kind: 'error'; text: string }
   | { kind: 'ignore'; reason: string };
 
 /**
- * Map a raw JSON event from the Claude CLI to one chat-renderer action.
+ * Map a raw JSON event from the Claude CLI to zero-or-more
+ * chat-renderer actions. Returns an array so events with multiple
+ * content blocks (e.g., assistant message with text + tool_use + text)
+ * can fan out into multiple visual messages in stream order.
  *
- * The CLI's exact stream-json schema is loosely documented and evolves
- * with the SDK; we recognize the common shapes:
+ * Recognized event shapes (loose, version-tolerant):
  *
- *   { type: 'system', subtype: 'init', ... }                      → system note
- *   { type: 'user', message: { role: 'user', content: [...] } }   → echo of our input
- *   { type: 'assistant', message: { role: 'assistant', content: [{type:'text',text}] } }
- *                                                                  → assistant bubble
- *   { type: 'result', subtype: 'success', result: '...', is_error: false }
- *                                                                  → final assistant message
- *   { type: 'result', subtype: 'error_max_turns' | ..., is_error: true, ... }
- *                                                                  → error bubble
- *   { type: 'content_block_delta', delta: { type: 'text_delta', text: '...' } }
+ *   { type: 'system', subtype: 'init', ... }                     → system note
+ *   { type: 'user', message: { role, content: [text|tool_result, ...] } }
+ *                                                                  → echo + tool results
+ *   { type: 'assistant', message: { role, content: [text|tool_use|thinking, ...] } }
+ *                                                                  → text bubbles + tool cards + thinking
+ *   { type: 'result', subtype: 'success', result: '...', is_error }
+ *                                                                  → final text or error bubble
+ *   { type: 'content_block_delta', delta: { type: 'text_delta', text } }
  *                                                                  → streaming text delta
  *
- * Unknown shapes fall back to `ignore` with a reason — caller can stash
+ * Unknown shapes return a single `ignore` action — caller can stash
  * them in a debug pane if it wants.
  */
-export function interpretClaudeChatEvent(value: unknown): ClaudeChatAction {
+export function interpretClaudeChatEvent(value: unknown): ClaudeChatAction[] {
   if (!value || typeof value !== 'object') {
-    return { kind: 'ignore', reason: 'non-object event' };
+    return [{ kind: 'ignore', reason: 'non-object event' }];
   }
   const ev = value as Record<string, unknown>;
   const type = typeof ev.type === 'string' ? ev.type : null;
 
-  // Streaming text deltas (Anthropic Messages API style).
+  // Streaming text deltas (Anthropic Messages API style). One delta = one append.
   if (type === 'content_block_delta' && ev.delta && typeof ev.delta === 'object') {
     const d = ev.delta as Record<string, unknown>;
     if (d.type === 'text_delta' && typeof d.text === 'string') {
-      return { kind: 'append-assistant-text', text: d.text };
+      return [{ kind: 'append-assistant-text', text: d.text }];
     }
-    return { kind: 'ignore', reason: `content_block_delta type=${String(d.type)}` };
+    return [{ kind: 'ignore', reason: `content_block_delta type=${String(d.type)}` }];
   }
 
-  // Whole assistant message (non-streaming success result or complete bubble).
+  // Assistant message — iterate content blocks, emit one action per block.
   if (type === 'assistant' && ev.message && typeof ev.message === 'object') {
-    const text = extractTextFromMessage(ev.message);
-    if (text !== null) return { kind: 'replace-last-assistant', text };
-    return { kind: 'ignore', reason: 'assistant message with no text content' };
+    return contentBlocksToActions(
+      (ev.message as Record<string, unknown>).content,
+      'assistant'
+    );
   }
 
-  // CLI echoes our user input back.
+  // User message — same iteration. User messages can include tool_result
+  // blocks (that's how the Messages API threads tool outputs back to the model).
   if (type === 'user' && ev.message && typeof ev.message === 'object') {
-    const text = extractTextFromMessage(ev.message);
-    if (text !== null) return { kind: 'new-user-message', text };
-    return { kind: 'ignore', reason: 'user message with no text content' };
+    return contentBlocksToActions(
+      (ev.message as Record<string, unknown>).content,
+      'user'
+    );
   }
 
-  // Final result event — also carries the assistant text.
+  // Final result — replace last assistant-text bubble with the consolidated
+  // text. Errors become error bubbles.
   if (type === 'result') {
     const isError = ev.is_error === true;
     const text =
@@ -168,24 +178,20 @@ export function interpretClaudeChatEvent(value: unknown): ClaudeChatAction {
         ? (ev.error as string)
         : '';
     if (isError) {
-      return { kind: 'error', text: text || 'Claude reported an error.' };
+      return [{ kind: 'error', text: text || 'Claude reported an error.' }];
     }
-    if (text) return { kind: 'replace-last-assistant', text };
-    return { kind: 'ignore', reason: 'result with no text payload' };
+    if (text) return [{ kind: 'replace-last-assistant', text }];
+    return [{ kind: 'ignore', reason: 'result with no text payload' }];
   }
 
-  // System / init metadata.
   if (type === 'system') {
     const subtype = typeof ev.subtype === 'string' ? ev.subtype : 'system';
-    // Init events fire on session start; surface as a small note so the
-    // user knows the JSON channel is alive.
     if (subtype === 'init') {
-      return { kind: 'system', text: 'Claude JSON session ready.' };
+      return [{ kind: 'system', text: 'Claude JSON session ready.' }];
     }
-    return { kind: 'ignore', reason: `system subtype=${subtype}` };
+    return [{ kind: 'ignore', reason: `system subtype=${subtype}` }];
   }
 
-  // Top-level error event (rare; usually wrapped in `result`).
   if (type === 'error') {
     const msg =
       typeof ev.error === 'string'
@@ -193,33 +199,90 @@ export function interpretClaudeChatEvent(value: unknown): ClaudeChatAction {
         : typeof ev.message === 'string'
         ? (ev.message as string)
         : 'Unknown error';
-    return { kind: 'error', text: msg };
+    return [{ kind: 'error', text: msg }];
   }
 
-  return { kind: 'ignore', reason: `unknown type=${type ?? '(missing)'}` };
+  return [{ kind: 'ignore', reason: `unknown type=${type ?? '(missing)'}` }];
 }
 
 /**
- * Pull a flat text string out of an Anthropic-style message object.
- * Messages look like `{ role, content: [{type:'text', text:'...'}, ...] }`.
- * Returns null if no text was found.
+ * Walk an Anthropic-style content array and emit one action per block.
+ * Blocks we recognize: `text`, `tool_use`, `tool_result`, `thinking`.
+ * Unknown block types become `ignore` actions.
  */
-function extractTextFromMessage(message: unknown): string | null {
-  if (!message || typeof message !== 'object') return null;
-  const m = message as Record<string, unknown>;
-  const content = m.content;
-  if (!Array.isArray(content)) return null;
+function contentBlocksToActions(
+  content: unknown,
+  role: 'assistant' | 'user'
+): ClaudeChatAction[] {
+  if (!Array.isArray(content)) {
+    return [{ kind: 'ignore', reason: `${role} message with non-array content` }];
+  }
+  const out: ClaudeChatAction[] = [];
+  for (const block of content) {
+    if (!block || typeof block !== 'object') continue;
+    const b = block as Record<string, unknown>;
+    const btype = typeof b.type === 'string' ? b.type : null;
+
+    if (btype === 'text' && typeof b.text === 'string') {
+      if (role === 'assistant') {
+        // Use append-assistant-text rather than replace; the renderer's
+        // applyClaudeAction starts a new text bubble whenever the
+        // previous message isn't a plain assistant-text bubble (i.e.
+        // tool_use cards interrupt the run), so mixed [text, tool, text]
+        // produces three visual messages in stream order.
+        out.push({ kind: 'append-assistant-text', text: b.text });
+      } else {
+        out.push({ kind: 'new-user-message', text: b.text });
+      }
+      continue;
+    }
+
+    if (btype === 'tool_use') {
+      const id = typeof b.id === 'string' ? b.id : `tu_${Math.random().toString(36).slice(2, 10)}`;
+      const name = typeof b.name === 'string' ? b.name : 'tool';
+      out.push({ kind: 'add-tool-use', toolUseId: id, name, input: b.input });
+      continue;
+    }
+
+    if (btype === 'tool_result') {
+      const toolUseId = typeof b.tool_use_id === 'string' ? b.tool_use_id : '';
+      out.push({
+        kind: 'add-tool-result',
+        toolUseId,
+        output: extractToolResultText(b.content),
+      });
+      continue;
+    }
+
+    if (btype === 'thinking' && typeof b.thinking === 'string') {
+      out.push({ kind: 'add-thinking', text: b.thinking });
+      continue;
+    }
+
+    out.push({ kind: 'ignore', reason: `${role} block type=${btype ?? '(missing)'}` });
+  }
+  if (out.length === 0) {
+    return [{ kind: 'ignore', reason: `${role} message with no recognizable blocks` }];
+  }
+  return out;
+}
+
+/**
+ * Tool-result content per the Anthropic Messages API can be a string
+ * OR an array of content blocks (each a {type:'text',text} or image).
+ * We flatten to a single string for display; images get a placeholder.
+ */
+function extractToolResultText(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
   const parts: string[] = [];
   for (const block of content) {
     if (!block || typeof block !== 'object') continue;
     const b = block as Record<string, unknown>;
-    if (b.type === 'text' && typeof b.text === 'string') {
-      parts.push(b.text);
-    }
-    // Future: tool_use, tool_result, thinking — render specially when
-    // we have UI for them. For now they're invisible (logged via ignore).
+    if (b.type === 'text' && typeof b.text === 'string') parts.push(b.text);
+    else if (b.type === 'image') parts.push('[image]');
   }
-  return parts.length > 0 ? parts.join('') : null;
+  return parts.join('\n');
 }
 
 // --- User-input encoder -----------------------------------------------------

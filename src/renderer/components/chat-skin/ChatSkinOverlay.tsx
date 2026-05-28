@@ -47,11 +47,28 @@ function isJsonStreamProfile(profile: string | undefined): boolean {
  *     cursor-to-start-of-line; chat UI just wants newlines.
  */
 
+/**
+ * One unit of the chat timeline. Most messages carry plain `text`. Tool
+ * blocks (chat-mode only) attach via the discriminator fields below — a
+ * tool_use card has `toolUse` set, a tool_result has `toolResult` set,
+ * a thinking block has `thinking` set. The renderer dispatches on
+ * whichever is present (text falls through as the default).
+ */
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
   timestamp: number;
+  toolUse?: { id: string; name: string; input: unknown };
+  toolResult?: { toolUseId: string; output: string };
+  thinking?: string;
+}
+
+/** True when the message is a plain text bubble — used by the JSON
+ *  reducer to decide whether a delta should append to the current
+ *  bubble or start a new one (tool/thinking interrupt the run). */
+function isPlainTextMessage(m: ChatMessage | undefined): boolean {
+  return !!m && !m.toolUse && !m.toolResult && !m.thinking;
 }
 
 interface Props {
@@ -217,8 +234,13 @@ export function ChatSkinOverlay({ paneId, visible, onToggleOff, profile }: Props
           ]);
           continue;
         }
-        const action = interpretClaudeChatEvent(ev.value);
-        next = applyClaudeAction(next, action);
+        // Interpreter now returns an action array — one event can fan
+        // out into multiple visual messages when a content_block array
+        // contains text + tool_use + text etc.
+        const actions = interpretClaudeChatEvent(ev.value);
+        for (const action of actions) {
+          next = applyClaudeAction(next, action);
+        }
       }
       return next;
     });
@@ -445,6 +467,13 @@ function PersonaAvatar({ size = 32 }: { size?: number }) {
 }
 
 function MessageBubble({ message, showCursor }: { message: ChatMessage; showCursor: boolean }) {
+  // Dispatch on tool/thinking discriminators before falling through to
+  // the plain text bubble path. Each renders as its own row in the
+  // timeline so the visual order matches Claude's emit order.
+  if (message.toolUse) return <ToolUseCard toolUse={message.toolUse} />;
+  if (message.toolResult) return <ToolResultCard result={message.toolResult} />;
+  if (message.thinking) return <ThinkingBlock text={message.thinking} />;
+
   const isUser = message.role === 'user';
   // Detect Claude/Codex/Aider-style interactive selection prompts. These
   // require keyboard-only responses (Enter / Esc / numeric pick) that the
@@ -497,6 +526,300 @@ function MessageBubble({ message, showCursor }: { message: ChatMessage; showCurs
       </div>
     </div>
   );
+}
+
+// --- Tool-use / tool-result / thinking renderers (chat-mode profile) ----
+
+/**
+ * Compact card for a `tool_use` content block. Shows the tool name
+ * and a one-line input preview by default; click to expand the full
+ * JSON input. Pure presentation — actual tool execution happens in
+ * the CLI, this is just visibility.
+ */
+function ToolUseCard({ toolUse }: { toolUse: NonNullable<ChatMessage['toolUse']> }) {
+  const [open, setOpen] = useState(false);
+  const summary = summarizeToolInput(toolUse.input);
+  return (
+    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+      <div
+        style={{
+          maxWidth: '85%',
+          padding: '8px 12px',
+          borderRadius: 12,
+          background: 'rgba(124,58,237,0.08)',
+          border: '1px solid rgba(124,58,237,0.25)',
+          fontSize: 13,
+          color: 'var(--text-primary)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+          minWidth: 0,
+        }}
+      >
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            color: 'inherit',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            textAlign: 'left',
+          }}
+        >
+          <span style={{ fontSize: 14 }} aria-hidden="true">🔧</span>
+          <span style={{ fontWeight: 600 }}>{toolUse.name}</span>
+          {!open && summary && (
+            <span
+              style={{
+                color: 'var(--text-secondary)',
+                fontFamily: MONO_STACK,
+                fontSize: 11,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                minWidth: 0,
+                flex: 1,
+              }}
+            >
+              {summary}
+            </span>
+          )}
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontSize: 10,
+              color: 'var(--text-secondary)',
+              transform: open ? 'rotate(180deg)' : 'rotate(0)',
+              transition: 'transform 120ms',
+            }}
+            aria-hidden="true"
+          >
+            ▾
+          </span>
+        </button>
+        {open && (
+          <pre
+            style={{
+              margin: 0,
+              padding: '8px 10px',
+              background: '#0a0a14',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              fontSize: 11,
+              lineHeight: 1.4,
+              fontFamily: MONO_STACK,
+              color: 'var(--text-primary)',
+              overflow: 'auto',
+              maxHeight: 240,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+            }}
+          >
+            {safeStringify(toolUse.input)}
+          </pre>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Compact card for a `tool_result` content block. Collapsed by default
+ * since outputs are often long (file contents, command output). Click
+ * to expand. The matching tool_use_id is shown so the user can correlate
+ * even when results arrive out of order.
+ */
+function ToolResultCard({ result }: { result: NonNullable<ChatMessage['toolResult']> }) {
+  const [open, setOpen] = useState(false);
+  const lineCount = result.output ? result.output.split('\n').length : 0;
+  const preview = result.output ? result.output.replace(/\n/g, ' ').slice(0, 80) : '(empty)';
+  return (
+    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+      <div
+        style={{
+          maxWidth: '85%',
+          padding: '8px 12px',
+          borderRadius: 12,
+          background: 'rgba(74,222,128,0.06)',
+          border: '1px solid rgba(74,222,128,0.22)',
+          fontSize: 13,
+          color: 'var(--text-primary)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+          minWidth: 0,
+        }}
+      >
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            color: 'inherit',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            textAlign: 'left',
+          }}
+        >
+          <span style={{ fontSize: 14 }} aria-hidden="true">↩</span>
+          <span style={{ fontWeight: 600 }}>Tool result</span>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+            ({lineCount} {lineCount === 1 ? 'line' : 'lines'})
+          </span>
+          {!open && (
+            <span
+              style={{
+                color: 'var(--text-secondary)',
+                fontFamily: MONO_STACK,
+                fontSize: 11,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                minWidth: 0,
+                flex: 1,
+              }}
+            >
+              {preview}
+            </span>
+          )}
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontSize: 10,
+              color: 'var(--text-secondary)',
+              transform: open ? 'rotate(180deg)' : 'rotate(0)',
+              transition: 'transform 120ms',
+            }}
+            aria-hidden="true"
+          >
+            ▾
+          </span>
+        </button>
+        {open && (
+          <pre
+            style={{
+              margin: 0,
+              padding: '8px 10px',
+              background: '#0a0a14',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              fontSize: 11,
+              lineHeight: 1.4,
+              fontFamily: MONO_STACK,
+              color: 'var(--text-primary)',
+              overflow: 'auto',
+              maxHeight: 320,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+            }}
+          >
+            {result.output || '(empty)'}
+          </pre>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Inline display for Claude's extended-reasoning `thinking` blocks.
+ * Muted + italic by default so it doesn't compete with the actual
+ * response. Click-to-expand for the full reasoning text.
+ */
+function ThinkingBlock({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const lineCount = text.split('\n').length;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+      <div
+        style={{
+          maxWidth: '85%',
+          padding: '8px 12px',
+          borderRadius: 12,
+          background: 'rgba(148,163,184,0.06)',
+          border: '1px dashed rgba(148,163,184,0.30)',
+          color: 'var(--text-secondary)',
+          fontStyle: 'italic',
+          fontSize: 12,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+          minWidth: 0,
+        }}
+      >
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            color: 'inherit',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            textAlign: 'left',
+          }}
+        >
+          <span aria-hidden="true">💭</span>
+          <span style={{ fontWeight: 600, fontStyle: 'normal' }}>Thinking</span>
+          <span style={{ fontStyle: 'normal', fontSize: 11 }}>
+            ({lineCount} {lineCount === 1 ? 'line' : 'lines'})
+          </span>
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontSize: 10,
+              transform: open ? 'rotate(180deg)' : 'rotate(0)',
+              transition: 'transform 120ms',
+              fontStyle: 'normal',
+            }}
+            aria-hidden="true"
+          >
+            ▾
+          </span>
+        </button>
+        {open && (
+          <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{text}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function summarizeToolInput(input: unknown): string {
+  // Try to surface the most useful field (path, command, query, prompt)
+  // so the user gets a glance-level read on what the tool is doing
+  // without expanding the card.
+  if (!input || typeof input !== 'object') return '';
+  const obj = input as Record<string, unknown>;
+  for (const key of ['file_path', 'path', 'filename', 'command', 'query', 'pattern', 'prompt', 'url']) {
+    const v = obj[key];
+    if (typeof v === 'string' && v.length > 0) return v.length > 80 ? v.slice(0, 79) + '…' : v;
+  }
+  const keys = Object.keys(obj).slice(0, 3).join(', ');
+  return keys ? `{ ${keys} }` : '';
+}
+
+function safeStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
 }
 
 function InteractivePromptBanner() {
@@ -950,7 +1273,11 @@ function applyClaudeAction(
   switch (action.kind) {
     case 'append-assistant-text': {
       const last = prev[prev.length - 1];
-      if (last && last.role === 'assistant') {
+      // Only append when the last message is a *plain text* assistant
+      // bubble. Tool cards / thinking blocks interrupt the text run, so
+      // any text after them starts a fresh bubble — mirrors how the
+      // stream actually reads top-to-bottom.
+      if (last && last.role === 'assistant' && isPlainTextMessage(last)) {
         const nextText = (last.text + action.text).slice(0, MAX_MESSAGE_CHARS);
         return [...prev.slice(0, -1), { ...last, text: nextText }];
       }
@@ -967,7 +1294,7 @@ function applyClaudeAction(
     case 'replace-last-assistant': {
       const last = prev[prev.length - 1];
       const text = action.text.slice(0, MAX_MESSAGE_CHARS);
-      if (last && last.role === 'assistant') {
+      if (last && last.role === 'assistant' && isPlainTextMessage(last)) {
         return [...prev.slice(0, -1), { ...last, text }];
       }
       return cap([
@@ -975,10 +1302,55 @@ function applyClaudeAction(
         { id: makeId(), role: 'assistant', text, timestamp: Date.now() },
       ]);
     }
+    case 'add-tool-use': {
+      return cap([
+        ...prev,
+        {
+          id: makeId(),
+          role: 'assistant',
+          text: '',
+          timestamp: Date.now(),
+          toolUse: {
+            id: action.toolUseId,
+            name: action.name,
+            input: action.input,
+          },
+        },
+      ]);
+    }
+    case 'add-tool-result': {
+      return cap([
+        ...prev,
+        {
+          id: makeId(),
+          role: 'user',
+          text: '',
+          timestamp: Date.now(),
+          toolResult: {
+            toolUseId: action.toolUseId,
+            output: action.output.slice(0, MAX_MESSAGE_CHARS),
+          },
+        },
+      ]);
+    }
+    case 'add-thinking': {
+      return cap([
+        ...prev,
+        {
+          id: makeId(),
+          role: 'assistant',
+          text: '',
+          timestamp: Date.now(),
+          thinking: action.text.slice(0, MAX_MESSAGE_CHARS),
+        },
+      ]);
+    }
     case 'new-user-message': {
       // Don't double-add: if the most recent user bubble already matches,
       // it's the optimistic render we added on send(). Skip the echo.
-      const recentUser = [...prev].reverse().find((m) => m.role === 'user');
+      const recentUser = [...prev]
+        .reverse()
+        .find((m) => m.role === 'user' && isPlainTextMessage(m));
       if (recentUser && recentUser.text.trim() === action.text.trim()) {
         return prev;
       }
