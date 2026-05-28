@@ -278,6 +278,11 @@ interface Window {
       listCached: () => Promise<import('./shared/types').HFCachedEntry[]>;
       removeCached: (repoId: string) => Promise<boolean>;
       getCachePath: () => Promise<string>;
+      importAndLaunch: (
+        repoId: string,
+        quant: string | null,
+        cwd?: string
+      ) => Promise<import('./shared/types').ModelLaunchResult>;
     };
     tray: {
       getSettings: () => Promise<import('./shared/types').TraySettings>;

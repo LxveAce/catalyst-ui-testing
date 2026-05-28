@@ -540,53 +540,53 @@ function setupModels() {
       }
       const safeCwd =
         typeof cwd === 'string' && cwd.length > 0 && cwd.length <= 4096 ? cwd : undefined;
-      // paneId = "model:<id>-<timestamp>" — bounded length, only allowed chars.
-      const safeIdPart = model.id.replace(/[^A-Za-z0-9_\-:]/g, '_').slice(0, 40);
-      const paneId = `model:${safeIdPart}-${Date.now().toString(36)}`.slice(0, 64);
-      // Map the model's provider display name → canonical ProviderId (or
-      // null for local/Ollama models that don't need an API key). If we
-      // have a key on file, inject it as the env var the spawned CLI
-      // expects (ANTHROPIC_API_KEY / OPENAI_API_KEY / etc.). The PTY
-      // interceptor also attaches so an interactive prompt from the CLI
-      // can be intercepted + answered via ApiKeyModal.
-      const providerId = normalizeProvider(model.provider);
-      const envInjection: Record<string, string> = providerId
-        ? ProviderAuthService.instance().envForProvider(providerId)
-        : {};
-      try {
-        // Tag for ResourceMonitor's `models` bucket — keeps its RAM/CPU
-        // out of the `claude` bucket and out of `ollama` (the daemon is
-        // tracked separately via process-name scan).
-        ptyRegistry.setPaneCategory(paneId, 'model');
-        ptyRegistry.spawn(paneId, safeCwd, {
-          command: model.command,
-          args: model.args,
-          env: envInjection,
-          label: model.name,
-        });
-        // Only attach the interceptor if we have a provider we know how to
-        // recognize. Avoids extra work on Ollama / Claude (which already
-        // handle their own auth).
-        if (providerId) {
-          ptyKeyInterceptor.attach(paneId, providerId);
-        }
-        syncResourcePids();
-        return {
-          ok: true,
-          paneId,
-          commandLine: ptyRegistry.commandLineFor(paneId),
-          error: null,
-        };
-      } catch (e) {
-        return {
-          ok: false,
-          paneId: null,
-          commandLine: null,
-          error: e instanceof Error ? e.message : String(e),
-        };
-      }
+      return launchModelDefinition(model, safeCwd);
     }
   );
+}
+
+/**
+ * Shared launcher used by MODELS_LAUNCH and HF_IMPORT_AND_LAUNCH.
+ * Synthesises a paneId, spawns the PTY with the model's command line,
+ * attaches the API-key interceptor for providers we know how to
+ * recognise, and returns the standard ModelLaunchResult.
+ *
+ * Lives outside setupModels so the HF wire-up (a separate setup
+ * function) can call it without re-deriving the closure state.
+ */
+function launchModelDefinition(model: ModelDefinition, cwd?: string): ModelLaunchResult {
+  const safeIdPart = model.id.replace(/[^A-Za-z0-9_\-:]/g, '_').slice(0, 40);
+  const paneId = `model:${safeIdPart}-${Date.now().toString(36)}`.slice(0, 64);
+  const providerId = normalizeProvider(model.provider);
+  const envInjection: Record<string, string> = providerId
+    ? ProviderAuthService.instance().envForProvider(providerId)
+    : {};
+  try {
+    ptyRegistry.setPaneCategory(paneId, 'model');
+    ptyRegistry.spawn(paneId, cwd, {
+      command: model.command,
+      args: model.args,
+      env: envInjection,
+      label: model.name,
+    });
+    if (providerId) {
+      ptyKeyInterceptor.attach(paneId, providerId);
+    }
+    syncResourcePids();
+    return {
+      ok: true,
+      paneId,
+      commandLine: ptyRegistry.commandLineFor(paneId),
+      error: null,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      paneId: null,
+      commandLine: null,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
 }
 
 function setupOllama() {
@@ -1323,6 +1323,74 @@ function setupHuggingFace() {
     return getHuggingFace().removeCached(repoId);
   });
   ipcMain.handle(IPC.HF_GET_CACHE_PATH, () => getHuggingFace().getCachePath());
+
+  ipcMain.handle(
+    IPC.HF_IMPORT_AND_LAUNCH,
+    async (
+      _event,
+      repoIdRaw: unknown,
+      quantRaw: unknown,
+      cwdRaw: unknown
+    ): Promise<ModelLaunchResult> => {
+      if (typeof repoIdRaw !== 'string') {
+        return { ok: false, paneId: null, commandLine: null, error: 'repoId must be a string' };
+      }
+      if (!/^[A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-]+$/.test(repoIdRaw) || repoIdRaw.length > 256) {
+        return { ok: false, paneId: null, commandLine: null, error: 'invalid repoId' };
+      }
+      const quant =
+        typeof quantRaw === 'string' && /^[A-Za-z0-9_.]+$/.test(quantRaw) && quantRaw.length <= 32
+          ? quantRaw
+          : null;
+      const cwd =
+        typeof cwdRaw === 'string' && cwdRaw.length > 0 && cwdRaw.length <= 4096
+          ? cwdRaw
+          : undefined;
+
+      // Idempotent synthesized id so the SAME repo+quant maps to the
+      // same catalog entry on repeated imports.
+      const safeRepo = repoIdRaw.replace('/', '.').replace(/[^A-Za-z0-9_.\-]/g, '_');
+      const safeQuant = quant ?? 'default';
+      const synthId = `hf.${safeRepo}.${safeQuant.toLowerCase()}`;
+      const ollamaName = `hf.co/${repoIdRaw}${quant ? `:${quant}` : ''}`;
+
+      const reg = ModelRegistry.instance();
+      let model = reg.get(synthId);
+      if (!model) {
+        const fresh: ModelDefinition = {
+          id: synthId,
+          name: `${repoIdRaw}${quant ? ` (${quant})` : ''}`,
+          description: `Imported from Hugging Face — runs via Ollama (\`${ollamaName}\`).`,
+          category: 'local',
+          provider: 'Ollama',
+          command: 'ollama',
+          args: ['run', ollamaName],
+          ollamaName,
+          huggingfaceName: repoIdRaw,
+          architecture: 'dense',
+          recommendedQuant: quant ?? undefined,
+          roles: ['general-chat'],
+          hardwareTiers: ['low', 'mid', 'high'],
+          badge: 'HF Import',
+          recommendedFor:
+            'Imported from the Hugging Face panel.  Ollama pulls the weights on first launch.',
+        };
+        try {
+          reg.add(fresh);
+          model = fresh;
+        } catch (e) {
+          return {
+            ok: false,
+            paneId: null,
+            commandLine: null,
+            error: e instanceof Error ? e.message : String(e),
+          };
+        }
+      }
+
+      return launchModelDefinition(model, cwd);
+    }
+  );
 }
 
 function setupTray() {
