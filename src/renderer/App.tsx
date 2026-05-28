@@ -263,6 +263,17 @@ export function App() {
       // etc.) where the user needs to type an argument before submitting.
       sendToActive(command, submit);
       setActivePanel('terminal');
+      // When the user just dropped a starter command into the pane,
+      // auto-focus the active terminal so they can finish typing the
+      // argument without an extra click (closes M-1 from
+      // SECURITY_REVIEW_POLISH.md). Dispatched as a window event so
+      // any mounted TerminalPanel / EmbeddedTerminal can opt in via
+      // its `active` prop; non-active panes ignore.
+      if (!submit) {
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new CustomEvent('ccs-focus-active-terminal'));
+        });
+      }
     },
     [sendToActive]
   );
@@ -563,18 +574,28 @@ export function App() {
           onClose={() => setCliOnboardingOpen(false)}
           sendToActivePane={(text) => {
             // "Sign in to Claude" types `/login` (Claude's in-session
-            // slash command) into the active pane. The embedded PTY
-            // auto-spawns Claude, so the active pane is always a running
-            // Claude session — `/login` triggers the browser OAuth flow
-            // from inside that session. Typing `claude login` (the bare
-            // shell command) here would be treated as chat text and
-            // Claude would reply "I notice you typed claude login as a
-            // message…" — exactly the bug caught in 3.0.0-beta.1.
+            // slash command) into the active pane. PRE-TerminalTabs,
+            // the active pane was always a Claude PTY; PR #27 (M-3
+            // TerminalTabs fix) handles the multi-tab case explicitly:
+            // if the user has switched focus to an Ollama / Aider /
+            // Gemini tab, find a Claude tab first and switch to it,
+            // then send. If no Claude tab exists at all, fall back to
+            // sending into whatever's active — the worst case is a
+            // visible error in the model tab the user can recover from.
             //
             // submit=true appends CR so Claude executes the slash command
             // immediately. Without CR the text appears typed but inert.
-            setActivePanel('terminal');
-            sendToActive(text, true);
+            const claudeTab = tabs.find((t) => t.profile === 'claude');
+            if (claudeTab && claudeTab.id !== activeTabId) {
+              setActiveTabId(claudeTab.id);
+              setActivePanel('terminal');
+              // Defer the send by one tick so the new active tab's
+              // sender has time to register in App.sendersRef.
+              setTimeout(() => sendToActive(text, true), 100);
+            } else {
+              setActivePanel('terminal');
+              sendToActive(text, true);
+            }
           }}
         />
       )}

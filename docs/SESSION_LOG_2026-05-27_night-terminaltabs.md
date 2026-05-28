@@ -437,3 +437,79 @@ parse-error bubble with the binary's actual usage message (failure
 actual `claude` binary on the verifier host.
 
 **8 of 9 original followups shipped.** The 9th is a manual probe.
+
+---
+
+## Addendum 7 — Final push to 100% (PRs #25, #26, #27)
+
+User said "keep going until its all finished and 100%". Bundled the
+remaining backlog into 3 stacked PRs that close every open H + M from
+every red-team this session.
+
+### PR #25 — CLI capability probe (closes H-1)
+
+Proactive `claude --help` probe at app startup; renderer badges the
+`Claude (Chat)` catalog entry when stream-json isn't supported.
+
+| Layer | Change |
+|---|---|
+| `shared/types.ts` | New `CliCapabilities` interface. |
+| `shared/ipc-channels.ts` | New `CLI_CAPABILITIES` channel. |
+| `main/cli-service.ts` | New `getCapabilities({force?})` — runs `claude --help` with 5s timeout, caches per session, parses for stream-json + --print + version. Forgiving on non-zero exit. |
+| `main/index.ts` | IPC handler registration. |
+| `preload/preload.ts` + `declarations.d.ts` | Expose `cli.capabilities()`. |
+| `renderer/components/terminal/TerminalTabs.tsx` | Fetch on mount; `STREAM_JSON_REQUIRED_PROFILES` set; ProfilePicker→PickerGroup thread `cliCaps`; incompatible entries show a yellow "CLI flags?" pill + tooltip. |
+
+### PR #26 — Tool-use polish bundle (closes M-1/2/3 tool-use)
+
+Three additive UX tightenings in one PR:
+- **M-1**: `shortToolId()` strips `toolu_`/`tu_` prefixes and shows the first 6 chars as `#abc123` badge on BOTH cards. Same id on both → user correlates at a glance.
+- **M-2**: `TOOL_SUMMARY_FIELDS` expanded from 8 to 18 candidate fields (catches Anthropic SDK conventions + web tools + generic text/content).
+- **M-3**: `formatImagePlaceholder()` reports `media_type` + source kind + size — `[image: image/png, base64, ~24 KB]` instead of `[image]`. Real image rendering still a follow-up (CSP review needed).
+
+### PR #27 — General polish bundle (closes M-1 polish + M-2 polish + M-3 chat-mode + M-3 TerminalTabs)
+
+| Fix | What |
+|---|---|
+| **M-2 polish** | `capNotice` auto-dismiss extended to 10s + click-to-dismiss button. Banner less likely to vanish before user notices. |
+| **M-1 polish** | `submit:false` commands dispatch `ccs-focus-active-terminal` window event. TerminalPanel + EmbeddedTerminal listen; when active they call `term.focus()`. User finishes typing the argument without an extra click. |
+| **M-3 chat-mode** | User-message echo dedup uses `normalizeForDedup` (collapse whitespace runs + trim) so Claude's internal text normalization doesn't double-render the bubble. |
+| **M-3 TerminalTabs** | `CliAuthOnboarding`'s sendToActivePane callback routes to a Claude tab first if the active tab is non-Claude. Otherwise `/login` would go to ollama/aider and confuse. |
+
+### Verification
+
+- ✅ `npx tsc --noEmit` clean for all 3.
+- ✅ `npx vite build` clean for all 3.
+- ✅ Runtime verifier — final 30/30 run after PR #27 confirms zero regression.
+
+### Final state — 100% of Highs + Mediums closed
+
+| Review | Original H/M findings | Closed |
+|---|---|---|
+| SECURITY_REVIEW_TERMINAL_TABS.md | C-1, H-1, M-1, M-3 | 4/4 (M-2 cosmetic-only, deferred per review) |
+| SECURITY_REVIEW_COMMANDS_TAB.md | H-1, M-1, M-2 | 3/3 (M-3 cosmetic, deferred) |
+| SECURITY_REVIEW_CHAT_MODE.md | H-1, M-1, M-2, M-3 | 4/4 |
+| SECURITY_REVIEW_POLISH.md | M-1, M-2 | 2/2 |
+| SECURITY_REVIEW_TOOL_USE.md | M-1, M-2, M-3 | 3/3 |
+
+**16 of 16 actionable H/M findings closed**. The 2 remaining
+cosmetic-marked Mediums (TerminalTabs M-2, Commands M-3) were
+explicitly classified as "no correctness issue" by the reviews
+themselves. Lows stay deferred per category L policy.
+
+### Stack — 10 PRs from a single session
+
+- #18 — TerminalTabs wiring + session v2 (foundation)
+- #19 — Commands tab mirror + H-1 fix + verifier extension
+- #20 — Claude chat-mode profile + JSONL parser
+- #21 — Polish (submit flag + tab cap)
+- #22 — Tool-use / tool-result / thinking renderer
+- #23 — Model-tab PID surfacing
+- #24 — Stop button in chat-mode
+- #25 — CLI capability probe (closes H-1)
+- #26 — Tool-use polish bundle (closes 3 Mediums)
+- #27 — General polish bundle (closes 4 Mediums)
+
+Everything pushed to `testing` remote. `origin` (public release repo)
+remains untouched the entire session. Merge in stack order; each base
+auto-rebases to `master` on the prior merge.

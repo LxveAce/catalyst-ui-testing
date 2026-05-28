@@ -919,6 +919,16 @@ function shortToolId(id: string): string {
   return cleaned.slice(0, 6);
 }
 
+/**
+ * Collapse whitespace runs to single spaces + trim. Used for the
+ * user-message echo dedup so Claude's text normalization (`\n\n\n` →
+ * `\n\n`, trailing-space removal, etc.) doesn't trip the equality
+ * check and double-render the message.
+ */
+function normalizeForDedup(s: string): string {
+  return s.replace(/\s+/g, ' ').trim();
+}
+
 function safeStringify(value: unknown): string {
   try {
     return JSON.stringify(value, null, 2);
@@ -1505,11 +1515,18 @@ function applyClaudeAction(
     }
     case 'new-user-message': {
       // Don't double-add: if the most recent user bubble already matches,
-      // it's the optimistic render we added on send(). Skip the echo.
+      // it's the optimistic render we added on send(). Compare on a
+      // whitespace-normalized basis (PR #27, closes M-3 chat-mode) so
+      // that Claude's internal text normalization — collapsing repeated
+      // newlines or trimming trailing spaces — doesn't cause the same
+      // message to appear twice.
       const recentUser = [...prev]
         .reverse()
         .find((m) => m.role === 'user' && isPlainTextMessage(m));
-      if (recentUser && recentUser.text.trim() === action.text.trim()) {
+      if (
+        recentUser &&
+        normalizeForDedup(recentUser.text) === normalizeForDedup(action.text)
+      ) {
         return prev;
       }
       return cap([
