@@ -283,49 +283,103 @@ function GgufVariantList({
   variants: HFGgufVariant[];
   onErr: (msg: string | null) => void;
 }) {
-  // The Ollama-bridge import button lands in PR #56 — for now we surface
-  // the variants + a "Copy ollama command" so users can paste it
-  // manually.  This keeps the Browse PR independently shippable.
+  // Per-variant launch state.  `null` means idle; "launching" while
+  // the IPC is in flight; "launched" for 4s after success so the
+  // user sees confirmation.
+  const [launchState, setLaunchState] = useState<Record<string, 'launching' | 'launched' | null>>({});
+  const launchTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => () => {
+    for (const t of Object.values(launchTimers.current)) clearTimeout(t);
+  }, []);
+
   if (variants.length === 0) {
     return <div style={subtleStyle}>No GGUF files in this repo.</div>;
   }
+
   const handleCopy = (quant: string | null) => {
     const cmd = `ollama run hf.co/${repoId}${quant ? `:${quant}` : ''}`;
     void window.electronAPI.app.clipboardWrite(cmd).then((ok) => {
       if (!ok) onErr(`Could not copy command. It was: ${cmd}`);
     });
   };
+
+  const handleImport = async (quant: string | null) => {
+    const key = quant ?? '__default__';
+    setLaunchState((s) => ({ ...s, [key]: 'launching' }));
+    try {
+      const cwd = await window.electronAPI.git.getCwd().catch(() => undefined);
+      const r = await window.electronAPI.hf.importAndLaunch(repoId, quant, cwd ?? undefined);
+      if (!r.ok) {
+        onErr(`Import failed: ${r.error ?? 'unknown error'}`);
+        setLaunchState((s) => ({ ...s, [key]: null }));
+        return;
+      }
+      setLaunchState((s) => ({ ...s, [key]: 'launched' }));
+      if (launchTimers.current[key]) clearTimeout(launchTimers.current[key]);
+      launchTimers.current[key] = setTimeout(() => {
+        setLaunchState((s) => ({ ...s, [key]: null }));
+      }, 4000);
+    } catch (e) {
+      onErr(formatError(e));
+      setLaunchState((s) => ({ ...s, [key]: null }));
+    }
+  };
+
   return (
     <div style={{ marginTop: 8 }}>
       <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
         GGUF variants ({variants.length})
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {variants.slice(0, 12).map((v) => (
-          <div
-            key={v.fileName}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '6px 8px',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              fontSize: 11,
-            }}
-          >
-            <span style={{ flex: 1, fontFamily: 'monospace', color: 'var(--text-primary)' }}>
-              {v.fileName}
-            </span>
-            {v.quant && <span style={tagChipStyle}>{v.quant}</span>}
-            {v.sizeBytes !== null && (
-              <span style={subtleStyle}>{fmtBytes(v.sizeBytes)}</span>
-            )}
-            <button onClick={() => handleCopy(v.quant)} style={smallBtnStyle}>Copy ollama cmd</button>
-          </div>
-        ))}
+        {variants.slice(0, 12).map((v) => {
+          const key = v.quant ?? '__default__';
+          const state = launchState[key];
+          return (
+            <div
+              key={v.fileName}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '6px 8px',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                borderRadius: 4,
+                fontSize: 11,
+              }}
+            >
+              <span style={{ flex: 1, fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+                {v.fileName}
+              </span>
+              {v.quant && <span style={tagChipStyle}>{v.quant}</span>}
+              {v.sizeBytes !== null && (
+                <span style={subtleStyle}>{fmtBytes(v.sizeBytes)}</span>
+              )}
+              <button
+                onClick={() => void handleImport(v.quant)}
+                disabled={state === 'launching'}
+                style={state === 'launched' ? { ...smallBtnStyle, color: '#22c55e', borderColor: '#22c55e' } : smallBtnStyle}
+                title="Adds this variant to the Models catalog and starts it via Ollama"
+              >
+                {state === 'launching' ? 'Launching…' : state === 'launched' ? '✓ Launched' : 'Import to Ollama'}
+              </button>
+              <button
+                onClick={() => handleCopy(v.quant)}
+                style={smallBtnStyle}
+                title="Copy the ollama run command to clipboard"
+              >
+                Copy cmd
+              </button>
+            </div>
+          );
+        })}
       </div>
+      {Object.values(launchState).some((s) => s === 'launched') && (
+        <div style={{ ...subtleStyle, marginTop: 6, color: 'var(--accent-light)' }}>
+          Launched — switch to the Models panel to view the running tab.
+        </div>
+      )}
     </div>
   );
 }
