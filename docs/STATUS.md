@@ -1,9 +1,9 @@
 # Claude Code Studio — Testing Repo STATUS
 
 > **Version:** v3.1.0
-> **Last updated:** 2026-05-27 (multi-session evening push — GPU + chat-skin v2 + auto-detect + BitNet + v3.1.0 bump)
-> **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`)
-> **Latest session log:** [`SESSION_LOG_2026-05-27_rnd-kickoff.md`](./SESSION_LOG_2026-05-27_rnd-kickoff.md)
+> **Last updated:** 2026-05-27 (post-handoff continuation — TerminalTabs wired into App.tsx; session schema v1→v2)
+> **Branch this describes:** `master` (testing repo only — `LxveAce/claude-code-studio-testing`); feature `feature/terminal-tabs-wiring` open
+> **Latest session log:** [`SESSION_LOG_2026-05-27_night-terminaltabs.md`](./SESSION_LOG_2026-05-27_night-terminaltabs.md)
 > **Latest verification report:** [`VERIFICATION_2026-05-27.md`](./VERIFICATION_2026-05-27.md)
 
 This is the always-current pickup doc. A fresh `git clone` + reading this file should
@@ -69,6 +69,42 @@ here first.
 ---
 
 ## What's live (deep dive)
+
+### TerminalTabs wiring + session schema v2 (this session)
+
+Replaces the SplitLayout pane tree in `App.tsx` with the
+Windows-Terminal-style `TerminalTabs` strip + content host scaffolded in
+PR #17. `App.tsx` now owns a `tabs: TerminalTab[]` + `activeTabId` pair
+instead of `layout: SplitNode`; `activePaneId` is derived from the active
+tab. `SplitLayout.tsx` deleted.
+
+Session schema bumped **v1 → v2**:
+
+- `SessionState` shape: `{ version, activePanel, theme, tabs: PersistedTab[], activeTabId }`.
+- `SessionService` migration extracts the first pane id from any v1 layout
+  tree and produces a single Claude tab on that paneId, so an alive PTY
+  from a hot-reload reattaches instead of orphaning.
+- Only Claude tabs are persisted; model tabs are ephemeral by design
+  (relaunching them silently would trigger surprise downloads / GPU
+  loads).
+- Sanitizer caps: 32 tabs, 64-char ids, paneId regex `^[A-Za-z0-9_\-:]+$`,
+  drops `profile !== 'claude'`, dedupes id and paneId.
+
+Palette tab actions replace the old pane actions:
+- "New Claude tab", "Close tab", "Next tab", "Previous tab", "Reset tabs"
+- (Split-horizontal / split-vertical removed — not meaningful in a tab
+  model.)
+
+Race fix in the scaffold: `TerminalTabs`'s `addClaudeTab` /
+`addModelTab` / `closeTab` were calling `onTabsChange` with closure-based
+arrays, which dropped any tabs added concurrently during a model-launch
+await window. Fixed by changing the prop to
+`React.Dispatch<React.SetStateAction<TerminalTab[]>>` and using updater
+functions throughout. See `docs/security-reviews/SECURITY_REVIEW_TERMINAL_TABS.md`
+finding C-1.
+
+Verification: `npx tsc --noEmit` clean, `npx vite build` clean. Manual
+smoke list in the security review file.
 
 ### GPU routing (PR #15) — fixes "my dedicated GPU is ignored"
 
@@ -168,31 +204,10 @@ To run again: `node scripts/runtime-verify.mjs` (will spawn Electron, ~3 min tot
 
 ## Deferred — pick up here next session
 
-Three things the user asked for that I scoped + (in one case) wrote the code for,
-but did NOT wire into the live app this session:
+Two of the three items from the previous handoff remain. Item #1
+(TerminalTabs wiring) shipped this session — see "What's live" below.
 
-### 1. Wire `TerminalTabs.tsx` into `App.tsx`
-
-**Status**: the file exists at `src/renderer/components/terminal/TerminalTabs.tsx`
-with a full Windows-Terminal-style implementation. NOT YET used by App.tsx — App
-still renders `SplitLayout`.
-
-Why deferred: wiring it means migrating the session-state shape from
-`layout: SplitNode` to `tabs: TerminalTab[]` (+ `activeTabId`). Shipping that
-half-done would regress users who relied on the existing split-pane layout. Needs:
-
-- App.tsx state: drop `layout` + `activePaneId` (or keep activePaneId derived from
-  active tab), add `tabs` + `activeTabId`.
-- Replace `<SplitLayout … />` with `<TerminalTabs … />`.
-- Session persistence: write `{ tabs, activeTabId }` instead of `{ layout, activePanel }`.
-  Backward-compat: detect old shape on read and migrate to a single Claude tab.
-- The existing palette + snippets + hotkeys still use `activePaneId` — keep that
-  derived from the active tab so they continue to work.
-
-The TerminalTabs file itself has Claude profile + model-profile launch logic,
-profile picker dropdown, close + popout per tab.
-
-### 2. Claude "chat-mode" profile
+### 1. Claude "chat-mode" profile
 
 **Status**: scoped only — no code yet.
 
@@ -211,10 +226,12 @@ Implementation sketch:
 - User picks "Claude" (TUI for terminal) or "Claude (Chat)" (JSON for chat skin)
   at tab creation. Different tabs can use different modes.
 
-This is a substantial refactor. Schedule it together with item #1 (TerminalTabs
-wiring) since both touch the tab/profile model.
+This is a substantial refactor. Now that TerminalTabs is the live tab model,
+this work fits naturally on top of it: add a `claude-chat` profile, route
+its PTY's stdio through a JSON parser, and have the chat-skin overlay
+detect the profile and render structured messages directly.
 
-### 3. Commands tab mirrors active model
+### 2. Commands tab mirrors active model
 
 **Status**: scoped only — no code yet.
 
@@ -228,8 +245,12 @@ Implementation sketch:
   ollama generic). Manually curated.
 - Optionally: parse `<cli> --help` once per session and surface common flags.
 
-Implementation depends on item #1 (need to know which tab is active in a tab-based
-world).
+Now that TerminalTabs owns the active-tab concept (via `activeTabId` in
+App.tsx, mirrored to `activePaneId`), `CommandsPanel` can read the
+profile of the active tab and render the matching command list. As a
+prerequisite, model panes need `registerSender` plumbing in
+`EmbeddedTerminal` so any commands the user picks actually reach the PTY
+(see H-1 in `docs/security-reviews/SECURITY_REVIEW_TERMINAL_TABS.md`).
 
 ---
 
@@ -256,8 +277,12 @@ world).
 - **Cat 7 daemon poll**: 15s window. If Ollama is slow on the user's box, increase
   the `TIMEOUT_MS` in `OllamaService.daemonStart`.
 - **Claude TUI in chat skin**: even with the v2 sanitizer, some selection prompts
-  won't render perfectly — the proper fix is item #2 above (chat-mode profile).
-- **TerminalTabs scaffold not wired**: see item #1 above.
+  won't render perfectly — the proper fix is the chat-mode profile (item #1
+  in Deferred above).
+- **Model tab snippet injection**: `EmbeddedTerminal` doesn't register a
+  sender, so palette/snippet text aimed at a model tab is silently dropped.
+  Tracked as H-1 in the TerminalTabs security review; fix bundled with the
+  Commands-tab-mirroring work.
 
 ---
 
@@ -322,6 +347,12 @@ to ship a public update.
 - **Evening session log (everything after the morning push):**
   `docs/SESSION_LOG_2026-05-27_evening.md` — chat-skin v2, GPU routing,
   auto-detect, BitNet, TerminalTabs scaffolding, v3.1.0 release.
+- **Night session log (post-handoff pickup):**
+  `docs/SESSION_LOG_2026-05-27_night-terminaltabs.md` — TerminalTabs
+  wired into App.tsx, session schema v1→v2 migration, SplitLayout
+  deleted, palette retargeted to tab actions.
+- **TerminalTabs security review:**
+  `docs/security-reviews/SECURITY_REVIEW_TERMINAL_TABS.md`.
 - **Per-file LMM journals:** `journal/` mirrors `src/` paths.
 - **Multi-provider design notes:** `docs/MULTI_PROVIDER_BRAINSTORM.md`.
 - **Backlog:** `docs/BACKLOG.md`.

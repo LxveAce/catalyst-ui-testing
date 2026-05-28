@@ -102,10 +102,11 @@ record cycles; those are separate from this on-disk journal.
 ### `src/renderer/components/settings/` (1)
 - `SettingsPanel.tsx.lmm.md`
 
-### `src/renderer/components/terminal/` (1)
+### `src/renderer/components/terminal/` (2)
 - `TerminalPanel.tsx.lmm.md` — xterm host + fit/resize handling
+- `TerminalTabs.tsx.lmm.md` — Windows-Terminal-style tab strip; replaces SplitLayout in App.tsx
 
 ---
 
-*Total: 40 LMM analyses. Keep this catalog in sync when entries are
+*Total: 41 LMM analyses. Keep this catalog in sync when entries are
 added, moved, or removed.*
