@@ -55,6 +55,28 @@ owns the data directly and never needs to ship Obsidian.
 
 ---
 
+## 1b. "Prepackaged like Ollama" — what's legal, and the better UX
+
+The user asked for Obsidian to **come prepackaged in the `.exe`, like Ollama.**
+The Ollama pattern is clean *because Ollama is MIT* (redistributable). **Obsidian
+is not** — so:
+
+- ❌ **Bundling the Obsidian binary inside `Catalyst-UI-x.y.z.exe`** = redistribution
+  = ToS violation. **Do not build this.**
+- ⚠️ **Silently downloading + auto-installing Obsidian** (the Ollama NSIS bootstrap
+  pattern) is legally grey for a closed app — automating its distribution. Avoid
+  as a default; at most, *offer a link* to obsidian.md and let the user install.
+- ✅ **Make the Brain NATIVE to Catalyst** — your own code, compiled into the
+  `.exe`, reading/writing an Obsidian-*compatible* markdown folder. **This IS
+  "prepackaged" — more so than Ollama (zero download, zero second app).** Real
+  Obsidian becomes an *optional* "open this same folder as a vault" bridge.
+
+**Directive for the building agent:** ship the Brain prepackaged (native, in the
+`.exe`). Treat the Obsidian *application* as bring-your-own / optional. Same "it
+just works" UX, zero legal exposure.
+
+---
+
 ## 2. The data model (all public — Catalyst reads/writes directly)
 
 A vault is just a **folder of plain files**, no proprietary DB
