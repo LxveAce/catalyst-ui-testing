@@ -380,11 +380,13 @@ function setupTerminal() {
   ipcMain.on(IPC.TERMINAL_RESTART, (_event, paneId: unknown) => {
     if (!PtyRegistry.isValidPaneId(paneId)) return;
     suppressedRestartPanes.add(paneId);
-    // Restart is a *hard* lifecycle transition (kill + spawn). spawn()'s
-    // reattach-if-alive shortcut would skip the kill, so we must kill first.
+    // Restart is a *hard* lifecycle transition (kill + spawn). Use the
+    // registry's restart() so the pane respawns with its ORIGINAL launch
+    // params (model command/args, Claude --dangerously-skip-permissions, cwd)
+    // and category — a bare spawn() here would respawn the bundled Claude CLI
+    // on every pane, dropping a model/shell command or the skip-perms choice.
     try {
-      ptyRegistry.kill(paneId);
-      ptyRegistry.spawn(paneId);
+      ptyRegistry.restart(paneId);
     } catch {
       // Surfaces via missing 'ready' event on the renderer.
     }
