@@ -40,8 +40,8 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 
 | Agent | Branch | Scope | Files (primary) | Status |
 |---|---|---|---|---|
-| Claude (Opus 4.8, "docs+terminal") | `feature/terminal-profiles-skip-perms` | (1) Launch any system shell (CMD/PowerShell/pwsh/Git Bash/WSL/bash/zsh) as a tab. (2) "Claude (skip permissions)" picker entry → per-launch `--dangerously-skip-permissions`. Plus repo doc sync to Catalyst UI v4.0.3. | `src/main/shell-profiles.ts` (new), `src/main/index.ts`, `src/main/pty-manager.ts`, `src/main/session-service.ts`, `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `src/renderer/components/terminal/{TerminalTabs,TerminalPanel}.tsx`, `src/renderer/App.tsx`; docs: README/STATUS/HANDOFF/CHANGELOG/CONTRIBUTING/SECURITY | ✅ code-complete, type-clean (pending `npm install` for `@huggingface/hub` to run) |
-| _(other agent — please claim your row here)_ | | | | |
+| Claude (Opus 4.8, "docs+terminal") | `feature/terminal-profiles-skip-perms` | (1) Launch any system shell (CMD/PowerShell/pwsh/Git Bash/WSL/bash/zsh) as a tab. (2) "Claude (skip permissions)" picker entry → per-launch `--dangerously-skip-permissions`. Plus repo doc sync to Catalyst UI v4.0.3. Adds `PtyRegistry.restart()` (remembers launch params). | `src/main/shell-profiles.ts` (new), `src/main/{index,pty-manager,pty-registry,session-service}.ts`, `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `src/renderer/components/terminal/{TerminalTabs,TerminalPanel}.tsx`, `src/renderer/App.tsx`; docs: README/STATUS/HANDOFF/CHANGELOG/CONTRIBUTING/SECURITY + `security-reviews/SECURITY_REVIEW_TERMINAL_PROFILES.md` | ✅ done + red-teamed. tsc + vite build clean. H-1 fixed. |
+| _(other agent)_ | _Obsidian integration (per `project_obsidian_integration.md`)_ | Unify journaling streams into a vault; direct-vault-FS + BYO-Obsidian paths. | journaling / vault / LMM area — **no overlap** with the terminal/PTY files above | (please confirm your branch here) |
 
 ---
 
@@ -66,6 +66,10 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 
 ## Decisions / notes (newest first)
 
+- **2026-06-02** — Red-team done on the terminal feature (`SECURITY_REVIEW_TERMINAL_PROFILES.md`).
+  **H-1 fixed:** restart used to drop a Claude tab's skip-perms flag and respawn
+  the bundled Claude on model/shell panes; `PtyRegistry.restart()` now respawns
+  with the original launch params + category. tsc + vite build both clean.
 - **2026-06-02** — Skip-permissions UX: chosen design is **two picker entries**
   ("Claude" + "Claude (skip permissions) ⚠"), NOT a modal prompt-per-launch.
   Plain `+`/Enter still opens a normal Claude tab.
