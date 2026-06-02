@@ -75,6 +75,33 @@ Real work to pick up next. Ordered roughly by impact.
 
 ---
 
+## ★ Catalyst Brain — Obsidian integration (PLANNING)
+
+**Status:** Deep-research complete 2026-06-02 (25/25 claims verified). Full plan
+in [`OBSIDIAN_INTEGRATION.md`](./OBSIDIAN_INTEGRATION.md); workstream tracked on
+[`AGENT_COORDINATION.md`](./AGENT_COORDINATION.md) (`feature/obsidian-brain`).
+
+**What:** make Catalyst's models the AI "brain" over an Obsidian-compatible
+markdown knowledge layer ("Catalyst Brain"), and unify Catalyst's 7 journaling
+streams (LMM cycles, `*.lmm.md`, compact-controller vaults, session logs, security
+reviews, cost history, snippets) into one schema-stamped markdown substrate so
+every model + method can read each other's output.
+
+**Why it matters:** this is the concrete realization of **#4 "Embedding-RAG over
+past sessions"** above — same embedding models (Qwen3-Embedding/BGE-M3/Nomic),
+now with a real, Obsidian-compatible vault as the corpus + agent memory.
+
+**Key constraint:** Obsidian's app is closed-source freeware; its ToS forbids
+bundling/redistribution — so, unlike Ollama, **we cannot ship the binary.** Path
+is direct vault filesystem (public formats) + bring-your-own Obsidian via
+`obsidian://` URI / the Local REST API plugin + MCP.
+
+**Where to start:** P1 = a `src/main/brain-*` Brain Folder Service (scoped
+read/write of `.md`+YAML+wikilinks, diff-before-write), reusing the FileTree
+path-traversal guards. See `OBSIDIAN_INTEGRATION.md` §5–6.
+
+---
+
 ## Historical record (delete this block once it's no longer useful)
 
 The sections below were the running work-in-progress notes for the
