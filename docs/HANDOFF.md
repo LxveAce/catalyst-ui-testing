@@ -1,17 +1,18 @@
-# Claude Code Studio - Development Handoff
+# Claude Code Studio → Catalyst UI - Development Handoff (historical)
 
-> **⚠ Historical doc — last fully accurate at v1.0 (2026-05-23).**
-> This file describes the original v1 phased development plan and was
-> partially updated during the v1.1 → v2.0 push. For the **current
-> state of the project (v3.0.0)** see:
+> **⚠ Historical doc — describes the original v1 phased development plan
+> (last fully accurate at v1.0, 2026-05-23).** The app was renamed
+> **Claude Code Studio → Catalyst UI** at v4.0.0. For the **current state
+> of the project (v4.0.3)** do NOT read below — instead see:
 >
-> - `docs/SESSION_LOG_2026-05-26_v3.0.0_release.md` — full handoff for
->   v3.0.0 stable: feature list, build infrastructure quirks, branch
->   layout, files added/modified, what's queued for v3.0.1+.
-> - `CHANGELOG.md` — at-a-glance per-release summary.
-> - `docs/BACKLOG.md` — open ideas for v3.0.1+.
+> - `docs/STATUS.md` — the always-current pickup doc (start here).
+> - `journal/V4_0_3_TRANSFER_TESTING.md` — latest cross-machine handoff.
+> - `CHANGELOG.md` — at-a-glance per-release summary (through v4.0.3).
+> - `docs/MIGRATING_FROM_CCS.md` — the rebrand + upgrade walk-through.
+> - `docs/BACKLOG.md` — open ideas.
 >
-> The rest of this file is preserved verbatim as historical context.
+> The rest of this file is preserved verbatim as historical context for
+> the v1.0 → v3.0 phased build.
 
 ---
 
