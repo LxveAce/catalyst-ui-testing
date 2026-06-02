@@ -4,11 +4,11 @@
 
 | Version | Supported |
 | ------- | --------- |
-| 1.0.x   | ✅        |
-| < 1.0   | ❌        |
+| 4.0.x   | ✅        |
+| < 4.0   | ❌        |
 
-Claude Code Studio auto-updates from GitHub Releases on Windows, so the latest
-released version is the supported one.
+Catalyst UI (formerly Claude Code Studio) auto-updates from GitHub Releases, so
+the latest released version is the supported one.
 
 ## Reporting a vulnerability
 
@@ -16,7 +16,7 @@ released version is the supported one.
 
 Report privately via GitHub's **"Report a vulnerability"** button under the
 repository's **Security** tab
-(<https://github.com/LxveAce/claude-code-studio/security/advisories/new>). This
+(<https://github.com/LxveAce/catalyst-ui/security/advisories/new>). This
 opens a private advisory visible only to the maintainers.
 
 Please include:
