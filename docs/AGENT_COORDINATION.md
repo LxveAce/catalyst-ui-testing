@@ -41,14 +41,16 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 | Agent | Branch | Scope | Files (primary) | Status |
 |---|---|---|---|---|
 | Claude (Opus 4.8, "docs+terminal") | `feature/terminal-profiles-skip-perms` | (1) Launch any system shell (CMD/PowerShell/pwsh/Git Bash/WSL/bash/zsh) as a tab. (2) "Claude (skip permissions)" picker entry → per-launch `--dangerously-skip-permissions`. Plus repo doc sync to Catalyst UI v4.0.3. Adds `PtyRegistry.restart()` (remembers launch params). | `src/main/shell-profiles.ts` (new), `src/main/{index,pty-manager,pty-registry,session-service}.ts`, `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `src/renderer/components/terminal/{TerminalTabs,TerminalPanel}.tsx`, `src/renderer/App.tsx`; docs: README/STATUS/HANDOFF/CHANGELOG/CONTRIBUTING/SECURITY + `security-reviews/SECURITY_REVIEW_TERMINAL_PROFILES.md` | ✅ done + red-teamed. tsc + vite build clean. H-1 fixed. |
-| _(other agent)_ | _Obsidian integration (per `project_obsidian_integration.md`)_ | Unify journaling streams into a vault; direct-vault-FS + BYO-Obsidian paths. | journaling / vault / LMM area — **no overlap** with the terminal/PTY files above | (please confirm your branch here) |
+| Claude (Opus 4.8, "research+obsidian") | `feature/obsidian-brain` | **Catalyst Brain** = Obsidian-compatible knowledge + AI layer. Deep-research done (25/25 verified). Unify the 7 journaling streams into one schema-stamped markdown substrate; Catalyst's models = the RAG brain. Direct-vault-FS + BYO-Obsidian (`obsidian://` URI / Local REST API + MCP); **NOT** bundling the Obsidian binary (ToS forbids). Plan: [`OBSIDIAN_INTEGRATION.md`](./OBSIDIAN_INTEGRATION.md). | **Docs/planning only so far** (`docs/OBSIDIAN_INTEGRATION.md`, this row, `BACKLOG.md`). Future code will live in a new `src/main/brain-*` area + a Brain panel — **no overlap** with the terminal/PTY files above. | 📋 planning — research complete, awaiting go-ahead to build P1 |
 
 ---
 
 ## Goals
 
 ### In progress / claimed
-- _(add yours)_
+- [ ] **Catalyst Brain — Obsidian integration** (`feature/obsidian-brain`).
+  Phase plan in `docs/OBSIDIAN_INTEGRATION.md`. P0 (naming) done; P1 (Brain
+  Folder Service) is the next code step, on user go-ahead. Realizes BACKLOG #4.
 
 ### Done
 - [x] **Sync stale local clone → Catalyst UI v4.0.3.** Local was at v3.2.0
@@ -66,6 +68,17 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 
 ## Decisions / notes (newest first)
 
+- **2026-06-02** — **Obsidian: do NOT bundle the binary.** Verified (obsidian.md/terms):
+  the desktop app is proprietary closed-source freeware; ToS forbids
+  redistribution/derivative-works/RE. "Free for commercial use" (Feb 2025) ≠ free
+  to redistribute. So the Ollama-style ship-the-binary pattern is illegal here.
+  Legal paths: direct vault filesystem (public formats: `.md`+YAML, MIT JSON
+  Canvas `.canvas`, `.base` YAML), `obsidian://` URI, the coddingtonbear Local
+  REST API plugin (BYO) + mcp-obsidian, and an optional MIT-typings first-party
+  plugin. **Avoid** embedding Obsidian's window (legal grey zone).
+- **2026-06-02** — **Naming:** the new Obsidian knowledge/AI layer is **"Catalyst
+  Brain"**; the word **"vault"** stays reserved for the existing compact-controller
+  `vault-*.json` sync (Phase 6). Don't call the Brain a "vault" in UI/IPC/types.
 - **2026-06-02** — Red-team done on the terminal feature (`SECURITY_REVIEW_TERMINAL_PROFILES.md`).
   **H-1 fixed:** restart used to drop a Claude tab's skip-perms flag and respawn
   the bundled Claude on model/shell panes; `PtyRegistry.restart()` now respawns
