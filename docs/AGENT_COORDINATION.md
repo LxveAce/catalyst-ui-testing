@@ -68,6 +68,13 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 
 ## Decisions / notes (newest first)
 
+- **2026-06-02** — **"Prepackaged like Ollama" → ship the NATIVE Brain, not the
+  Obsidian binary.** User wants Obsidian to feel built-in/prepackaged in the
+  `.exe`. Legal way: the Catalyst Brain is native code (compiled into the app,
+  reads/writes an Obsidian-*compatible* markdown folder) = zero-install, more
+  "prepackaged" than Ollama. **Building agent: do NOT bundle or auto-silent-install
+  the Obsidian app** (ToS). Real Obsidian = optional BYO bridge. Full feature +
+  UI brainstorm: [`OBSIDIAN_BRAIN_FEATURES.md`](./OBSIDIAN_BRAIN_FEATURES.md).
 - **2026-06-02** — **Obsidian: do NOT bundle the binary.** Verified (obsidian.md/terms):
   the desktop app is proprietary closed-source freeware; ToS forbids
   redistribution/derivative-works/RE. "Free for commercial use" (Feb 2025) ≠ free
