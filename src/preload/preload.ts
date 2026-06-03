@@ -93,6 +93,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     appendNote: (relPath: string, text: string) =>
       ipcRenderer.invoke(IPC.BRAIN_APPEND_NOTE, relPath, text),
     deleteNote: (relPath: string) => ipcRenderer.invoke(IPC.BRAIN_DELETE_NOTE, relPath),
+    writeEntry: (entry: unknown) => ipcRenderer.invoke(IPC.BRAIN_WRITE_ENTRY, entry),
+    mirrorStreams: () => ipcRenderer.invoke(IPC.BRAIN_MIRROR_STREAMS),
   },
   github: {
     authState: () => ipcRenderer.invoke(IPC.GITHUB_AUTH_STATE),

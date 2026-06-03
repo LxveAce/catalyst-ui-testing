@@ -30,6 +30,7 @@ export function BrainPanel() {
   const [query, setQuery] = useState('');
   const [view, setView] = useState<View>({ kind: 'list' });
   const [notice, setNotice] = useState<string | null>(null);
+  const [mirroring, setMirroring] = useState(false);
 
   const refreshConfig = useCallback(async () => {
     try {
@@ -73,6 +74,21 @@ export function BrainPanel() {
       }
     } catch {
       setNotice('Could not open the folder picker.');
+    }
+  }, [refreshNotes]);
+
+  const mirror = useCallback(async () => {
+    setMirroring(true);
+    try {
+      const r = await window.electronAPI.brain.mirrorStreams();
+      if (r.error) { setNotice(`Mirror failed: ${r.error}`); return; }
+      const breakdown = Object.entries(r.bySource).map(([k, v]) => `${v} ${k}`).join(', ');
+      setNotice(`Mirrored ${r.written} note${r.written === 1 ? '' : 's'} into _catalyst/${breakdown ? ` (${breakdown})` : ''}${r.failed ? ` · ${r.failed} failed` : ''}.`);
+      await refreshNotes();
+    } catch {
+      setNotice('Mirror failed.');
+    } finally {
+      setMirroring(false);
     }
   }, [refreshNotes]);
 
@@ -138,6 +154,17 @@ export function BrainPanel() {
           Change
         </button>
       </div>
+
+      {view.kind === 'list' && (
+        <button
+          onClick={() => void mirror()}
+          disabled={mirroring}
+          style={{ ...ghostBtn, width: '100%', marginTop: 8, textAlign: 'center' }}
+          title="Mirror Catalyst's journaling streams (LMM cycles, snippets, cost) into the Brain as schema-stamped notes under _catalyst/"
+        >
+          {mirroring ? 'Mirroring…' : '⟳ Mirror journaling streams → Brain'}
+        </button>
+      )}
 
       {notice && (
         <div style={noticeBox} onClick={() => setNotice(null)} title="Dismiss">
