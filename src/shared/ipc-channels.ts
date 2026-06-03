@@ -256,4 +256,21 @@ export const IPC = {
    *  Payload = { paneId, provider, key }. Main writes the key to PTY stdin
    *  and persists via provider-auth:set-key. */
   PROVIDER_KEY_SUBMIT: 'provider-auth:key-submit',
+
+  // Catalyst Brain — Obsidian-compatible knowledge folder (P1, Brain Folder
+  // Service). Scoped read/write of `.md`+YAML+wikilinks; diff-before-write.
+  // Distinct from the compact-controller "vault" JSON sync.
+  BRAIN_GET_CONFIG: 'brain:get-config',
+  BRAIN_PICK_FOLDER: 'brain:pick-folder',
+  BRAIN_SET_FOLDER: 'brain:set-folder',
+  BRAIN_LIST_NOTES: 'brain:list-notes',
+  BRAIN_READ_NOTE: 'brain:read-note',
+  /** Diff-before-write preview for an overwrite/create. */
+  BRAIN_PREVIEW_WRITE: 'brain:preview-write',
+  /** Diff-before-write preview for a delete. */
+  BRAIN_PREVIEW_DELETE: 'brain:preview-delete',
+  BRAIN_WRITE_NOTE: 'brain:write-note',
+  BRAIN_CREATE_NOTE: 'brain:create-note',
+  BRAIN_APPEND_NOTE: 'brain:append-note',
+  BRAIN_DELETE_NOTE: 'brain:delete-note',
 } as const;

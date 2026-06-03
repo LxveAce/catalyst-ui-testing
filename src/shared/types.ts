@@ -1087,6 +1087,117 @@ export interface OllamaDaemonState {
   lastError: string | null;
 }
 
+// ===========================================================================
+// Catalyst Brain (Obsidian integration, P1 — Brain Folder Service)
+//
+// "Brain" = the Obsidian-COMPATIBLE knowledge layer: a folder of plain `.md`
+// notes (YAML frontmatter + wikilinks) that Catalyst reads/writes directly,
+// no Obsidian binary required. NOTE the deliberate naming split: "vault" stays
+// reserved for the existing compact-controller JSON sync (cloud-sync.ts) — the
+// Brain is never called a "vault" in IPC/types/UI. See docs/OBSIDIAN_INTEGRATION.md.
+// ===========================================================================
+
+/** Persisted Brain configuration. */
+export interface BrainConfig {
+  /** Absolute path to the Brain folder (an Obsidian-format `.md` folder), or
+   *  null when the user hasn't chosen one yet. */
+  folder: string | null;
+  /** True when `folder` is set AND currently exists as a directory on disk. */
+  ready: boolean;
+}
+
+/** A parsed `[[wikilink]]` occurrence inside a note body. */
+export interface Wikilink {
+  /** The full matched token, e.g. `[[Note#Heading|Alias]]`. */
+  raw: string;
+  /** Link target (note name / path), e.g. `Note`. */
+  target: string;
+  /** Optional `#heading` fragment. */
+  heading?: string;
+  /** Optional `|alias` display text. */
+  alias?: string;
+}
+
+/** Lightweight listing entry — cheap (stat-only), no content read. */
+export interface BrainNoteSummary {
+  /** POSIX-style path relative to the Brain root (the stable note id). */
+  relPath: string;
+  /** Display title — basename without `.md` (full metadata via readNote). */
+  title: string;
+  /** Bytes on disk. */
+  size: number;
+  /** ISO timestamp of last modification. */
+  modified: string;
+}
+
+export interface BrainListResult {
+  root: string | null;
+  notes: BrainNoteSummary[];
+  /** True when the walk hit MAX_NOTES and stopped early. */
+  truncated: boolean;
+  error: 'no-brain-folder' | 'not-found' | 'access-denied' | null;
+}
+
+/** A fully-read note: frontmatter (raw + light-parsed) + body + extracted refs. */
+export interface BrainNote {
+  relPath: string;
+  /** SHA-256 of the raw file content at read time — pass back to writeNote as
+   *  `expectedHash` for optimistic-concurrency (detects external edits). */
+  hash: string;
+  /** Raw frontmatter block WITHOUT the `---` fences, or null if none. Preserved
+   *  verbatim so edits never lose unknown YAML fields. */
+  frontmatterRaw: string | null;
+  /** Light parse of common frontmatter fields (display/filter only — not a full
+   *  YAML parse). Unknown/complex fields live only in frontmatterRaw. */
+  frontmatter: { title?: string; tags?: string[]; aliases?: string[]; [k: string]: unknown };
+  /** Note body (everything after the frontmatter block). */
+  body: string;
+  /** Markdown headings (`#`..`######`) in order. */
+  headings: Array<{ level: number; text: string }>;
+  /** All `[[wikilinks]]` found in the body. */
+  links: Wikilink[];
+  size: number;
+  modified: string;
+}
+
+/** One line of a simple prefix/suffix diff for write previews. */
+export interface BrainDiffLine {
+  type: 'same' | 'add' | 'del';
+  text: string;
+}
+
+/** Diff-before-write preview for a create/overwrite/append/delete. */
+export interface BrainWritePreview {
+  relPath: string;
+  /** True if the target already exists. */
+  exists: boolean;
+  /** Existing content (null when the file doesn't exist). */
+  oldContent: string | null;
+  /** Proposed content (null for a delete preview). */
+  newContent: string | null;
+  /** True when newContent === oldContent (a no-op write). */
+  identical: boolean;
+  /** Simple line diff (common-prefix/suffix + changed middle). */
+  diff: BrainDiffLine[];
+  error: 'no-brain-folder' | 'outside-root' | 'invalid-path' | null;
+}
+
+export interface BrainWriteResult {
+  ok: boolean;
+  relPath: string | null;
+  /** Hash of the freshly-written content (use for subsequent edits). */
+  hash: string | null;
+  error:
+    | 'no-brain-folder'
+    | 'outside-root'
+    | 'invalid-path'
+    | 'already-exists'
+    | 'not-found'
+    | 'conflict'
+    | 'write-failed'
+    | null;
+}
+
 // The full ElectronAPI shape lives in src/declarations.d.ts as an ambient
 // Window typing. Don't redeclare it here — keep this file for serializable
 // IPC payload types only.

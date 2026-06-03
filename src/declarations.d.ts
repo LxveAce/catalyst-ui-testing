@@ -104,6 +104,40 @@ interface Window {
       setCwd: (cwd: string) => Promise<string>;
       pickDir: () => Promise<string | null>;
     };
+    brain: {
+      getConfig: () => Promise<import('./shared/types').BrainConfig>;
+      pickFolder: () => Promise<import('./shared/types').BrainConfig>;
+      setFolder: (
+        folder: string | null
+      ) => Promise<import('./shared/types').BrainConfig>;
+      listNotes: () => Promise<import('./shared/types').BrainListResult>;
+      readNote: (
+        relPath: string
+      ) => Promise<import('./shared/types').BrainNote | { error: string }>;
+      previewWrite: (
+        relPath: string,
+        content: string
+      ) => Promise<import('./shared/types').BrainWritePreview>;
+      previewDelete: (
+        relPath: string
+      ) => Promise<import('./shared/types').BrainWritePreview>;
+      writeNote: (
+        relPath: string,
+        content: string,
+        expectedHash?: string
+      ) => Promise<import('./shared/types').BrainWriteResult>;
+      createNote: (
+        relPath: string,
+        content: string
+      ) => Promise<import('./shared/types').BrainWriteResult>;
+      appendNote: (
+        relPath: string,
+        text: string
+      ) => Promise<import('./shared/types').BrainWriteResult>;
+      deleteNote: (
+        relPath: string
+      ) => Promise<import('./shared/types').BrainWriteResult>;
+    };
     github: {
       authState: () => Promise<import('./shared/types').GitHubAuthState>;
       setToken: (

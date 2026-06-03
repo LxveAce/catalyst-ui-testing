@@ -12,6 +12,7 @@ import { SnippetsService } from './snippets-service';
 import { NotificationsService } from './notifications-service';
 import { UpdaterService } from './updater-service';
 import { SessionService } from './session-service';
+import { BrainService } from './brain-service';
 import { HotkeysService } from './hotkeys-service';
 import { TrayService } from './tray-service';
 import { AccessibilityService } from './accessibility-service';
@@ -1076,6 +1077,58 @@ function setupGit() {
   });
 }
 
+function setupBrain() {
+  const svc = BrainService.instance();
+  ipcMain.handle(IPC.BRAIN_GET_CONFIG, () => svc.getConfig());
+  ipcMain.handle(IPC.BRAIN_PICK_FOLDER, async () => {
+    if (!mainWindow) return svc.getConfig();
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Choose your Catalyst Brain folder (an Obsidian-compatible .md folder)',
+      properties: ['openDirectory', 'createDirectory'],
+      defaultPath: svc.getConfig().folder ?? undefined,
+    });
+    if (result.canceled || result.filePaths.length === 0) return svc.getConfig();
+    return svc.setFolder(result.filePaths[0]);
+  });
+  ipcMain.handle(IPC.BRAIN_SET_FOLDER, (_e, folder: unknown) =>
+    svc.setFolder(typeof folder === 'string' ? folder : null)
+  );
+  ipcMain.handle(IPC.BRAIN_LIST_NOTES, () => svc.listNotes());
+  ipcMain.handle(IPC.BRAIN_READ_NOTE, (_e, rel: unknown) =>
+    svc.readNote(typeof rel === 'string' ? rel : '')
+  );
+  ipcMain.handle(IPC.BRAIN_PREVIEW_WRITE, (_e, rel: unknown, content: unknown) =>
+    svc.previewWrite(
+      typeof rel === 'string' ? rel : '',
+      typeof content === 'string' ? content : ''
+    )
+  );
+  ipcMain.handle(IPC.BRAIN_PREVIEW_DELETE, (_e, rel: unknown) =>
+    svc.previewDelete(typeof rel === 'string' ? rel : '')
+  );
+  ipcMain.handle(
+    IPC.BRAIN_WRITE_NOTE,
+    (_e, rel: unknown, content: unknown, expectedHash: unknown) =>
+      svc.writeNote(
+        typeof rel === 'string' ? rel : '',
+        typeof content === 'string' ? content : '',
+        typeof expectedHash === 'string' ? expectedHash : undefined
+      )
+  );
+  ipcMain.handle(IPC.BRAIN_CREATE_NOTE, (_e, rel: unknown, content: unknown) =>
+    svc.createNote(
+      typeof rel === 'string' ? rel : '',
+      typeof content === 'string' ? content : ''
+    )
+  );
+  ipcMain.handle(IPC.BRAIN_APPEND_NOTE, (_e, rel: unknown, text: unknown) =>
+    svc.appendNote(typeof rel === 'string' ? rel : '', typeof text === 'string' ? text : '')
+  );
+  ipcMain.handle(IPC.BRAIN_DELETE_NOTE, (_e, rel: unknown) =>
+    svc.deleteNote(typeof rel === 'string' ? rel : '')
+  );
+}
+
 function setupGitHub() {
   ipcMain.handle(IPC.GITHUB_AUTH_STATE, () => getGitHub().getAuthState());
   ipcMain.handle(
@@ -1595,6 +1648,7 @@ app.whenReady().then(() => {
   setupResources();
   setupCompact();
   setupGit();
+  setupBrain();
   setupGitHub();
   setupLMM();
   setupAuth();
