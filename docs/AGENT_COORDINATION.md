@@ -45,7 +45,7 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 |---|---|---|---|---|
 | Claude (Opus 4.8, "docs+terminal") | `feature/terminal-profiles-skip-perms` | (1) Launch any system shell (CMD/PowerShell/pwsh/Git Bash/WSL/bash/zsh) as a tab. (2) "Claude (skip permissions)" picker entry → per-launch `--dangerously-skip-permissions`. Plus repo doc sync to Catalyst UI v4.0.3. Adds `PtyRegistry.restart()` (remembers launch params). | `src/main/shell-profiles.ts` (new), `src/main/{index,pty-manager,pty-registry,session-service}.ts`, `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `src/renderer/components/terminal/{TerminalTabs,TerminalPanel}.tsx`, `src/renderer/App.tsx`; docs: README/STATUS/HANDOFF/CHANGELOG/CONTRIBUTING/SECURITY + `security-reviews/SECURITY_REVIEW_TERMINAL_PROFILES.md` | ✅ done + red-teamed. tsc + vite build clean. H-1 fixed. |
 | Claude (Opus 4.8, "research+obsidian") | `feature/obsidian-brain` | **Catalyst Brain** = Obsidian-compatible knowledge + AI layer. Deep-research done (25/25 verified). Plan: [`OBSIDIAN_INTEGRATION.md`](./OBSIDIAN_INTEGRATION.md), features: [`OBSIDIAN_BRAIN_FEATURES.md`](./OBSIDIAN_BRAIN_FEATURES.md). | docs: `OBSIDIAN_INTEGRATION.md`, `OBSIDIAN_BRAIN_FEATURES.md`, `BACKLOG.md` | 📋 research/plan complete |
-| Claude (Opus 4.8, "build-agent") — handed the build by user | `feature/obsidian-brain` · **worktree** `C:\Users\extra\OneDrive\Desktop\catalyst-obsidian-brain` (same machine as reviewer; `node_modules` junctioned from the main clone) | **P1–P4 all built.** P1 Brain Folder Service; renderer **🧠 Brain panel**; P2 canonical schema + Brain Writer (mirror LMM/snippets/cost); P3 RAG (Ollama embeddings + vectors in userData + semantic search); P4 interop (`obsidian://` open + Local REST API key via safeStorage). | `src/main/brain-{service,writer,index,rest-auth}.ts` (new), `src/main/{index,session-service}.ts`, `src/renderer/components/brain/BrainPanel.tsx` (new), `src/renderer/{App.tsx,components/layout/Sidebar.tsx}`, `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `docs/security-reviews/SECURITY_REVIEW_BRAIN_P1.md` + `…_P2_P4.md` | ✅ P1–P4 built + red-teamed. tsc + vite build clean; logic tests 15/15 + 9/9. Pushed (commits 1a1216b…). **Runtime smoke pending** (no live click-through here). |
+| Claude (Opus 4.8, "build-agent") — handed the build by user | `feature/obsidian-brain` · **worktree** `C:\Users\extra\OneDrive\Desktop\catalyst-obsidian-brain` (same machine as reviewer; `node_modules` junctioned from the main clone) | **P1–P4 all built.** P1 Brain Folder Service; renderer **🧠 Brain panel**; P2 canonical schema + Brain Writer (mirror LMM/snippets/cost); P3 RAG (Ollama embeddings + vectors in userData + semantic search); P4 interop (`obsidian://` open + Local REST API key via safeStorage). | `src/main/brain-{service,writer,index,rest-auth}.ts` (new), `src/main/{index,session-service}.ts`, `src/renderer/components/brain/BrainPanel.tsx` (new), `src/renderer/{App.tsx,components/layout/Sidebar.tsx}`, `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `docs/security-reviews/SECURITY_REVIEW_BRAIN_P1.md` + `…_P2_P4.md` | ✅ P1–P4 built + red-teamed. tsc + vite build clean; logic tests 15/15 + 9/9. Pushed (1a1216b…ae19e84). **✅ COMPLETE (P1–P5 + extras), runtime-verified** (CDP: Brain mounts, 0 errors, 14/14 panels); promoted to public `88ea136`; reviewer-audited 2026-06-03. |
 
 ---
 
@@ -110,6 +110,17 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 ---
 
 ## Decisions / notes (newest first)
+
+- **2026-06-03 — ✅ REVIEWER SIGN-OFF (research+obsidian agent).** Audited the
+  Brain build + handoff notes for cold-pickup completeness before the user closes
+  both chats. Verdict: **complete and accurate.** Rubric all green — native Brain
+  (no bundled Obsidian binary), "Brain" naming kept distinct from "vault",
+  path-scoped + diff-before-write + safeStorage key, single Brain Writer + schema,
+  **no AGPL copied** (confirmed `SECURITY_REVIEW_BRAIN_P5.md`). Gaps I filled:
+  (1) surfaced the **one open write-path hardening** — `SECURITY_REVIEW_BRAIN_P1.md`
+  **M-1 symlink-escape** (realpath, P-next) — into `HANDOFF_2026-06-03.md` §9;
+  (2) flagged the **stale main clone** (`679d94c`, no Brain — re-sync before use);
+  (3) documented the **2-instance builder+reviewer workflow** (below). See HANDOFF §9.
 
 - **2026-06-02 — ✅ ANSWERED (build-agent → reviewer): all Brain code is on the
   branch, not `master`.** I'm on **`feature/obsidian-brain`**, worktree
@@ -178,3 +189,35 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
   errors until installed. node-pty rebuild needs VS 2022 C++ Build Tools.
 - **Node 22 only** (`engines.node: ">=22.0.0 <24.0.0"`); Node 24 breaks packaging.
 - **Local `npm run dist`** needs Windows Developer Mode ON (winCodeSign symlinks).
+
+---
+
+## Multi-agent workflow — the 2-instance pattern (reproduce this)
+
+This session ran **two AI agents in parallel** and it worked well. To do it again:
+
+**Roles**
+- **Builder** — implements the feature on its **own `feature/*` branch + worktree**.
+  Claims a row, commits per phase, red-teams each phase
+  (`docs/security-reviews/SECURITY_REVIEW_*`), writes the `HANDOFF_*` doc at the end.
+- **Reviewer / Director** — does the research + spec up front, then **watches the
+  builder's pushes** and reviews each diff against a rubric, posts directives in the
+  *Decisions* log, and relays to the user. Stays **read-only** on the builder's branch.
+
+**Reviewer rubric (Catalyst Brain example):** (1) legal guardrail honored (native,
+no bundled Obsidian binary); (2) naming ("Brain" not "vault"); (3) security
+(path-scoped, diff-before-write, secret scan, local-only); (4) one canonical writer +
+schema; (5) no AGPL copied; (6) phase order / scope, off other workstreams' files.
+
+**Start 2 instances next time**
+1. Open two chats; assign one **Builder**, one **Reviewer**.
+2. Both read this board + the latest `HANDOFF_*`. Builder claims a row + branch.
+3. Reviewer does research/spec first, then polls `git fetch <testing-remote>` for the
+   builder's pushes (a ~3-min loop works) and reviews each diff.
+4. Cross-talk via this **Decisions** log + the shared memory dir (auto-loaded next session).
+
+**⚠️ Collision lesson (important):** give the Builder its **own worktree + branch**;
+the Reviewer must stay **read-only there** or use a **separate worktree**. This session
+both agents briefly shared the `catalyst-obsidian-brain` worktree — a reviewer commit
+ran while the builder had uncommitted changes (no damage, only because `git add` was
+file-scoped). **Never run git writes in a worktree another agent is actively editing.**
