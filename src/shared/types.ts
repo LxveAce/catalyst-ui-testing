@@ -1314,6 +1314,15 @@ export interface BrainRestTestResult {
   error: 'no-key' | 'self-signed-cert' | 'unreachable' | string | null;
 }
 
+/** Result of a Local REST API call against a live Obsidian vault. */
+export interface BrainRestCallResult {
+  ok: boolean;
+  status: number | null;
+  /** Parsed JSON (when the plugin returns JSON) or raw text. */
+  data: unknown;
+  error: 'no-key' | 'bad-url' | 'self-signed-cert' | 'unreachable' | 'timeout' | string | null;
+}
+
 /** Result of an `obsidian://` open attempt. */
 export interface BrainOpenResult {
   ok: boolean;

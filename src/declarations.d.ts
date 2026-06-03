@@ -159,6 +159,26 @@ interface Window {
       ) => Promise<import('./shared/types').BrainRestStatus>;
       restClear: () => Promise<import('./shared/types').BrainRestStatus>;
       restTest: () => Promise<import('./shared/types').BrainRestTestResult>;
+      restList: (
+        dir?: string
+      ) => Promise<import('./shared/types').BrainRestCallResult>;
+      restGetFile: (
+        filePath: string
+      ) => Promise<import('./shared/types').BrainRestCallResult>;
+      restSearch: (
+        query: string
+      ) => Promise<import('./shared/types').BrainRestCallResult>;
+      restAppend: (
+        filePath: string,
+        content: string
+      ) => Promise<import('./shared/types').BrainRestCallResult>;
+      restPut: (
+        filePath: string,
+        content: string
+      ) => Promise<import('./shared/types').BrainRestCallResult>;
+      restDeleteFile: (
+        filePath: string
+      ) => Promise<import('./shared/types').BrainRestCallResult>;
       links: (
         relPath: string
       ) => Promise<import('./shared/types').BrainLinksResult>;

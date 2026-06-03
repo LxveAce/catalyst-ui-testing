@@ -788,6 +788,27 @@ function RestApiSection({ setNotice }: { setNotice: (s: string | null) => void }
   const [key, setKey] = useState('');
   const [hasKey, setHasKey] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [liveQuery, setLiveQuery] = useState('');
+  const [liveBusy, setLiveBusy] = useState(false);
+  const [liveSummary, setLiveSummary] = useState<string | null>(null);
+
+  const runLive = useCallback(async (op: 'list' | 'search') => {
+    setLiveBusy(true);
+    try {
+      const r = op === 'list'
+        ? await window.electronAPI.brain.restList()
+        : await window.electronAPI.brain.restSearch(liveQuery.trim());
+      if (!r.ok) {
+        setNotice(r.error === 'no-key' ? 'Save a key first.' : `Live vault: ${r.error ?? 'failed'} (is Obsidian running with the plugin?).`);
+        return;
+      }
+      setLiveSummary(typeof r.data === 'string' ? r.data : JSON.stringify(r.data, null, 2).slice(0, 4000));
+    } catch {
+      setNotice('Live vault request failed.');
+    } finally {
+      setLiveBusy(false);
+    }
+  }, [liveQuery, setNotice]);
 
   const refresh = useCallback(async () => {
     try {
@@ -854,7 +875,7 @@ function RestApiSection({ setNotice }: { setNotice: (s: string | null) => void }
                 const r = await window.electronAPI.brain.restTest();
                 setNotice(
                   r.ok ? 'Connected to Obsidian Local REST API ✓'
-                  : r.error === 'self-signed-cert' ? 'Reached it, but the plugin uses a self-signed HTTPS cert (expected). Treat as connectable; full requests need cert handling (future).'
+                  : r.error === 'self-signed-cert' ? 'Reached it, but the self-signed cert was rejected. (Live calls accept it on localhost.)'
                   : r.error === 'no-key' ? 'Save a key first.'
                   : 'Could not reach the Local REST API (is Obsidian running with the plugin enabled?).'
                 );
@@ -872,6 +893,30 @@ function RestApiSection({ setNotice }: { setNotice: (s: string | null) => void }
               </button>
             )}
           </div>
+
+          {hasKey && (
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>
+                Live vault (read-only here; models can also write via IPC)
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  value={liveQuery}
+                  onChange={(e) => setLiveQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void runLive('search'); }}
+                  placeholder="search the live vault…"
+                  style={searchInput}
+                />
+                <button onClick={() => void runLive('search')} disabled={liveBusy} style={liveBusy ? primaryBtnDisabled : primaryBtnSm}>Go</button>
+              </div>
+              <button onClick={() => void runLive('list')} disabled={liveBusy} style={{ ...ghostBtn, marginTop: 6 }}>
+                {liveBusy ? '…' : 'List vault files'}
+              </button>
+              {liveSummary && (
+                <pre style={{ ...diffBox, marginTop: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 160 }}>{liveSummary}</pre>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
