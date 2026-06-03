@@ -1,8 +1,12 @@
 # Catalyst UI — Testing Repo STATUS
 
+> 👉 **NEWEST PICKUP DOC: [`HANDOFF_2026-06-03.md`](./HANDOFF_2026-06-03.md)** —
+> read that first. It covers everything below + the terminal-profiles and
+> Catalyst Brain work shipped after v4.0.3.
+>
 > **Product:** Catalyst UI *(formerly Claude Code Studio — renamed at v4.0.0)*
-> **Version:** v4.0.3
-> **Last updated:** 2026-06-02
+> **Version:** v4.0.3 (+ unreleased terminal-profiles & Catalyst Brain on master)
+> **Last updated:** 2026-06-03
 > **Branch this describes:** `master` (testing repo: `LxveAce/catalyst-ui-testing`)
 > **Latest cross-machine handoff:** [`journal/V4_0_3_TRANSFER_TESTING.md`](../journal/V4_0_3_TRANSFER_TESTING.md)
 > **Full per-release history:** [`CHANGELOG.md`](../CHANGELOG.md)
