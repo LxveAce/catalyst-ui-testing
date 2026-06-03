@@ -103,6 +103,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     restSet: (baseUrl: string, key: string) => ipcRenderer.invoke(IPC.BRAIN_REST_SET, baseUrl, key),
     restClear: () => ipcRenderer.invoke(IPC.BRAIN_REST_CLEAR),
     restTest: () => ipcRenderer.invoke(IPC.BRAIN_REST_TEST),
+    links: (relPath: string) => ipcRenderer.invoke(IPC.BRAIN_LINKS, relPath),
   },
   github: {
     authState: () => ipcRenderer.invoke(IPC.GITHUB_AUTH_STATE),

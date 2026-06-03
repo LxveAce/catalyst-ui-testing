@@ -16,6 +16,7 @@ import { BrainService } from './brain-service';
 import { BrainWriter } from './brain-writer';
 import { BrainIndex } from './brain-index';
 import { BrainRestAuth } from './brain-rest-auth';
+import { BrainGraph } from './brain-graph';
 import { HotkeysService } from './hotkeys-service';
 import { TrayService } from './tray-service';
 import { AccessibilityService } from './accessibility-service';
@@ -1260,6 +1261,9 @@ function setupBrain() {
   );
   ipcMain.handle(IPC.BRAIN_REST_CLEAR, () => BrainRestAuth.instance().clear());
   ipcMain.handle(IPC.BRAIN_REST_TEST, () => BrainRestAuth.instance().test());
+  ipcMain.handle(IPC.BRAIN_LINKS, (_e, rel: unknown) =>
+    BrainGraph.instance().links(typeof rel === 'string' ? rel : '')
+  );
 }
 
 function setupGitHub() {
