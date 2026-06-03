@@ -1,5 +1,8 @@
 # Agent Coordination Board
 
+> 👉 **Cold pickup? Read [`HANDOFF_2026-06-03.md`](./HANDOFF_2026-06-03.md) first**
+> — full current state (repos, commits, what shipped, setup, open items).
+>
 > **Purpose:** Catalyst UI is being worked on by **more than one AI agent**
 > (and across more than one machine). This file is the shared source of truth
 > for *who is doing what, on which branch, and what's done*. **Read this first,
