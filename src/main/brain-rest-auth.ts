@@ -1,8 +1,11 @@
 import { app, safeStorage } from 'electron';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
+import * as http from 'node:http';
+import * as https from 'node:https';
 import * as path from 'node:path';
-import type { BrainRestStatus, BrainRestTestResult } from '../shared/types';
+import { URL } from 'node:url';
+import type { BrainRestCallResult, BrainRestStatus, BrainRestTestResult } from '../shared/types';
 
 /**
  * BrainRestAuth — credential store for the (bring-your-own) Obsidian
@@ -131,4 +134,135 @@ export class BrainRestAuth {
       return { ok: false, status: null, error: 'unreachable' };
     }
   }
+
+  // --- live-vault operations (the mcp-obsidian tool set) --------------------
+  // These let Catalyst (and MCP-capable models, via IPC) drive a RUNNING
+  // Obsidian vault through the Local REST API plugin. Read ops are safe to
+  // surface in the UI; write/delete are exposed over IPC for intentional use.
+
+  /** List files at the vault root, or within `dir`. */
+  listFiles(dir?: string): Promise<BrainRestCallResult> {
+    const p = dir && dir.trim() ? `vault/${encodeVaultPath(dir)}/` : 'vault/';
+    return this.call('GET', p);
+  }
+
+  /** Get a file's contents from the live vault. */
+  getFile(filePath: string): Promise<BrainRestCallResult> {
+    return this.call('GET', `vault/${encodeVaultPath(filePath)}`);
+  }
+
+  /** Full-text search across the live vault (simple query). */
+  search(query: string): Promise<BrainRestCallResult> {
+    return this.call('POST', 'search/simple/', { query: { query: String(query ?? '') } });
+  }
+
+  /** Append markdown to a vault file (creates it if missing). */
+  append(filePath: string, content: string): Promise<BrainRestCallResult> {
+    return this.call('POST', `vault/${encodeVaultPath(filePath)}`, {
+      bodyText: String(content ?? ''),
+      contentType: 'text/markdown',
+    });
+  }
+
+  /** Create/overwrite a vault file. */
+  put(filePath: string, content: string): Promise<BrainRestCallResult> {
+    return this.call('PUT', `vault/${encodeVaultPath(filePath)}`, {
+      bodyText: String(content ?? ''),
+      contentType: 'text/markdown',
+    });
+  }
+
+  /** Delete a vault file. */
+  deleteFile(filePath: string): Promise<BrainRestCallResult> {
+    return this.call('DELETE', `vault/${encodeVaultPath(filePath)}`);
+  }
+
+  /**
+   * Low-level request to the Local REST API. Uses Node http/https so we can
+   * accept the plugin's SELF-SIGNED cert — but ONLY for loopback hosts. For any
+   * non-loopback https target we keep normal cert validation on, so the key is
+   * never sent to an untrusted host over an unverified channel.
+   */
+  private call(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    urlPath: string,
+    opts: { query?: Record<string, string>; bodyText?: string; contentType?: string } = {}
+  ): Promise<BrainRestCallResult> {
+    const { baseUrl } = this.read();
+    const key = this.getKey();
+    if (!key) return Promise.resolve({ ok: false, status: null, data: null, error: 'no-key' });
+
+    let url: URL;
+    try {
+      url = new URL(urlPath, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
+    } catch {
+      return Promise.resolve({ ok: false, status: null, data: null, error: 'bad-url' });
+    }
+    if (opts.query) {
+      for (const [k, v] of Object.entries(opts.query)) url.searchParams.set(k, v);
+    }
+    const isHttps = url.protocol === 'https:';
+    const isLoopback =
+      url.hostname === '127.0.0.1' || url.hostname === 'localhost' || url.hostname === '::1';
+    const mod = isHttps ? https : http;
+
+    return new Promise<BrainRestCallResult>((resolve) => {
+      const req = mod.request(
+        url,
+        {
+          method,
+          headers: {
+            Authorization: `Bearer ${key}`,
+            Accept: 'application/json',
+            ...(opts.bodyText != null ? { 'Content-Type': opts.contentType ?? 'text/markdown' } : {}),
+          },
+          // Self-signed cert is accepted ONLY for loopback (the plugin default).
+          ...(isHttps ? { rejectUnauthorized: !isLoopback } : {}),
+          timeout: 6000,
+        },
+        (res) => {
+          let buf = '';
+          res.setEncoding('utf8');
+          res.on('data', (d) => (buf += d));
+          res.on('end', () => {
+            let data: unknown = buf;
+            if (/json/i.test(String(res.headers['content-type'] ?? ''))) {
+              try {
+                data = JSON.parse(buf);
+              } catch {
+                /* keep raw */
+              }
+            }
+            const status = res.statusCode ?? 0;
+            const ok = status >= 200 && status < 300;
+            resolve({ ok, status, data, error: ok ? null : `http-${status}` });
+          });
+        }
+      );
+      req.on('error', (e) => {
+        const msg = String((e as Error).message || e);
+        resolve({
+          ok: false,
+          status: null,
+          data: null,
+          error: /certificate|self.signed|TLS|SSL/i.test(msg) ? 'self-signed-cert' : 'unreachable',
+        });
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        resolve({ ok: false, status: null, data: null, error: 'timeout' });
+      });
+      if (opts.bodyText != null) req.write(opts.bodyText);
+      req.end();
+    });
+  }
+}
+
+/** Encode a vault-relative path for the REST URL (per-segment; blocks `..`). */
+function encodeVaultPath(p: string): string {
+  return String(p)
+    .split('/')
+    .filter((seg) => seg.length > 0 && seg !== '.' && seg !== '..')
+    .map(encodeURIComponent)
+    .join('/');
 }
