@@ -259,6 +259,22 @@ export function BrainPanel() {
               {semHits.length === 0 && (
                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>No matches.</div>
               )}
+              {semHits.length > 0 && (
+                <button
+                  onClick={async () => {
+                    const blocks = semHits.slice(0, 6)
+                      .map((h) => `## ${h.title} (${h.relPath})\n\n${h.snippet}`)
+                      .join('\n\n---\n\n');
+                    const ctx = `Context retrieved from the Catalyst Brain for: "${sem}"\n\n${blocks}`;
+                    try { await window.electronAPI.app.clipboardWrite(ctx); setNotice('Copied top results as context — paste into a model prompt.'); }
+                    catch { setNotice('Copy failed.'); }
+                  }}
+                  style={{ ...ghostBtn, alignSelf: 'flex-start' }}
+                  title="Copy the top retrieved chunks as a context block for a model prompt"
+                >
+                  ⎘ Copy top results as context
+                </button>
+              )}
               {semHits.map((h, i) => (
                 <button
                   key={`${h.relPath}-${h.chunkIndex}-${i}`}
@@ -533,6 +549,17 @@ function NoteEditor({
             </button>
             <button onClick={() => void save()} disabled={!dirty || saving} style={dirty && !saving ? primaryBtnSm : primaryBtnDisabled}>
               {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={async () => {
+                const ctx = `[Catalyst Brain note: ${relPath}]\n\n${body}`;
+                try { await window.electronAPI.app.clipboardWrite(ctx); setNotice('Copied note as context — paste it into any model.'); }
+                catch { setNotice('Copy failed.'); }
+              }}
+              style={ghostBtn}
+              title="Copy this note as a context block to paste into a Claude/Ollama prompt"
+            >
+              Copy context
             </button>
             <div style={{ flex: 1 }} />
             {confirmDelete ? (

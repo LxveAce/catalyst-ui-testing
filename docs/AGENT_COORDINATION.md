@@ -75,8 +75,13 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
     on-mount IPC — getConfig/listNotes/indexStatus — round-trips). 14/14 sidebar
     panels pass. (The 3 `ext:` failures are pre-existing terminal/palette gesture
     assertions vs. older button labels — not Brain, not changed on this branch.)
+  - [x] **Brain → models (context export)** — "Copy context" on a note and
+    "Copy top results as context" on semantic search → clipboard (existing
+    `app:clipboard-write`), so retrieved Brain knowledge feeds any Claude/Ollama
+    prompt. Closes the knowledge↔models loop without touching the terminal code.
   - [ ] **Optional later:** full MCP routing through the REST plugin (self-signed
-    cert handling), `.canvas`/`.base` read, first-party Obsidian plugin (P5).
+    cert handling), `.canvas`/`.base` read, first-party Obsidian plugin (P5),
+    auto-inject context into the active tab (needs terminal-sender wiring).
 
 ### Done
 - [x] **Sync stale local clone → Catalyst UI v4.0.3.** Local was at v3.2.0
