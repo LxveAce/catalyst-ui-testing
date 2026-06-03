@@ -159,6 +159,9 @@ interface Window {
       ) => Promise<import('./shared/types').BrainRestStatus>;
       restClear: () => Promise<import('./shared/types').BrainRestStatus>;
       restTest: () => Promise<import('./shared/types').BrainRestTestResult>;
+      links: (
+        relPath: string
+      ) => Promise<import('./shared/types').BrainLinksResult>;
     };
     github: {
       authState: () => Promise<import('./shared/types').GitHubAuthState>;

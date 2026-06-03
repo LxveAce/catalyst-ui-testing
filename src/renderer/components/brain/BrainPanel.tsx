@@ -295,6 +295,7 @@ export function BrainPanel() {
           relPath={view.relPath}
           onBack={() => { setView({ kind: 'list' }); void refreshNotes(); }}
           onDeleted={() => { setView({ kind: 'list' }); void refreshNotes(); }}
+          onOpenNote={(rel) => setView({ kind: 'note', relPath: rel })}
           setNotice={setNotice}
         />
       ) : view.kind === 'new' ? (
@@ -360,11 +361,13 @@ function NoteEditor({
   relPath,
   onBack,
   onDeleted,
+  onOpenNote,
   setNotice,
 }: {
   relPath: string;
   onBack: () => void;
   onDeleted: () => void;
+  onOpenNote: (relPath: string) => void;
   setNotice: (s: string | null) => void;
 }) {
   const [note, setNote] = useState<BrainNote | null>(null);
@@ -375,6 +378,20 @@ function NoteEditor({
   const [diff, setDiff] = useState<BrainDiffLine[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [links, setLinks] = useState<{ backlinks: { relPath: string; title: string }[]; outgoing: { target: string; relPath: string | null }[] } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const r = await window.electronAPI.brain.links(relPath);
+        if (alive) setLinks(r.ok ? { backlinks: r.backlinks, outgoing: r.outgoing } : null);
+      } catch {
+        if (alive) setLinks(null);
+      }
+    })();
+    return () => { alive = false; };
+  }, [relPath]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -530,6 +547,41 @@ function NoteEditor({
           </div>
 
           {diff && <DiffView diff={diff} />}
+
+          {links && (links.backlinks.length > 0 || links.outgoing.length > 0) && (
+            <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+              {links.backlinks.length > 0 && (
+                <>
+                  <Label>Linked from ({links.backlinks.length})</Label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 6 }}>
+                    {links.backlinks.map((b) => (
+                      <button key={b.relPath} onClick={() => onOpenNote(b.relPath)} style={linkRow} title={b.relPath}>
+                        ← {b.title}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              {links.outgoing.length > 0 && (
+                <>
+                  <Label>Links to ({links.outgoing.length})</Label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {links.outgoing.map((o) => (
+                      o.relPath ? (
+                        <button key={o.target} onClick={() => onOpenNote(o.relPath!)} style={chip} title={o.relPath}>
+                          [[{o.target}]]
+                        </button>
+                      ) : (
+                        <span key={o.target} style={{ ...chip, opacity: 0.5, background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-muted)' }} title="Unresolved — no matching note">
+                          [[{o.target}]]?
+                        </span>
+                      )
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
@@ -833,6 +885,22 @@ const chip: React.CSSProperties = {
   background: 'var(--accent-dim)',
   color: 'var(--accent-light)',
   border: '1px solid var(--border-active)',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+};
+const linkRow: React.CSSProperties = {
+  textAlign: 'left',
+  border: 'none',
+  background: 'transparent',
+  color: 'var(--text-secondary)',
+  fontSize: 11,
+  padding: '3px 4px',
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
 const noticeBox: React.CSSProperties = {
   marginTop: 10,

@@ -67,9 +67,16 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
     semantic search; incremental rebuild; gated on Ollama. Realizes BACKLOG #4.
   - [x] **P4 — interop** — `obsidian://` open (note + vault); Local REST API key
     via `safeStorage` (raw key never leaves main); best-effort connectivity test.
-  - [ ] **Remaining:** live runtime smoke (UI click-through); optional later —
-    full MCP routing through the REST plugin (cert handling), `.canvas`/`.base`
-    read, first-party Obsidian plugin (P5).
+  - [x] **Wikilink graph (backlinks)** — `brain-graph.ts`: "Linked from" +
+    resolved/unresolved outgoing `[[links]]` in the note editor (click to
+    navigate). Pure-FS, cached, 11/11 logic tests. The Obsidian graph, no Obsidian.
+  - [x] **Live runtime smoke** — ran `scripts/runtime-verify.mjs` (CDP): the app
+    launches and the **🧠 Brain panel mounts with zero console errors** (its
+    on-mount IPC — getConfig/listNotes/indexStatus — round-trips). 14/14 sidebar
+    panels pass. (The 3 `ext:` failures are pre-existing terminal/palette gesture
+    assertions vs. older button labels — not Brain, not changed on this branch.)
+  - [ ] **Optional later:** full MCP routing through the REST plugin (self-signed
+    cert handling), `.canvas`/`.base` read, first-party Obsidian plugin (P5).
 
 ### Done
 - [x] **Sync stale local clone → Catalyst UI v4.0.3.** Local was at v3.2.0
