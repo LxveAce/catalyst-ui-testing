@@ -137,6 +137,10 @@ interface Window {
       deleteNote: (
         relPath: string
       ) => Promise<import('./shared/types').BrainWriteResult>;
+      writeEntry: (
+        entry: import('./shared/types').BrainEntry
+      ) => Promise<import('./shared/types').BrainWriteResult>;
+      mirrorStreams: () => Promise<import('./shared/types').BrainMirrorResult>;
     };
     github: {
       authState: () => Promise<import('./shared/types').GitHubAuthState>;

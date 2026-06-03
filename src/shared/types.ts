@@ -1199,6 +1199,47 @@ export interface BrainWriteResult {
     | null;
 }
 
+/**
+ * Canonical Brain entry (P2 — the unification schema). Every journaling stream
+ * (LMM cycles, snippets, cost, session logs, security reviews, …) and every
+ * model funnels through this one shape, written as a schema-stamped `.md` under
+ * `_catalyst/<source>/<id>.md`. One contract = the streams become mutually
+ * readable (and Obsidian's graph links them). `id` is the idempotency key —
+ * re-writing the same id overwrites in place.
+ */
+export interface BrainEntry {
+  /** Stable id (idempotent overwrite); slugified into the filename. */
+  id: string;
+  /** Human title (frontmatter `title`). */
+  title: string;
+  /** Origin stream/agent, e.g. 'lmm' | 'snippet' | 'cost' | 'session-log' |
+   *  'security-review' | 'manual' | a model name. Slugified into the subfolder. */
+  source: string;
+  /** Markdown body. */
+  body: string;
+  type?: string;
+  project?: string;
+  /** ISO timestamps. */
+  created?: string;
+  updated?: string;
+  /** Which model/agent/human authored it. */
+  author?: string;
+  status?: string;
+  tags?: string[];
+  /** Wikilink targets — also appended to the body so Obsidian's graph connects. */
+  links?: string[];
+}
+
+/** Result of mirroring the journaling streams into the Brain. */
+export interface BrainMirrorResult {
+  ok: boolean;
+  written: number;
+  failed: number;
+  /** Count written per source (e.g. `{ lmm: 3, snippet: 12, cost: 1 }`). */
+  bySource: Record<string, number>;
+  error: 'no-brain-folder' | null;
+}
+
 // The full ElectronAPI shape lives in src/declarations.d.ts as an ambient
 // Window typing. Don't redeclare it here — keep this file for serializable
 // IPC payload types only.
