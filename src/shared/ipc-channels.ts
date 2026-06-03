@@ -290,6 +290,13 @@ export const IPC = {
   BRAIN_REST_SET: 'brain:rest-set',
   BRAIN_REST_CLEAR: 'brain:rest-clear',
   BRAIN_REST_TEST: 'brain:rest-test',
+  /** Live-vault operations via the Local REST API (mcp-obsidian tool set). */
+  BRAIN_REST_LIST: 'brain:rest-list',
+  BRAIN_REST_GET_FILE: 'brain:rest-get-file',
+  BRAIN_REST_SEARCH: 'brain:rest-search',
+  BRAIN_REST_APPEND: 'brain:rest-append',
+  BRAIN_REST_PUT: 'brain:rest-put',
+  BRAIN_REST_DELETE_FILE: 'brain:rest-delete-file',
   /** Wikilink graph — backlinks + resolved outgoing links for a note. */
   BRAIN_LINKS: 'brain:links',
   /** Other Obsidian formats — list/read Canvas (.canvas) + Bases (.base). */

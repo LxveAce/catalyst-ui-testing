@@ -1261,6 +1261,24 @@ function setupBrain() {
   );
   ipcMain.handle(IPC.BRAIN_REST_CLEAR, () => BrainRestAuth.instance().clear());
   ipcMain.handle(IPC.BRAIN_REST_TEST, () => BrainRestAuth.instance().test());
+  ipcMain.handle(IPC.BRAIN_REST_LIST, (_e, dir: unknown) =>
+    BrainRestAuth.instance().listFiles(typeof dir === 'string' ? dir : undefined)
+  );
+  ipcMain.handle(IPC.BRAIN_REST_GET_FILE, (_e, p: unknown) =>
+    BrainRestAuth.instance().getFile(typeof p === 'string' ? p : '')
+  );
+  ipcMain.handle(IPC.BRAIN_REST_SEARCH, (_e, q: unknown) =>
+    BrainRestAuth.instance().search(typeof q === 'string' ? q : '')
+  );
+  ipcMain.handle(IPC.BRAIN_REST_APPEND, (_e, p: unknown, c: unknown) =>
+    BrainRestAuth.instance().append(typeof p === 'string' ? p : '', typeof c === 'string' ? c : '')
+  );
+  ipcMain.handle(IPC.BRAIN_REST_PUT, (_e, p: unknown, c: unknown) =>
+    BrainRestAuth.instance().put(typeof p === 'string' ? p : '', typeof c === 'string' ? c : '')
+  );
+  ipcMain.handle(IPC.BRAIN_REST_DELETE_FILE, (_e, p: unknown) =>
+    BrainRestAuth.instance().deleteFile(typeof p === 'string' ? p : '')
+  );
   ipcMain.handle(IPC.BRAIN_LINKS, (_e, rel: unknown) =>
     BrainGraph.instance().links(typeof rel === 'string' ? rel : '')
   );
