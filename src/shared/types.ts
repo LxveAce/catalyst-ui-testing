@@ -1240,6 +1240,60 @@ export interface BrainMirrorResult {
   error: 'no-brain-folder' | null;
 }
 
+// ===========================================================================
+// Catalyst Brain — RAG index (P3). Chunk the Brain notes, embed each chunk via
+// an Ollama embedding model, persist the vectors in userData, and answer
+// semantic queries by cosine similarity. Realizes BACKLOG #4.
+// ===========================================================================
+
+export interface BrainIndexStatus {
+  /** True once an index has been built for the current folder. */
+  built: boolean;
+  folder: string | null;
+  /** Ollama embedding model the index was/will be built with. */
+  model: string;
+  /** Distinct notes represented in the index. */
+  notes: number;
+  /** Total embedded chunks. */
+  chunks: number;
+  /** Embedding dimensionality (0 until built). */
+  dim: number;
+  /** ISO time the index was last built, or null. */
+  updatedAt: string | null;
+  /** True if the build hit the chunk cap and stopped early. */
+  truncated: boolean;
+}
+
+export type BrainIndexError =
+  | 'no-brain-folder'
+  | 'ollama-unreachable'
+  | 'model-missing'
+  | 'no-notes'
+  | 'not-built'
+  | 'failed';
+
+export interface BrainIndexResult {
+  ok: boolean;
+  status: BrainIndexStatus | null;
+  error: BrainIndexError | null;
+}
+
+export interface BrainSearchHit {
+  relPath: string;
+  title: string;
+  /** The matched chunk text (trimmed for display). */
+  snippet: string;
+  /** Cosine similarity, 0..1. */
+  score: number;
+  chunkIndex: number;
+}
+
+export interface BrainSearchResult {
+  ok: boolean;
+  hits: BrainSearchHit[];
+  error: BrainIndexError | null;
+}
+
 // The full ElectronAPI shape lives in src/declarations.d.ts as an ambient
 // Window typing. Don't redeclare it here — keep this file for serializable
 // IPC payload types only.
