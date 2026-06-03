@@ -79,9 +79,18 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
     "Copy top results as context" on semantic search → clipboard (existing
     `app:clipboard-write`), so retrieved Brain knowledge feeds any Claude/Ollama
     prompt. Closes the knowledge↔models loop without touching the terminal code.
-  - [ ] **Optional later:** full MCP routing through the REST plugin (self-signed
-    cert handling), `.canvas`/`.base` read, first-party Obsidian plugin (P5),
-    auto-inject context into the active tab (needs terminal-sender wiring).
+  - [x] **Canvas + Bases read** — `.canvas` (MIT JSON Canvas, nodes/edges) +
+    `.base` (light YAML, no dep); listed + previewed in the panel.
+  - [x] **Auto-inject to the active tab** — "→ Send to tab" (note) and "→ Send
+    context to active tab" (RAG) inject into the live Claude/Ollama session.
+  - [x] **Local REST API client** — list/get/search/append/put/delete the LIVE
+    vault (Node http/https; self-signed cert accepted **loopback-only**); read
+    ops in the panel, writes via IPC for MCP-capable models.
+  - [x] **P5 — first-party Obsidian plugin** scaffold (`obsidian-plugin/`,
+    MIT typings, esbuild) — tags notes for Catalyst, status-bar count.
+  - **ENTIRE PLAN COMPLETE.** Red-teams: `SECURITY_REVIEW_BRAIN_P1/P2_P4/P5.md`.
+    Remaining truly-optional: a write-confirm/allowlist before autonomous-model
+    REST writes (M-1), and runtime-testing the Obsidian plugin inside Obsidian.
 
 ### Done
 - [x] **Sync stale local clone → Catalyst UI v4.0.3.** Local was at v3.2.0
