@@ -1322,6 +1322,33 @@ export interface BrainOpenResult {
   error: 'no-brain-folder' | 'outside-root' | 'failed' | null;
 }
 
+// ===========================================================================
+// Catalyst Brain — wikilink graph (backlinks). Which notes link to this one,
+// and where this note's [[links]] resolve. Pure filesystem; the Obsidian graph
+// without Obsidian.
+// ===========================================================================
+
+export interface BrainBacklink {
+  relPath: string;
+  title: string;
+}
+
+export interface BrainOutLink {
+  /** The raw link target text (e.g. `Note`, `folder/Note`). */
+  target: string;
+  /** Resolved note relPath, or null when the target doesn't match a note. */
+  relPath: string | null;
+}
+
+export interface BrainLinksResult {
+  ok: boolean;
+  /** Notes that link TO this note. */
+  backlinks: BrainBacklink[];
+  /** This note's outgoing wikilinks (resolved + unresolved). */
+  outgoing: BrainOutLink[];
+  error: 'no-brain-folder' | null;
+}
+
 // The full ElectronAPI shape lives in src/declarations.d.ts as an ambient
 // Window typing. Don't redeclare it here — keep this file for serializable
 // IPC payload types only.

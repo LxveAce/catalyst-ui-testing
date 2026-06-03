@@ -290,4 +290,6 @@ export const IPC = {
   BRAIN_REST_SET: 'brain:rest-set',
   BRAIN_REST_CLEAR: 'brain:rest-clear',
   BRAIN_REST_TEST: 'brain:rest-test',
+  /** Wikilink graph — backlinks + resolved outgoing links for a note. */
+  BRAIN_LINKS: 'brain:links',
 } as const;
