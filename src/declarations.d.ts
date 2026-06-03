@@ -162,6 +162,13 @@ interface Window {
       links: (
         relPath: string
       ) => Promise<import('./shared/types').BrainLinksResult>;
+      listSpecial: () => Promise<import('./shared/types').BrainSpecialList>;
+      readCanvas: (
+        relPath: string
+      ) => Promise<import('./shared/types').BrainCanvas | { error: string }>;
+      readBase: (
+        relPath: string
+      ) => Promise<import('./shared/types').BrainBaseDoc | { error: string }>;
     };
     github: {
       authState: () => Promise<import('./shared/types').GitHubAuthState>;

@@ -4,11 +4,15 @@ import * as fs from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import type {
+  BrainBaseDoc,
+  BrainCanvas,
+  BrainCanvasNode,
   BrainConfig,
   BrainDiffLine,
   BrainListResult,
   BrainNote,
   BrainNoteSummary,
+  BrainSpecialList,
   BrainWritePreview,
   BrainWriteResult,
   Wikilink,
@@ -219,6 +223,117 @@ export class BrainService {
     }
     notes.sort((a, b) => a.relPath.localeCompare(b.relPath, undefined, { sensitivity: 'base' }));
     return { root, notes, truncated, error: null };
+  }
+
+  /** List the non-`.md` Obsidian docs (Canvas `.canvas`, Bases `.base`). */
+  async listSpecial(): Promise<BrainSpecialList> {
+    const root = this.root();
+    const canvases: BrainNoteSummary[] = [];
+    const bases: BrainNoteSummary[] = [];
+    if (!root) return { canvases, bases };
+
+    const walk = async (dir: string, depth: number): Promise<void> => {
+      if (depth > MAX_WALK_DEPTH) return;
+      let entries: fs.Dirent[];
+      try {
+        entries = await fsp.readdir(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const e of entries) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          if (IGNORE_DIRS.has(e.name)) continue;
+          await walk(full, depth + 1);
+        } else if (e.isFile()) {
+          const ext = path.extname(e.name).toLowerCase();
+          if (ext !== '.canvas' && ext !== '.base') continue;
+          const bucket = ext === '.canvas' ? canvases : bases;
+          if (bucket.length >= MAX_NOTES) continue;
+          let st: fs.Stats;
+          try {
+            st = await fsp.stat(full);
+          } catch {
+            continue;
+          }
+          bucket.push({
+            relPath: this.toRel(root, full),
+            title: path.basename(e.name, ext),
+            size: st.size,
+            modified: st.mtime.toISOString(),
+          });
+        }
+      }
+    };
+    try {
+      await walk(root, 0);
+    } catch {
+      // best-effort
+    }
+    const byPath = (a: BrainNoteSummary, b: BrainNoteSummary) =>
+      a.relPath.localeCompare(b.relPath, undefined, { sensitivity: 'base' });
+    canvases.sort(byPath);
+    bases.sort(byPath);
+    return { canvases, bases };
+  }
+
+  /** Read + parse a JSON Canvas (`.canvas`) file into a node/edge summary. */
+  async readCanvas(rel: string): Promise<BrainCanvas | { error: string }> {
+    const doc = await this.readSpecial(rel, '.canvas');
+    if ('error' in doc) return doc;
+    let parsed: { nodes?: unknown; edges?: unknown };
+    try {
+      parsed = JSON.parse(doc.raw);
+    } catch {
+      return { error: 'invalid-json' };
+    }
+    const rawNodes = Array.isArray(parsed.nodes) ? parsed.nodes : [];
+    const nodes: BrainCanvasNode[] = rawNodes.slice(0, 2000).map((n): BrainCanvasNode => {
+      const o = (n ?? {}) as Record<string, unknown>;
+      const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
+      return {
+        id: String(o.id ?? ''),
+        type: typeof o.type === 'string' ? o.type : 'unknown',
+        text: str(o.text),
+        file: str(o.file),
+        url: str(o.url),
+        label: str(o.label),
+      };
+    });
+    const edgeCount = Array.isArray(parsed.edges) ? parsed.edges.length : 0;
+    return { relPath: doc.relPath, nodes, edgeCount };
+  }
+
+  /** Read a Bases (`.base`) file: raw text + a LIGHT top-level YAML parse
+   *  (no dependency; complex views stay in `raw`). */
+  async readBase(rel: string): Promise<BrainBaseDoc | { error: string }> {
+    const doc = await this.readSpecial(rel, '.base');
+    if ('error' in doc) return doc;
+    return {
+      relPath: doc.relPath,
+      parsed: lightParseFrontmatter(doc.raw) as Record<string, unknown>,
+      raw: doc.raw,
+    };
+  }
+
+  /** Shared guarded read for a non-`.md` doc of a specific extension. */
+  private async readSpecial(
+    rel: string,
+    ext: '.canvas' | '.base'
+  ): Promise<{ relPath: string; raw: string } | { error: string }> {
+    const root = this.root();
+    if (!root) return { error: 'no-brain-folder' };
+    const abs = this.resolveNotePath(root, rel, { requireMd: false });
+    if (!abs || path.extname(abs).toLowerCase() !== ext) return { error: 'outside-root' };
+    let st: fs.Stats;
+    try {
+      st = await fsp.stat(abs);
+    } catch {
+      return { error: 'not-found' };
+    }
+    if (!st.isFile()) return { error: 'not-found' };
+    if (st.size > MAX_NOTE_BYTES) return { error: 'too-large' };
+    return { relPath: this.toRel(root, abs), raw: await fsp.readFile(abs, 'utf8') };
   }
 
   // --- read -----------------------------------------------------------------
