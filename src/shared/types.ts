@@ -774,7 +774,8 @@ export type SessionPanelId =
   | 'settings'
   | 'models'
   | 'files'
-  | 'hf';
+  | 'hf'
+  | 'brain';
 
 export interface SessionState {
   version: number;
