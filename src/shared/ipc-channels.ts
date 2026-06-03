@@ -279,4 +279,8 @@ export const IPC = {
   /** P2 — mirror the journaling streams (LMM cycles, snippets, cost, …) into
    *  the Brain as schema-stamped notes. Returns BrainMirrorResult. */
   BRAIN_MIRROR_STREAMS: 'brain:mirror-streams',
+  /** P3 — RAG index over the Brain (embed via Ollama; vectors in userData). */
+  BRAIN_INDEX_STATUS: 'brain:index-status',
+  BRAIN_INDEX_REBUILD: 'brain:index-rebuild',
+  BRAIN_INDEX_QUERY: 'brain:index-query',
 } as const;

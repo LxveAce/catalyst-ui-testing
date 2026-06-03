@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   BrainConfig,
   BrainDiffLine,
+  BrainIndexStatus,
   BrainNote,
   BrainNoteSummary,
+  BrainSearchHit,
 } from '../../../shared/types';
 
 /**
@@ -31,6 +33,12 @@ export function BrainPanel() {
   const [view, setView] = useState<View>({ kind: 'list' });
   const [notice, setNotice] = useState<string | null>(null);
   const [mirroring, setMirroring] = useState(false);
+  // P3 — semantic search / RAG.
+  const [sem, setSem] = useState('');
+  const [semHits, setSemHits] = useState<BrainSearchHit[] | null>(null);
+  const [semBusy, setSemBusy] = useState(false);
+  const [building, setBuilding] = useState(false);
+  const [indexInfo, setIndexInfo] = useState<BrainIndexStatus | null>(null);
 
   const refreshConfig = useCallback(async () => {
     try {
@@ -91,6 +99,47 @@ export function BrainPanel() {
       setMirroring(false);
     }
   }, [refreshNotes]);
+
+  const refreshIndex = useCallback(async () => {
+    try {
+      setIndexInfo(await window.electronAPI.brain.indexStatus());
+    } catch {
+      setIndexInfo(null);
+    }
+  }, []);
+
+  useEffect(() => { void refreshIndex(); }, [refreshIndex]);
+
+  const buildIndex = useCallback(async () => {
+    setBuilding(true);
+    try {
+      const r = await window.electronAPI.brain.indexRebuild();
+      if (!r.ok) {
+        setNotice(indexErrorMsg(r.error));
+      } else {
+        setNotice(`Index built: ${r.status?.chunks ?? 0} chunks from ${r.status?.notes ?? 0} notes (${r.status?.model}).`);
+      }
+      await refreshIndex();
+    } catch {
+      setNotice('Index build failed.');
+    } finally {
+      setBuilding(false);
+    }
+  }, [refreshIndex]);
+
+  const semSearch = useCallback(async () => {
+    if (!sem.trim()) { setSemHits(null); return; }
+    setSemBusy(true);
+    try {
+      const r = await window.electronAPI.brain.indexQuery(sem.trim(), 12);
+      if (!r.ok) { setSemHits(null); setNotice(indexErrorMsg(r.error)); return; }
+      setSemHits(r.hits);
+    } catch {
+      setNotice('Search failed.');
+    } finally {
+      setSemBusy(false);
+    }
+  }, [sem]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -164,6 +213,63 @@ export function BrainPanel() {
         >
           {mirroring ? 'Mirroring…' : '⟳ Mirror journaling streams → Brain'}
         </button>
+      )}
+
+      {view.kind === 'list' && (
+        <div style={{ marginTop: 10, padding: 10, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>
+              Semantic search
+            </span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+              {indexInfo?.built ? `${indexInfo.chunks} chunks · ${indexInfo.model}` : 'no index'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input
+              value={sem}
+              onChange={(e) => setSem(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void semSearch(); }}
+              placeholder="Ask the Brain (meaning, not keywords)…"
+              style={searchInput}
+            />
+            <button onClick={() => void semSearch()} disabled={semBusy} style={semBusy ? primaryBtnDisabled : primaryBtnSm}>
+              {semBusy ? '…' : 'Search'}
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+            <button onClick={() => void buildIndex()} disabled={building} style={ghostBtn} title="Embed all notes via an Ollama embedding model and build the vector index">
+              {building ? 'Building index…' : indexInfo?.built ? 'Rebuild index' : 'Build index'}
+            </button>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>via Ollama embeddings</span>
+          </div>
+
+          {semHits && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {semHits.length === 0 && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>No matches.</div>
+              )}
+              {semHits.map((h, i) => (
+                <button
+                  key={`${h.relPath}-${h.chunkIndex}-${i}`}
+                  onClick={() => setView({ kind: 'note', relPath: h.relPath })}
+                  style={{ ...noteRow, alignItems: 'flex-start', flexDirection: 'column', gap: 2 }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  title={h.relPath}
+                >
+                  <div style={{ display: 'flex', width: '100%', gap: 6 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title}</span>
+                    <span style={{ fontSize: 10, color: 'var(--accent-light)' }}>{(h.score * 100).toFixed(0)}%</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.4, maxHeight: 44, overflow: 'hidden' }}>
+                    {h.snippet}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {notice && (
@@ -511,6 +617,18 @@ function DiffView({ diff }: { diff: BrainDiffLine[] }) {
       </div>
     </div>
   );
+}
+
+/** Human-readable message for a RAG index error code. */
+function indexErrorMsg(error: string | null): string {
+  switch (error) {
+    case 'no-brain-folder': return 'Choose a Brain folder first.';
+    case 'ollama-unreachable': return 'Ollama isn\'t running. Start it (or launch a model) and try again.';
+    case 'model-missing': return 'The embedding model isn\'t pulled. In a terminal: `ollama pull nomic-embed-text`.';
+    case 'no-notes': return 'No notes to index yet.';
+    case 'not-built': return 'Build the index first (Build index).';
+    default: return 'Index operation failed.';
+  }
 }
 
 /** Recompose a note's original file content for dirty-checking. */

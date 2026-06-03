@@ -141,6 +141,14 @@ interface Window {
         entry: import('./shared/types').BrainEntry
       ) => Promise<import('./shared/types').BrainWriteResult>;
       mirrorStreams: () => Promise<import('./shared/types').BrainMirrorResult>;
+      indexStatus: () => Promise<import('./shared/types').BrainIndexStatus>;
+      indexRebuild: (
+        model?: string
+      ) => Promise<import('./shared/types').BrainIndexResult>;
+      indexQuery: (
+        text: string,
+        k?: number
+      ) => Promise<import('./shared/types').BrainSearchResult>;
     };
     github: {
       authState: () => Promise<import('./shared/types').GitHubAuthState>;

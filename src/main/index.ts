@@ -14,6 +14,7 @@ import { UpdaterService } from './updater-service';
 import { SessionService } from './session-service';
 import { BrainService } from './brain-service';
 import { BrainWriter } from './brain-writer';
+import { BrainIndex } from './brain-index';
 import { HotkeysService } from './hotkeys-service';
 import { TrayService } from './tray-service';
 import { AccessibilityService } from './accessibility-service';
@@ -1215,6 +1216,18 @@ function setupBrain() {
 
       return { ok: failed === 0, written, failed, bySource, error: null };
     }
+  );
+
+  // P3 — RAG index.
+  ipcMain.handle(IPC.BRAIN_INDEX_STATUS, () => BrainIndex.instance().status());
+  ipcMain.handle(IPC.BRAIN_INDEX_REBUILD, (_e, model: unknown) =>
+    BrainIndex.instance().rebuild(typeof model === 'string' ? model : undefined)
+  );
+  ipcMain.handle(IPC.BRAIN_INDEX_QUERY, (_e, text: unknown, k: unknown) =>
+    BrainIndex.instance().query(
+      typeof text === 'string' ? text : '',
+      typeof k === 'number' && Number.isFinite(k) ? k : 8
+    )
   );
 }
 
