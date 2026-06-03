@@ -117,6 +117,19 @@ export class BrainService {
     return this.isDir(folder) ? path.resolve(folder!) : null;
   }
 
+  /**
+   * Guarded absolute on-disk path for a Brain-relative note (or the root when
+   * `rel` is empty). null when there's no Brain folder or the path escapes
+   * root. Used by the obsidian:// interop to build a safe URI from a path the
+   * renderer can only address inside the Brain.
+   */
+  absPathFor(rel?: string): string | null {
+    const root = this.root();
+    if (!root) return null;
+    if (!rel || rel.trim().length === 0 || rel === '.') return root;
+    return this.resolveNotePath(root, rel, { requireMd: false });
+  }
+
   private isDir(p: string | null | undefined): boolean {
     if (!p) return false;
     try {

@@ -283,4 +283,11 @@ export const IPC = {
   BRAIN_INDEX_STATUS: 'brain:index-status',
   BRAIN_INDEX_REBUILD: 'brain:index-rebuild',
   BRAIN_INDEX_QUERY: 'brain:index-query',
+  /** P4 — interop. Open a note (or the vault) in Obsidian via obsidian://. */
+  BRAIN_OPEN_IN_OBSIDIAN: 'brain:open-in-obsidian',
+  /** P4 — Local REST API key (safeStorage; raw key never returned). */
+  BRAIN_REST_STATUS: 'brain:rest-status',
+  BRAIN_REST_SET: 'brain:rest-set',
+  BRAIN_REST_CLEAR: 'brain:rest-clear',
+  BRAIN_REST_TEST: 'brain:rest-test',
 } as const;

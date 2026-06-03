@@ -15,6 +15,7 @@ import { SessionService } from './session-service';
 import { BrainService } from './brain-service';
 import { BrainWriter } from './brain-writer';
 import { BrainIndex } from './brain-index';
+import { BrainRestAuth } from './brain-rest-auth';
 import { HotkeysService } from './hotkeys-service';
 import { TrayService } from './tray-service';
 import { AccessibilityService } from './accessibility-service';
@@ -1229,6 +1230,36 @@ function setupBrain() {
       typeof k === 'number' && Number.isFinite(k) ? k : 8
     )
   );
+
+  // P4 — interop.
+  ipcMain.handle(
+    IPC.BRAIN_OPEN_IN_OBSIDIAN,
+    async (_e, rel: unknown): Promise<import('../shared/types').BrainOpenResult> => {
+      const abs = svc.absPathFor(typeof rel === 'string' ? rel : undefined);
+      if (!abs) {
+        return { ok: false, uri: null, error: svc.getConfig().ready ? 'outside-root' : 'no-brain-folder' };
+      }
+      // obsidian://open?path=<abs> opens the file/folder by absolute path if it
+      // belongs to a vault the user has registered in Obsidian. The path comes
+      // from absPathFor (guarded), never raw renderer input.
+      const uri = `obsidian://open?path=${encodeURIComponent(abs)}`;
+      try {
+        await shell.openExternal(uri);
+        return { ok: true, uri, error: null };
+      } catch {
+        return { ok: false, uri, error: 'failed' };
+      }
+    }
+  );
+  ipcMain.handle(IPC.BRAIN_REST_STATUS, () => BrainRestAuth.instance().status());
+  ipcMain.handle(IPC.BRAIN_REST_SET, (_e, baseUrl: unknown, key: unknown) =>
+    BrainRestAuth.instance().setKey(
+      typeof baseUrl === 'string' ? baseUrl : '',
+      typeof key === 'string' ? key : ''
+    )
+  );
+  ipcMain.handle(IPC.BRAIN_REST_CLEAR, () => BrainRestAuth.instance().clear());
+  ipcMain.handle(IPC.BRAIN_REST_TEST, () => BrainRestAuth.instance().test());
 }
 
 function setupGitHub() {

@@ -199,6 +199,16 @@ export function BrainPanel() {
             {config.folder}
           </div>
         </div>
+        <button
+          onClick={async () => {
+            const r = await window.electronAPI.brain.openInObsidian();
+            if (!r.ok) setNotice('Couldn\'t open in Obsidian. Install Obsidian and add this folder as a vault first.');
+          }}
+          style={ghostBtn}
+          title="Open this folder in Obsidian (obsidian:// — requires Obsidian installed with this folder added as a vault)"
+        >
+          Obsidian ↗
+        </button>
         <button onClick={() => void pickFolder()} style={ghostBtn} title="Choose a different Brain folder">
           Change
         </button>
@@ -277,6 +287,8 @@ export function BrainPanel() {
           {notice}
         </div>
       )}
+
+      {view.kind === 'list' && <RestApiSection setNotice={setNotice} />}
 
       {view.kind === 'note' ? (
         <NoteEditor
@@ -442,6 +454,16 @@ function NoteEditor({
         <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={relPath}>
           {relPath}
         </div>
+        <button
+          onClick={async () => {
+            const r = await window.electronAPI.brain.openInObsidian(relPath);
+            if (!r.ok) setNotice('Couldn\'t open in Obsidian (is it installed with this folder as a vault?).');
+          }}
+          style={ghostBtn}
+          title="Open this note in Obsidian"
+        >
+          Obsidian ↗
+        </button>
         <button onClick={() => void load()} style={ghostBtn} title="Reload from disk">↻</button>
       </div>
 
@@ -569,6 +591,104 @@ function NewNote({
         </button>
         <button onClick={onCancel} style={ghostBtn}>Cancel</button>
       </div>
+    </div>
+  );
+}
+
+// --- Local REST API (BYO Obsidian) -----------------------------------------
+
+function RestApiSection({ setNotice }: { setNotice: (s: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [baseUrl, setBaseUrl] = useState('https://127.0.0.1:27124');
+  const [key, setKey] = useState('');
+  const [hasKey, setHasKey] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const s = await window.electronAPI.brain.restStatus();
+      setHasKey(s.hasKey);
+      setBaseUrl(s.baseUrl);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { if (open) void refresh(); }, [open, refresh]);
+
+  return (
+    <div style={{ marginTop: 10, padding: 10, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{ ...ghostBtn, width: '100%', textAlign: 'left', border: 'none', display: 'flex', alignItems: 'center', gap: 6 }}
+        title="Optional: connect to a running Obsidian via the Local REST API plugin so MCP-capable models can drive your vault"
+      >
+        <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>
+          Obsidian Local REST API (optional)
+        </span>
+        <span style={{ fontSize: 10, color: hasKey ? 'var(--accent-light)' : 'var(--text-muted)' }}>
+          {hasKey ? 'key saved' : 'not set'} {open ? '▾' : '▸'}
+        </span>
+      </button>
+
+      {open && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.4, marginBottom: 6 }}>
+            For the <code>coddingtonbear/obsidian-local-rest-api</code> plugin. The
+            key is encrypted at rest (OS keychain) and never leaves the main
+            process. The Brain works fully without this — it's only for driving a
+            live Obsidian instance.
+          </div>
+          <Label>Base URL</Label>
+          <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} spellCheck={false} style={{ ...mono, minHeight: 0, height: 30 }} />
+          <Label>API key</Label>
+          <input
+            type="password"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder={hasKey ? '•••••••• (saved — type to replace)' : 'paste the plugin API key'}
+            spellCheck={false}
+            style={{ ...mono, minHeight: 0, height: 30 }}
+          />
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+            <button
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const s = await window.electronAPI.brain.restSet(baseUrl, key);
+                  setHasKey(s.hasKey);
+                  setKey('');
+                  setNotice(s.hasKey ? 'Saved Local REST API key.' : (s.encryptionAvailable ? 'Saved base URL.' : 'OS keychain unavailable — key not stored.'));
+                } finally { setBusy(false); }
+              }}
+              disabled={busy}
+              style={busy ? primaryBtnDisabled : primaryBtnSm}
+            >
+              Save
+            </button>
+            <button
+              onClick={async () => {
+                const r = await window.electronAPI.brain.restTest();
+                setNotice(
+                  r.ok ? 'Connected to Obsidian Local REST API ✓'
+                  : r.error === 'self-signed-cert' ? 'Reached it, but the plugin uses a self-signed HTTPS cert (expected). Treat as connectable; full requests need cert handling (future).'
+                  : r.error === 'no-key' ? 'Save a key first.'
+                  : 'Could not reach the Local REST API (is Obsidian running with the plugin enabled?).'
+                );
+              }}
+              style={ghostBtn}
+            >
+              Test
+            </button>
+            {hasKey && (
+              <button
+                onClick={async () => { const s = await window.electronAPI.brain.restClear(); setHasKey(s.hasKey); setNotice('Cleared the saved key.'); }}
+                style={ghostBtnDanger}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
