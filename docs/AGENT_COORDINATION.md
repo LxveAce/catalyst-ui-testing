@@ -41,7 +41,8 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 | Agent | Branch | Scope | Files (primary) | Status |
 |---|---|---|---|---|
 | Claude (Opus 4.8, "docs+terminal") | `feature/terminal-profiles-skip-perms` | (1) Launch any system shell (CMD/PowerShell/pwsh/Git Bash/WSL/bash/zsh) as a tab. (2) "Claude (skip permissions)" picker entry → per-launch `--dangerously-skip-permissions`. Plus repo doc sync to Catalyst UI v4.0.3. Adds `PtyRegistry.restart()` (remembers launch params). | `src/main/shell-profiles.ts` (new), `src/main/{index,pty-manager,pty-registry,session-service}.ts`, `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `src/renderer/components/terminal/{TerminalTabs,TerminalPanel}.tsx`, `src/renderer/App.tsx`; docs: README/STATUS/HANDOFF/CHANGELOG/CONTRIBUTING/SECURITY + `security-reviews/SECURITY_REVIEW_TERMINAL_PROFILES.md` | ✅ done + red-teamed. tsc + vite build clean. H-1 fixed. |
-| Claude (Opus 4.8, "research+obsidian") | `feature/obsidian-brain` | **Catalyst Brain** = Obsidian-compatible knowledge + AI layer. Deep-research done (25/25 verified). Unify the 7 journaling streams into one schema-stamped markdown substrate; Catalyst's models = the RAG brain. Direct-vault-FS + BYO-Obsidian (`obsidian://` URI / Local REST API + MCP); **NOT** bundling the Obsidian binary (ToS forbids). Plan: [`OBSIDIAN_INTEGRATION.md`](./OBSIDIAN_INTEGRATION.md). | **Docs/planning only so far** (`docs/OBSIDIAN_INTEGRATION.md`, this row, `BACKLOG.md`). Future code will live in a new `src/main/brain-*` area + a Brain panel — **no overlap** with the terminal/PTY files above. | 📋 planning — research complete, awaiting go-ahead to build P1 |
+| Claude (Opus 4.8, "research+obsidian") | `feature/obsidian-brain` | **Catalyst Brain** = Obsidian-compatible knowledge + AI layer. Deep-research done (25/25 verified). Plan: [`OBSIDIAN_INTEGRATION.md`](./OBSIDIAN_INTEGRATION.md), features: [`OBSIDIAN_BRAIN_FEATURES.md`](./OBSIDIAN_BRAIN_FEATURES.md). | docs: `OBSIDIAN_INTEGRATION.md`, `OBSIDIAN_BRAIN_FEATURES.md`, `BACKLOG.md` | 📋 research/plan complete |
+| Claude (Opus 4.8, "build-agent") — handed the build by user | `feature/obsidian-brain` | **P1 — Brain Folder Service** (the substrate): scoped read/write of `.md`+YAML+wikilinks, path-traversal guards, diff-before-write, optimistic-concurrency, atomic writes. | `src/main/brain-service.ts` (new), `src/main/index.ts` (setupBrain), `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `docs/security-reviews/SECURITY_REVIEW_BRAIN_P1.md` (new) | ✅ P1 built + red-teamed. tsc + vite build clean; 15/15 logic tests. No renderer panel yet (P-next). |
 
 ---
 
@@ -49,8 +50,16 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 
 ### In progress / claimed
 - [ ] **Catalyst Brain — Obsidian integration** (`feature/obsidian-brain`).
-  Phase plan in `docs/OBSIDIAN_INTEGRATION.md`. P0 (naming) done; P1 (Brain
-  Folder Service) is the next code step, on user go-ahead. Realizes BACKLOG #4.
+  Phase plan in `docs/OBSIDIAN_INTEGRATION.md`. Realizes BACKLOG #4.
+  - [x] **P0** naming (Brain vs vault).
+  - [x] **P1 — Brain Folder Service** (main): `src/main/brain-service.ts` +
+    `setupBrain()` IPC + preload `brain` namespace + `Brain*` types. Scoped
+    read/write of `.md`+YAML+wikilinks, path guards, diff-before-write,
+    optimistic-concurrency (content hash), atomic writes. Red-team:
+    `SECURITY_REVIEW_BRAIN_P1.md`. tsc + vite clean; 15/15 logic tests.
+  - [ ] **P-next** (awaiting direction): renderer **Brain panel** (sidebar entry
+    + folder picker + note list/read/edit with diff preview) to make P1 usable,
+    then **P2** canonical schema + Brain Writer (unify the 7 journaling streams).
 
 ### Done
 - [x] **Sync stale local clone → Catalyst UI v4.0.3.** Local was at v3.2.0
@@ -68,6 +77,14 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 
 ## Decisions / notes (newest first)
 
+- **2026-06-02** — **User handed the Brain build to the build-agent; P1 shipped on
+  the branch.** Brain Folder Service is in (`src/main/brain-service.ts` + IPC +
+  preload + types). Dependency-free frontmatter handling (js-yaml is only a
+  transitive dep — unsafe to ship from main; raw frontmatter round-trips
+  losslessly, light-parse for tags/aliases/title; a real `yaml` dep can come in
+  P2). Red-team `SECURITY_REVIEW_BRAIN_P1.md`: one Medium (symlink-escape, same
+  lexical-guard limitation as ProjectExplorer — noted for realpath hardening),
+  no Highs. Next: a renderer Brain panel to exercise it.
 - **2026-06-02** — **"Prepackaged like Ollama" → ship the NATIVE Brain, not the
   Obsidian binary.** User wants Obsidian to feel built-in/prepackaged in the
   `.exe`. Legal way: the Catalyst Brain is native code (compiled into the app,

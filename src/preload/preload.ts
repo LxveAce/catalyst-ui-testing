@@ -77,6 +77,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setCwd: (cwd: string) => ipcRenderer.invoke(IPC.GIT_SET_CWD, cwd),
     pickDir: () => ipcRenderer.invoke(IPC.GIT_PICK_DIR),
   },
+  brain: {
+    getConfig: () => ipcRenderer.invoke(IPC.BRAIN_GET_CONFIG),
+    pickFolder: () => ipcRenderer.invoke(IPC.BRAIN_PICK_FOLDER),
+    setFolder: (folder: string | null) => ipcRenderer.invoke(IPC.BRAIN_SET_FOLDER, folder),
+    listNotes: () => ipcRenderer.invoke(IPC.BRAIN_LIST_NOTES),
+    readNote: (relPath: string) => ipcRenderer.invoke(IPC.BRAIN_READ_NOTE, relPath),
+    previewWrite: (relPath: string, content: string) =>
+      ipcRenderer.invoke(IPC.BRAIN_PREVIEW_WRITE, relPath, content),
+    previewDelete: (relPath: string) => ipcRenderer.invoke(IPC.BRAIN_PREVIEW_DELETE, relPath),
+    writeNote: (relPath: string, content: string, expectedHash?: string) =>
+      ipcRenderer.invoke(IPC.BRAIN_WRITE_NOTE, relPath, content, expectedHash ?? null),
+    createNote: (relPath: string, content: string) =>
+      ipcRenderer.invoke(IPC.BRAIN_CREATE_NOTE, relPath, content),
+    appendNote: (relPath: string, text: string) =>
+      ipcRenderer.invoke(IPC.BRAIN_APPEND_NOTE, relPath, text),
+    deleteNote: (relPath: string) => ipcRenderer.invoke(IPC.BRAIN_DELETE_NOTE, relPath),
+  },
   github: {
     authState: () => ipcRenderer.invoke(IPC.GITHUB_AUTH_STATE),
     setToken: (token: string, allowPlaintext = false) =>
