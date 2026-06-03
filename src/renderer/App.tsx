@@ -732,7 +732,7 @@ function RightPanel({
     case 'hf':
       return <HFPanel />;
     case 'brain':
-      return <BrainPanel />;
+      return <BrainPanel onSendCommand={onSendCommand} />;
     case 'files':
       return <FileTreePanel />;
     default:

@@ -1264,6 +1264,13 @@ function setupBrain() {
   ipcMain.handle(IPC.BRAIN_LINKS, (_e, rel: unknown) =>
     BrainGraph.instance().links(typeof rel === 'string' ? rel : '')
   );
+  ipcMain.handle(IPC.BRAIN_LIST_SPECIAL, () => svc.listSpecial());
+  ipcMain.handle(IPC.BRAIN_READ_CANVAS, (_e, rel: unknown) =>
+    svc.readCanvas(typeof rel === 'string' ? rel : '')
+  );
+  ipcMain.handle(IPC.BRAIN_READ_BASE, (_e, rel: unknown) =>
+    svc.readBase(typeof rel === 'string' ? rel : '')
+  );
 }
 
 function setupGitHub() {

@@ -24,7 +24,7 @@ type View =
   | { kind: 'note'; relPath: string }
   | { kind: 'new' };
 
-export function BrainPanel() {
+export function BrainPanel({ onSendCommand }: { onSendCommand?: (command: string, submit?: boolean) => void } = {}) {
   const [config, setConfig] = useState<BrainConfig | null>(null);
   const [notes, setNotes] = useState<BrainNoteSummary[]>([]);
   const [truncated, setTruncated] = useState(false);
@@ -275,6 +275,19 @@ export function BrainPanel() {
                   ⎘ Copy top results as context
                 </button>
               )}
+              {semHits.length > 0 && onSendCommand && (
+                <button
+                  onClick={() => {
+                    const blocks = semHits.slice(0, 6).map((h) => `## ${h.title} (${h.relPath})\n\n${h.snippet}`).join('\n\n---\n\n');
+                    onSendCommand(`Context from the Catalyst Brain for "${sem}":\n\n${blocks}\n`, false);
+                    setNotice('Sent retrieved context to the active tab — review and press Enter.');
+                  }}
+                  style={{ ...ghostBtn, alignSelf: 'flex-start' }}
+                  title="Insert the top retrieved chunks as context into the active terminal/chat tab"
+                >
+                  → Send context to active tab
+                </button>
+              )}
               {semHits.map((h, i) => (
                 <button
                   key={`${h.relPath}-${h.chunkIndex}-${i}`}
@@ -304,6 +317,8 @@ export function BrainPanel() {
         </div>
       )}
 
+      {view.kind === 'list' && <SpecialDocsSection setNotice={setNotice} />}
+
       {view.kind === 'list' && <RestApiSection setNotice={setNotice} />}
 
       {view.kind === 'note' ? (
@@ -312,6 +327,7 @@ export function BrainPanel() {
           onBack={() => { setView({ kind: 'list' }); void refreshNotes(); }}
           onDeleted={() => { setView({ kind: 'list' }); void refreshNotes(); }}
           onOpenNote={(rel) => setView({ kind: 'note', relPath: rel })}
+          onSendCommand={onSendCommand}
           setNotice={setNotice}
         />
       ) : view.kind === 'new' ? (
@@ -378,12 +394,14 @@ function NoteEditor({
   onBack,
   onDeleted,
   onOpenNote,
+  onSendCommand,
   setNotice,
 }: {
   relPath: string;
   onBack: () => void;
   onDeleted: () => void;
   onOpenNote: (relPath: string) => void;
+  onSendCommand?: (command: string, submit?: boolean) => void;
   setNotice: (s: string | null) => void;
 }) {
   const [note, setNote] = useState<BrainNote | null>(null);
@@ -561,6 +579,15 @@ function NoteEditor({
             >
               Copy context
             </button>
+            {onSendCommand && (
+              <button
+                onClick={() => { onSendCommand(`[Catalyst Brain note: ${relPath}]\n\n${body}\n`, false); setNotice('Sent to the active tab — review and press Enter to submit.'); }}
+                style={ghostBtn}
+                title="Insert this note as context into the active terminal/chat tab (not auto-submitted)"
+              >
+                → Send to tab
+              </button>
+            )}
             <div style={{ flex: 1 }} />
             {confirmDelete ? (
               <>
@@ -670,6 +697,85 @@ function NewNote({
         </button>
         <button onClick={onCancel} style={ghostBtn}>Cancel</button>
       </div>
+    </div>
+  );
+}
+
+// --- Canvas + Bases (other Obsidian formats) -------------------------------
+
+function SpecialDocsSection({ setNotice }: { setNotice: (s: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [canvases, setCanvases] = useState<{ relPath: string; title: string }[]>([]);
+  const [bases, setBases] = useState<{ relPath: string; title: string }[]>([]);
+  const [detail, setDetail] = useState<{ relPath: string; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    void (async () => {
+      try {
+        const r = await window.electronAPI.brain.listSpecial();
+        setCanvases(r.canvases);
+        setBases(r.bases);
+      } catch { /* ignore */ }
+    })();
+  }, [open]);
+
+  const showCanvas = useCallback(async (relPath: string) => {
+    const r = await window.electronAPI.brain.readCanvas(relPath);
+    if ('error' in r) { setNotice(`Canvas: ${r.error}`); return; }
+    const texts = r.nodes.filter((n) => n.text || n.file || n.label)
+      .map((n) => `• [${n.type}] ${n.text ?? n.file ?? n.label ?? ''}`.slice(0, 200));
+    setDetail({ relPath, text: `${r.nodes.length} nodes · ${r.edgeCount} edges\n\n${texts.join('\n')}` });
+  }, [setNotice]);
+
+  const showBase = useCallback(async (relPath: string) => {
+    const r = await window.electronAPI.brain.readBase(relPath);
+    if ('error' in r) { setNotice(`Base: ${r.error}`); return; }
+    setDetail({ relPath, text: r.raw });
+  }, [setNotice]);
+
+  const total = canvases.length + bases.length;
+
+  return (
+    <div style={{ marginTop: 10, padding: 10, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{ ...ghostBtn, width: '100%', textAlign: 'left', border: 'none', display: 'flex', alignItems: 'center', gap: 6 }}
+        title="Obsidian Canvas (.canvas) and Bases (.base) files in this folder"
+      >
+        <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>Canvas & Bases</span>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{open ? (total ? `${total}` : '0') : '▸'} {open ? '▾' : ''}</span>
+      </button>
+      {open && (
+        <div style={{ marginTop: 6 }}>
+          {total === 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>No .canvas or .base files.</div>}
+          {canvases.map((c) => (
+            <DocRow key={c.relPath} title={`🎨 ${c.title}`} relPath={c.relPath} onOpen={() => void showCanvas(c.relPath)} setNotice={setNotice} />
+          ))}
+          {bases.map((b) => (
+            <DocRow key={b.relPath} title={`🗃 ${b.title}`} relPath={b.relPath} onOpen={() => void showBase(b.relPath)} setNotice={setNotice} />
+          ))}
+          {detail && (
+            <div style={{ marginTop: 6 }}>
+              <Label>{detail.relPath}</Label>
+              <pre style={{ ...diffBox, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{detail.text || '(empty)'}</pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DocRow({ title, relPath, onOpen, setNotice }: { title: string; relPath: string; onOpen: () => void; setNotice: (s: string | null) => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <button onClick={onOpen} style={{ ...linkRow, flex: 1 }} title={relPath}>{title}</button>
+      <button
+        onClick={async () => { const r = await window.electronAPI.brain.openInObsidian(relPath); if (!r.ok) setNotice('Couldn\'t open in Obsidian.'); }}
+        style={{ ...ghostBtn, padding: '2px 6px', fontSize: 10 }}
+        title="Open in Obsidian"
+      >↗</button>
     </div>
   );
 }

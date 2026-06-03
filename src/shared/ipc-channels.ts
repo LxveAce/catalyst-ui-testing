@@ -292,4 +292,8 @@ export const IPC = {
   BRAIN_REST_TEST: 'brain:rest-test',
   /** Wikilink graph — backlinks + resolved outgoing links for a note. */
   BRAIN_LINKS: 'brain:links',
+  /** Other Obsidian formats — list/read Canvas (.canvas) + Bases (.base). */
+  BRAIN_LIST_SPECIAL: 'brain:list-special',
+  BRAIN_READ_CANVAS: 'brain:read-canvas',
+  BRAIN_READ_BASE: 'brain:read-base',
 } as const;
