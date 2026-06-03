@@ -149,6 +149,16 @@ interface Window {
         text: string,
         k?: number
       ) => Promise<import('./shared/types').BrainSearchResult>;
+      openInObsidian: (
+        relPath?: string
+      ) => Promise<import('./shared/types').BrainOpenResult>;
+      restStatus: () => Promise<import('./shared/types').BrainRestStatus>;
+      restSet: (
+        baseUrl: string,
+        key: string
+      ) => Promise<import('./shared/types').BrainRestStatus>;
+      restClear: () => Promise<import('./shared/types').BrainRestStatus>;
+      restTest: () => Promise<import('./shared/types').BrainRestTestResult>;
     };
     github: {
       authState: () => Promise<import('./shared/types').GitHubAuthState>;

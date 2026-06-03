@@ -1294,6 +1294,34 @@ export interface BrainSearchResult {
   error: BrainIndexError | null;
 }
 
+// ===========================================================================
+// Catalyst Brain — interop (P4). Bring-your-own Obsidian: open notes via the
+// obsidian:// URI, and store the (optional) Local REST API plugin key so
+// MCP-capable models can drive a running vault. Catalyst never ships Obsidian.
+// ===========================================================================
+
+/** Status of the stored Local REST API credential (raw key never exposed). */
+export interface BrainRestStatus {
+  hasKey: boolean;
+  baseUrl: string;
+  /** Whether the OS keychain (safeStorage) is available to encrypt the key. */
+  encryptionAvailable: boolean;
+}
+
+export interface BrainRestTestResult {
+  ok: boolean;
+  status: number | null;
+  error: 'no-key' | 'self-signed-cert' | 'unreachable' | string | null;
+}
+
+/** Result of an `obsidian://` open attempt. */
+export interface BrainOpenResult {
+  ok: boolean;
+  /** The obsidian:// URI we asked the OS to open (for display), or null. */
+  uri: string | null;
+  error: 'no-brain-folder' | 'outside-root' | 'failed' | null;
+}
+
 // The full ElectronAPI shape lives in src/declarations.d.ts as an ambient
 // Window typing. Don't redeclare it here — keep this file for serializable
 // IPC payload types only.
