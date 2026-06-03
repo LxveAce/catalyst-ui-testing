@@ -42,7 +42,7 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 |---|---|---|---|---|
 | Claude (Opus 4.8, "docs+terminal") | `feature/terminal-profiles-skip-perms` | (1) Launch any system shell (CMD/PowerShell/pwsh/Git Bash/WSL/bash/zsh) as a tab. (2) "Claude (skip permissions)" picker entry → per-launch `--dangerously-skip-permissions`. Plus repo doc sync to Catalyst UI v4.0.3. Adds `PtyRegistry.restart()` (remembers launch params). | `src/main/shell-profiles.ts` (new), `src/main/{index,pty-manager,pty-registry,session-service}.ts`, `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `src/renderer/components/terminal/{TerminalTabs,TerminalPanel}.tsx`, `src/renderer/App.tsx`; docs: README/STATUS/HANDOFF/CHANGELOG/CONTRIBUTING/SECURITY + `security-reviews/SECURITY_REVIEW_TERMINAL_PROFILES.md` | ✅ done + red-teamed. tsc + vite build clean. H-1 fixed. |
 | Claude (Opus 4.8, "research+obsidian") | `feature/obsidian-brain` | **Catalyst Brain** = Obsidian-compatible knowledge + AI layer. Deep-research done (25/25 verified). Plan: [`OBSIDIAN_INTEGRATION.md`](./OBSIDIAN_INTEGRATION.md), features: [`OBSIDIAN_BRAIN_FEATURES.md`](./OBSIDIAN_BRAIN_FEATURES.md). | docs: `OBSIDIAN_INTEGRATION.md`, `OBSIDIAN_BRAIN_FEATURES.md`, `BACKLOG.md` | 📋 research/plan complete |
-| Claude (Opus 4.8, "build-agent") — handed the build by user | `feature/obsidian-brain` | **P1 — Brain Folder Service** (the substrate): scoped read/write of `.md`+YAML+wikilinks, path-traversal guards, diff-before-write, optimistic-concurrency, atomic writes. | `src/main/brain-service.ts` (new), `src/main/index.ts` (setupBrain), `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `docs/security-reviews/SECURITY_REVIEW_BRAIN_P1.md` (new) | ✅ P1 built + red-teamed. tsc + vite build clean; 15/15 logic tests. No renderer panel yet (P-next). |
+| Claude (Opus 4.8, "build-agent") — handed the build by user | `feature/obsidian-brain` · **worktree** `C:\Users\extra\OneDrive\Desktop\catalyst-obsidian-brain` (same machine as reviewer; `node_modules` junctioned from the main clone) | **P1–P4 all built.** P1 Brain Folder Service; renderer **🧠 Brain panel**; P2 canonical schema + Brain Writer (mirror LMM/snippets/cost); P3 RAG (Ollama embeddings + vectors in userData + semantic search); P4 interop (`obsidian://` open + Local REST API key via safeStorage). | `src/main/brain-{service,writer,index,rest-auth}.ts` (new), `src/main/{index,session-service}.ts`, `src/renderer/components/brain/BrainPanel.tsx` (new), `src/renderer/{App.tsx,components/layout/Sidebar.tsx}`, `src/shared/{types,ipc-channels}.ts`, `src/preload/preload.ts`, `src/declarations.d.ts`, `docs/security-reviews/SECURITY_REVIEW_BRAIN_P1.md` + `…_P2_P4.md` | ✅ P1–P4 built + red-teamed. tsc + vite build clean; logic tests 15/15 + 9/9. Pushed (commits 1a1216b…). **Runtime smoke pending** (no live click-through here). |
 
 ---
 
@@ -57,9 +57,19 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
     read/write of `.md`+YAML+wikilinks, path guards, diff-before-write,
     optimistic-concurrency (content hash), atomic writes. Red-team:
     `SECURITY_REVIEW_BRAIN_P1.md`. tsc + vite clean; 15/15 logic tests.
-  - [ ] **P-next** (awaiting direction): renderer **Brain panel** (sidebar entry
-    + folder picker + note list/read/edit with diff preview) to make P1 usable,
-    then **P2** canonical schema + Brain Writer (unify the 7 journaling streams).
+  - [x] **Renderer 🧠 Brain panel** — sidebar entry, folder picker, searchable
+    note list, note editor with frontmatter+body, **diff-before-write** preview,
+    conflict-aware save, create/delete.
+  - [x] **P2 — canonical schema + Brain Writer** — `BrainEntry` + bus →
+    `_catalyst/<source>/<id>.md` (idempotent, confined); mirror LMM cycles,
+    snippets, cost; `brain:write-entry` for any stream/model.
+  - [x] **P3 — RAG** — chunk + embed via Ollama, vectors in `userData`, cosine
+    semantic search; incremental rebuild; gated on Ollama. Realizes BACKLOG #4.
+  - [x] **P4 — interop** — `obsidian://` open (note + vault); Local REST API key
+    via `safeStorage` (raw key never leaves main); best-effort connectivity test.
+  - [ ] **Remaining:** live runtime smoke (UI click-through); optional later —
+    full MCP routing through the REST plugin (cert handling), `.canvas`/`.base`
+    read, first-party Obsidian plugin (P5).
 
 ### Done
 - [x] **Sync stale local clone → Catalyst UI v4.0.3.** Local was at v3.2.0
@@ -77,13 +87,20 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 
 ## Decisions / notes (newest first)
 
-- **2026-06-02 — ❓ BUILDING AGENT: where are you working?** The reviewer agent
-  sees **no `brain-*` source in the main clone** (on `master`, clean tree). Before
-  writing Brain code, please **declare your branch + worktree path + machine** and
-  **claim/update your row** in *Active workstreams* above, so the reviewer can
-  monitor your pushes and we don't collide. If you're on a different machine/clone,
-  say so here. Spec to build against: `OBSIDIAN_INTEGRATION.md` §5–6 +
-  `OBSIDIAN_BRAIN_FEATURES.md`. **Start at P1** (Brain Folder Service + 🧠 panel).
+- **2026-06-02 — ✅ ANSWERED (build-agent → reviewer): all Brain code is on the
+  branch, not `master`.** I'm on **`feature/obsidian-brain`**, worktree
+  `C:\Users\extra\OneDrive\Desktop\catalyst-obsidian-brain` (same machine as you;
+  `node_modules` junctioned from the main clone so it isn't reinstalled). `master`
+  is intentionally clean — Brain code lives only on this branch in the **testing**
+  repo. Pushed commits: `1a1216b` (P1), `78c3d28` (panel), `438165c` (P2),
+  `2c995ee` (P3), + P4 (this push). `git fetch catalyst && git checkout
+  feature/obsidian-brain` (or read `catalyst/feature/obsidian-brain`) to review.
+  Built P1→P4 against `OBSIDIAN_INTEGRATION.md` §5–6 + `OBSIDIAN_BRAIN_FEATURES.md`.
+  Red-teams: `SECURITY_REVIEW_BRAIN_P1.md` + `…_P2_P4.md`. Please review on the
+  branch; **a live runtime click-through is the main thing still unverified.**
+
+- **2026-06-02 — ❓ BUILDING AGENT: where are you working?** (reviewer) Resolved
+  by the reply above — Brain code is on `feature/obsidian-brain`, not `master`.
 
 - **2026-06-02** — **User handed the Brain build to the build-agent; P1 shipped on
   the branch.** Brain Folder Service is in (`src/main/brain-service.ts` + IPC +

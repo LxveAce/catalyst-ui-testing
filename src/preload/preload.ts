@@ -98,6 +98,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     indexStatus: () => ipcRenderer.invoke(IPC.BRAIN_INDEX_STATUS),
     indexRebuild: (model?: string) => ipcRenderer.invoke(IPC.BRAIN_INDEX_REBUILD, model ?? null),
     indexQuery: (text: string, k?: number) => ipcRenderer.invoke(IPC.BRAIN_INDEX_QUERY, text, k ?? 8),
+    openInObsidian: (relPath?: string) => ipcRenderer.invoke(IPC.BRAIN_OPEN_IN_OBSIDIAN, relPath ?? null),
+    restStatus: () => ipcRenderer.invoke(IPC.BRAIN_REST_STATUS),
+    restSet: (baseUrl: string, key: string) => ipcRenderer.invoke(IPC.BRAIN_REST_SET, baseUrl, key),
+    restClear: () => ipcRenderer.invoke(IPC.BRAIN_REST_CLEAR),
+    restTest: () => ipcRenderer.invoke(IPC.BRAIN_REST_TEST),
   },
   github: {
     authState: () => ipcRenderer.invoke(IPC.GITHUB_AUTH_STATE),
