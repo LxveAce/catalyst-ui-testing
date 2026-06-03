@@ -273,4 +273,10 @@ export const IPC = {
   BRAIN_CREATE_NOTE: 'brain:create-note',
   BRAIN_APPEND_NOTE: 'brain:append-note',
   BRAIN_DELETE_NOTE: 'brain:delete-note',
+  /** P2 — write one canonical BrainEntry through the unification bus into the
+   *  managed `_catalyst/` subtree (idempotent by id). */
+  BRAIN_WRITE_ENTRY: 'brain:write-entry',
+  /** P2 — mirror the journaling streams (LMM cycles, snippets, cost, …) into
+   *  the Brain as schema-stamped notes. Returns BrainMirrorResult. */
+  BRAIN_MIRROR_STREAMS: 'brain:mirror-streams',
 } as const;
