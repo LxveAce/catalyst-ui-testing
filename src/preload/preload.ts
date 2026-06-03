@@ -104,6 +104,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     restClear: () => ipcRenderer.invoke(IPC.BRAIN_REST_CLEAR),
     restTest: () => ipcRenderer.invoke(IPC.BRAIN_REST_TEST),
     links: (relPath: string) => ipcRenderer.invoke(IPC.BRAIN_LINKS, relPath),
+    listSpecial: () => ipcRenderer.invoke(IPC.BRAIN_LIST_SPECIAL),
+    readCanvas: (relPath: string) => ipcRenderer.invoke(IPC.BRAIN_READ_CANVAS, relPath),
+    readBase: (relPath: string) => ipcRenderer.invoke(IPC.BRAIN_READ_BASE, relPath),
   },
   github: {
     authState: () => ipcRenderer.invoke(IPC.GITHUB_AUTH_STATE),

@@ -1323,6 +1323,41 @@ export interface BrainOpenResult {
 }
 
 // ===========================================================================
+// Catalyst Brain — other public Obsidian file formats (P-extra): Canvas
+// (.canvas = MIT JSON Canvas) and Bases (.base = YAML). Read-only, against the
+// public specs — Catalyst understands the whole vault, not just `.md`.
+// ===========================================================================
+
+export interface BrainCanvasNode {
+  id: string;
+  /** 'text' | 'file' | 'link' | 'group' per the JSON Canvas spec. */
+  type: string;
+  text?: string;
+  file?: string;
+  url?: string;
+  label?: string;
+}
+
+export interface BrainCanvas {
+  relPath: string;
+  nodes: BrainCanvasNode[];
+  edgeCount: number;
+}
+
+export interface BrainBaseDoc {
+  relPath: string;
+  /** Light top-level parse of the `.base` YAML (display only). */
+  parsed: Record<string, unknown>;
+  raw: string;
+}
+
+/** Listing of the non-`.md` Obsidian docs in the Brain. */
+export interface BrainSpecialList {
+  canvases: BrainNoteSummary[];
+  bases: BrainNoteSummary[];
+}
+
+// ===========================================================================
 // Catalyst Brain — wikilink graph (backlinks). Which notes link to this one,
 // and where this note's [[links]] resolve. Pure filesystem; the Obsidian graph
 // without Obsidian.
