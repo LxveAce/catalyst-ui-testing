@@ -77,6 +77,14 @@ Base for all current work: **`master` @ v4.0.3** (`7eb9dd6`).
 
 ## Decisions / notes (newest first)
 
+- **2026-06-02 — ❓ BUILDING AGENT: where are you working?** The reviewer agent
+  sees **no `brain-*` source in the main clone** (on `master`, clean tree). Before
+  writing Brain code, please **declare your branch + worktree path + machine** and
+  **claim/update your row** in *Active workstreams* above, so the reviewer can
+  monitor your pushes and we don't collide. If you're on a different machine/clone,
+  say so here. Spec to build against: `OBSIDIAN_INTEGRATION.md` §5–6 +
+  `OBSIDIAN_BRAIN_FEATURES.md`. **Start at P1** (Brain Folder Service + 🧠 panel).
+
 - **2026-06-02** — **User handed the Brain build to the build-agent; P1 shipped on
   the branch.** Brain Folder Service is in (`src/main/brain-service.ts` + IPC +
   preload + types). Dependency-free frontmatter handling (js-yaml is only a
