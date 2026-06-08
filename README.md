@@ -93,7 +93,25 @@ getting in the way of the terminal-first workflow.
   desktop notifications.
 - **Auto-updater, system tray & rebindable hotkeys.**
 - **Token cost tracker** — per-session estimates with a daily budget.
-- **Theming** — dark base with six accent presets.
+- **Theming** — dark base with 13 accent presets plus custom theme creation,
+  animated background patterns (dots / grid / rain / particles), layout density
+  settings (compact / comfortable / spacious), font family selection, and
+  optional frosted glass effect.
+- **Notes** — quick-capture notes with markdown rendering, tags, search,
+  pinning, and sort. Stored locally in your user data directory.
+- **Blind model compare** — select 2–4 Ollama models, enter a prompt, and
+  see responses side-by-side. Blind mode hides model names for unbiased
+  evaluation; reveal when ready.
+- **Keyboard shortcuts overlay** — press `?` to see all keybindings at a
+  glance. Platform-aware (Ctrl on Windows/Linux, Cmd on macOS).
+- **Toast notifications** — in-app event notifications for sync errors,
+  budget alerts, update availability, and PTY exits.
+- **Incognito tabs** — open ephemeral Claude sessions via the profile
+  picker or command palette; not persisted across restarts.
+- **Command palette history** — press arrow-up on an empty palette input
+  to recall previously executed commands.
+- **Escape menu stack** — overlays dismiss in LIFO order; pressing
+  Escape always closes the topmost overlay first.
 
 See [`docs/HANDOFF.md`](./docs/HANDOFF.md) for the per-phase breakdown.
 
