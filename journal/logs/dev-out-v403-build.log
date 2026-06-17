@@ -1,0 +1,44 @@
+
+> catalyst-ui@4.0.2 start
+> electron-forge start -- --remote-debugging-port=9222
+
+[33m❯[39m Checking your system
+[33m❯[39m Checking package manager version
+[32m✔[39m Found npm@11.12.1
+[32m✔[39m Checking your system
+[?25h
+[43m[30m WARN [39m[49m [36minlineDynamicImports[39m option is deprecated, please use [36mcodeSplitting: false[39m instead.
+
+4:45:51 PM [@electron-forge/plugin-vite] target built src/preload/preload.ts
+4:45:51 PM [@electron-forge/plugin-vite] target built src/main/index.ts
+
+
+DevTools listening on ws://127.0.0.1:9222/devtools/browser/7a9373c4-8304-459e-a001-3616eae6a235
+[2m4:48:01 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mRemoving a style property during rerender (borderColor) when a conflicting property is set (border) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values.
+[2m4:48:52 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/commands/CommandsPanel.tsx[22m
+[2m4:52:47 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/commands/CommandsPanel.tsx[22m
+[2m4:52:47 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/models/ModelsPanel.tsx[22m
+[2m4:52:47 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+4:52:47 PM [@electron-forge/plugin-vite] target built src/main/index.ts
+[2m4:52:51 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m4:52:51 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/commands/CommandsPanel.tsx[22m
+[2m4:52:51 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/models/ModelsPanel.tsx[22m
+4:52:52 PM [@electron-forge/plugin-vite] target built src/main/index.ts
+[2m5:02:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/commands/CommandsPanel.tsx[22m
+[2m5:02:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/models/ModelsPanel.tsx[22m
+[2m5:02:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+5:02:59 PM [@electron-forge/plugin-vite] target built src/main/index.ts
+5:03:00 PM [@electron-forge/plugin-vite] target built src/main/index.ts
+[2m5:03:05 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m5:03:05 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/commands/CommandsPanel.tsx[22m
+[2m5:03:05 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/models/ModelsPanel.tsx[22m
+5:03:05 PM [@electron-forge/plugin-vite] target built src/main/index.ts
+5:03:06 PM [@electron-forge/plugin-vite] target built src/main/index.ts
+[2m5:03:24 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/commands/CommandsPanel.tsx[22m
+[2m5:03:24 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m5:03:24 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/models/ModelsPanel.tsx[22m
+5:03:24 PM [@electron-forge/plugin-vite] target built src/main/index.ts
+[2m5:03:54 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/models/ModelsPanel.tsx[22m
+[2m5:03:54 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m5:03:54 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/commands/CommandsPanel.tsx[22m
+5:03:54 PM [@electron-forge/plugin-vite] target built src/main/index.ts
