@@ -14,6 +14,8 @@
 
 ---
 
+> Provided **as is**, without warranty; you use it at your own risk. See [DISCLAIMER.md](DISCLAIMER.md).
+
 ## What this repo is
 
 Catalyst UI is a multi-vendor AI workbench in a single Electron desktop app:
