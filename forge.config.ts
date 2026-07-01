@@ -58,7 +58,7 @@ const config: ForgeConfig = {
       // setupIcon: './assets/installer.ico',
       // loadingGif: './assets/loading.gif',
       // iconUrl:
-      //   'https://raw.githubusercontent.com/LxveAce/claude-code-studio/master/assets/app-icon.ico',
+      //   'https://raw.githubusercontent.com/LxveAce/catalyst-ui-testing/master/assets/app-icon.ico',
       // --- Code signing (Windows) ------------------------------------------
       // certificateFile: process.env.WINDOWS_CERT_PATH,
       // certificatePassword: process.env.WINDOWS_CERT_PASSWORD,
@@ -77,7 +77,7 @@ const config: ForgeConfig = {
     new PublisherGithub({
       repository: {
         owner: 'LxveAce',
-        name: 'claude-code-studio',
+        name: 'catalyst-ui-testing',
       },
       // Draft releases so the maintainer can review release notes before
       // exposing them to update.electronjs.org's release feed.
