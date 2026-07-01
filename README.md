@@ -67,7 +67,7 @@ systeminformation · Octokit · @huggingface/hub · electron-builder.
 src/        Application source (main / preload / renderer / shared)
 scripts/    Build helpers and CDP audit/verify harnesses
 docs/       Handoffs, status, security reviews, release notes
-journal/    Per-source-file LMM analyses (one .lmm.md per file)
+journal/    LMM analyses for core modules (.lmm.md; partial coverage)
 obsidian-plugin/  First-party Obsidian "Brain" bridge plugin (built separately)
 ```
 
@@ -76,7 +76,7 @@ obsidian-plugin/  First-party Obsidian "Brain" bridge plugin (built separately)
 - [`CHANGELOG.md`](./CHANGELOG.md) — per-release history
 - [`docs/STATUS.md`](./docs/STATUS.md) — current pickup doc
 - [`docs/security-reviews/`](./docs/security-reviews/) — per-phase self-red-team reviews
-- [`journal/`](./journal/) — per-source-file LMM analyses
+- [`journal/`](./journal/) — LMM analyses for core modules (`.lmm.md`; partial coverage, not every source file)
 
 ## License
 
