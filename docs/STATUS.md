@@ -1,12 +1,17 @@
 # Catalyst UI — Testing Repo STATUS
 
-> 👉 **NEWEST PICKUP DOC: [`HANDOFF_2026-06-03.md`](./HANDOFF_2026-06-03.md)** —
-> read that first. It covers everything below + the terminal-profiles and
-> Catalyst Brain work shipped after v4.0.3.
+> 👉 **NEWEST HANDOFF DOC: [`HANDOFF_2026-06-03.md`](./HANDOFF_2026-06-03.md)** —
+> the last full cold-pickup writeup; read it after this file. It covers the
+> terminal-profiles and Catalyst Brain (P1–P5) work. Master has since advanced
+> past it — the Odysseus port + security hardening, the Notes/Compare panels,
+> the PII scrub, and the canonical DISCLAIMER all landed afterward and are
+> summarized here + in `CHANGELOG.md` [Unreleased].
 >
 > **Product:** Catalyst UI *(formerly Claude Code Studio — renamed at v4.0.0)*
-> **Version:** v4.0.3 (+ unreleased terminal-profiles & Catalyst Brain on master)
-> **Last updated:** 2026-06-03
+> **Version:** v4.0.3 shipped; **v4.1 in flight on `master`** — terminal
+> profiles, Catalyst Brain P1–P5, and the Odysseus port are all landed but
+> **unreleased / not tagged**
+> **Last updated:** 2026-07-01
 > **Branch this describes:** `master` (testing repo: `LxveAce/catalyst-ui-testing`)
 > **Latest cross-machine handoff:** [`journal/V4_0_3_TRANSFER_TESTING.md`](../journal/V4_0_3_TRANSFER_TESTING.md)
 > **Full per-release history:** [`CHANGELOG.md`](../CHANGELOG.md)
@@ -51,10 +56,14 @@ package.json only, no docs/journal) — see
 
 ## Where we are
 
-v4.0.3 is the current shipped release on **both** repos (public master at the
-v4.0.3 release commit; testing master one or two docs commits ahead). It was a
-**strict bug-fix** release over v4.0.2 — four issues the user surfaced via
-screenshots of the v4.0.2 dev build:
+v4.0.3 is the current **shipped/tagged** release on both repos. Testing
+`master` now runs a full **v4.1 line ahead of that tag** — terminal
+system-shell profiles + a Claude (skip-permissions) tab, Catalyst Brain
+P1–P5, the 2026-06-08 Odysseus port + security hardening, and the
+Notes/Compare panels — none of it tagged yet (see the `[Unreleased]` section
+of `CHANGELOG.md`). v4.0.3 itself was a **strict bug-fix** release over
+v4.0.2 — four issues the user surfaced via screenshots of the v4.0.2 dev
+build:
 
 1. `Cannot resize a pty that has already exited` modal crash — `PtyManager`
    now nulls its handle on exit + defensive try/catch in `PtyManager.resize`
@@ -140,9 +149,13 @@ theming (13 built-ins + custom editor).
 
 ---
 
-## What's next (v4.1 carry-over)
+## What's next (toward the v4.1 release)
 
-From the v4.0.3 transfer doc + `docs/BACKLOG.md`:
+The v4.1 feature work has **landed on `master`** (terminal profiles, Catalyst
+Brain P1–P5, the Odysseus port + hardening, Notes/Compare panels — see
+`CHANGELOG.md` `[Unreleased]`). Cutting and tagging the v4.1 release is the
+next milestone (owner call: version bump + release notes). Still-open
+carry-overs from the v4.0.3 transfer doc + `docs/BACKLOG.md`:
 
 1. **PTY lifecycle smoke audit** — v4.0.2/4.0.3 both shipped without a harness
    exercising spawn → exit → resize (the gap that let the resize crash ship).
