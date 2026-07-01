@@ -12,6 +12,53 @@ integration).
 
 ---
 
+## [Unreleased] — v4.1 (in flight; not yet tagged)
+
+Work on the v4.1 line that lives on `master` after the v4.0.3 tag. **Not
+released** — no version bump or tag has been cut; this section records
+what has landed so a release can be assembled from it later.
+
+### Added
+- **Terminal system-shell profiles** — the profile picker now offers
+  raw system shells alongside the CLI profiles, plus a **Claude (skip
+  permissions)** tab that launches Claude with
+  `--dangerously-skip-permissions` pre-applied.
+- **Catalyst Brain (P1–P5)** — a scoped Markdown knowledge layer that
+  unifies the journaling streams:
+  - **P1 Brain Folder Service** — scoped `.md` / YAML / wikilink
+    read+write under a user-chosen root, with a path-traversal guard.
+  - **Renderer Brain panel** — folder picker, note list/editor, and a
+    diff-before-write confirmation.
+  - **P2 canonical schema + Brain Writer** — one canonical note schema
+    the previously-separate journaling streams write through.
+  - **P3 RAG** — embed notes via Ollama into a local vector store for
+    semantic search.
+  - **P4 interop** — `obsidian://` open + a Local REST API key stored
+    via `safeStorage`; a REST client that can drive a live Obsidian
+    vault; a wikilink backlinks graph; Canvas/Bases read with
+    auto-inject of context into the active tab; and copy-as-context
+    (a note + its top RAG results) into any model tab.
+  - **P5 first-party Obsidian plugin** — a "Catalyst Brain Bridge"
+    plugin scaffold under `obsidian-plugin/` (built separately).
+- **Notes and Compare panels** — new panel IDs wired into the sidebar.
+
+### Changed
+- **README** refreshed for accuracy and given a Connect/contact
+  section; incognito-tooltip copy cleaned up.
+
+### Security
+- **Odysseus port + security hardening** — ported the Odysseus-inspired
+  feature set together with an accompanying security-hardening pass.
+- **PTY launch params preserved across restart** — fixes red-team
+  finding H-1 (a restarted PTY previously lost its launch parameters).
+- **PII scrub** — removed a legal name and personal email from the
+  repo docs, attributing the work to the alias instead.
+- **Canonical DISCLAIMER + acceptable-use terms** added (authorized
+  lawful use; as-is / no-warranty / no-liability; not legal advice)
+  and linked from the README.
+
+---
+
 ## [4.0.3] — 2026-05-28
 
 Bug-fix release.  v4.0.2 shipped with four issues users surfaced in
