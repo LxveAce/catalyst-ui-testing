@@ -7,7 +7,8 @@ copyright: Copyright © 2026 LxveAce
 # user-facing; the appId is internal plumbing.
 
 # IMPORTANT: builder output goes to dist/ to avoid colliding with forge's out/
-# (per Phase 1 red-team M3). Both pipelines coexist until Phase 8.
+# (per Phase 1 red-team M3). Both pipelines coexist — electron-builder is the
+# real shipping path; forge is retained only as a legacy escape hatch.
 directories:
   output: dist
   buildResources: build
@@ -39,8 +40,9 @@ asarUnpack:
 npmRebuild: false
 
 # Anthropic CLI install + bundled Node runtime happen at install time via
-# the NSIS bootstrap script (Phase 4). For Phase 2 we ship the existing
-# app behavior — assumes claude is on PATH.
+# the NSIS bootstrap script (build/installer.nsh, configured below) — it
+# downloads Node 22 + @anthropic-ai/claude-code into
+# $INSTDIR\resources\runtime\ so the app doesn't depend on a system PATH claude.
 
 win:
   target:
@@ -57,21 +59,20 @@ win:
 # install hook the way NSIS does, and Apple's gatekeeper would flag any
 # attempt to download + execute binaries during a drag-install.
 #
-# Code signing + notarization deferred to v2.1 — requires Apple Developer
-# Program ($99/yr) + osxSign config keyed to env vars. Without signing,
-# users see "App is damaged or can't be opened" on first launch; the
-# workaround is right-click → Open → confirm in the dialog. Documented
-# in the per-OS README install section.
+# Code signing + notarization are still deferred — they require an Apple
+# Developer Program membership ($99/yr) + osxSign config keyed to env vars.
+# Without signing, users see "App is damaged or can't be opened" on first
+# launch; the workaround is right-click → Open → confirm in the dialog.
+# Documented in the per-OS README install section.
 mac:
   # GitHub's `macos-latest` runner is Apple Silicon (arm64). Cross-
   # compiling to x64 on an arm64 host requires Rosetta + extra setup.
-  # arm64-only build for v2.0; Intel Macs run via Rosetta.
+  # arm64-only build; Intel Macs run via Rosetta.
   #
-  # NOTE on targets: only dmg (no zip). The .zip was for auto-update via
-  # electron-updater. Per user request we're shipping only the single
-  # installer file per OS — auto-update is disabled for v2.0 and tracked
-  # for v2.1 (when we'll either re-enable .zip + latest-mac.yml or host
-  # them on a separate update channel).
+  # NOTE on targets: only dmg (no zip). The .zip is what electron-updater
+  # needs for mac auto-update; shipping a single dmg per OS means mac
+  # auto-update stays disabled (Windows auto-updates via NSIS + latest.yml).
+  # Re-enabling mac auto-update is tracked alongside mac code signing.
   target:
     - target: dmg
       arch: arm64
@@ -136,8 +137,9 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: "Catalyst UI"
   artifactName: "Catalyst-UI-${version}-Windows.${ext}"
-  # Disable .exe.blockmap generation — used only for delta updates which
-  # we're not shipping in v2.0 (auto-updater disabled this release).
+  # Disable .exe.blockmap / differential-package generation — used only for
+  # delta updates, which we don't ship (we publish full installers; Windows
+  # auto-update pulls the whole latest.yml artifact).
   differentialPackage: false
   # Custom NSIS script: downloads Node 22 + @anthropic-ai/claude-code into
   # $INSTDIR\resources\runtime\, plus (Cat 8) an optional Ollama install
@@ -158,7 +160,7 @@ publish:
     owner: LxveAce
     repo: catalyst-ui
     releaseType: draft
-    # Repo rename happens in lockstep with v4.0.0; until then this
-    # config is for the FUTURE catalyst-ui repo.  Builds prior to
-    # the lockstep rename were pointed at claude-code-studio and
-    # will continue to find updates via GitHub's permanent redirect.
+    # The repo was renamed to catalyst-ui at v4.0.0, so this points at
+    # the public release repo.  Builds published before the rename were
+    # pointed at claude-code-studio and still find updates via GitHub's
+    # permanent redirect.
